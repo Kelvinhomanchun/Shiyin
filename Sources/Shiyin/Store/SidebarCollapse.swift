@@ -28,8 +28,11 @@ extension AppModel {
 
     /// 下面的列表只看這個資料夾（展開後的「顯示全部 N 場」）
     func showFolder(_ name: String) {
+        showTrash = false
         sidebarMode = .meetings
         folderFilter = name
+        // 列表收起來時打開，不然按了看起來沒反應（fork：子資料夾的「顯示全部」）
+        setSection("meetings", expanded: true)
     }
 
     /// 資料夾裡的會議（不含垃圾桶），日期新到舊（資料庫讀出來的順序）

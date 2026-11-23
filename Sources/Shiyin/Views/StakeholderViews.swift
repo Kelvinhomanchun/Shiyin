@@ -839,13 +839,15 @@ struct StakeholderMapView: View {
         let items = model.stakeholderMap(folder: folder.isEmpty ? nil : folder, group: group.isEmpty ? nil : group)
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(folder.isEmpty ? String(localized: "關係人地圖") : String(localized: "關係人地圖：\(FolderPath.display(folder))")).font(.songti(20))
-                Spacer()
-                Picker("一個資料夾", selection: $model.stakeholderMapFolder) {
-                    Text("所有會議").tag("")
-                    ForEach(folders, id: \.self) { Text(FolderPath.display($0)).tag($0) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("關係人地圖").font(.songti(20))
+                    if !folder.isEmpty {
+                        Text(FolderPath.display(folder)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
-                .fixedSize()
+                .layoutPriority(1)
+                Spacer()
+                FolderScopePicker(selection: $model.stakeholderMapFolder, folders: folders, allTitle: String(localized: "所有會議"))
                 if !model.personGroups.isEmpty {
                     Picker("一個群組", selection: $model.stakeholderMapGroup) {
                         Text("所有人").tag("")

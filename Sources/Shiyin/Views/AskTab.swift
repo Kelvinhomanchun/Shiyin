@@ -234,14 +234,10 @@ struct AskAllView: View {
                 .fixedSize()
                 .labelsHidden()
                 if current == .folder {
-                    Picker("資料夾", selection: Binding(get: { model.askFolder ?? "" }, set: { name in
+                    FolderScopePicker(selection: Binding(get: { model.askFolder ?? "" }, set: { name in
                         model.askFolder = name
                         model.loadAllQuestions()
-                    })) {
-                        ForEach(folders, id: \.self) { Text(FolderPath.display($0)).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    }), folders: folders)
                 }
             }
             .padding(.horizontal, 24)

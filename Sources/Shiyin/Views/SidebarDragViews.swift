@@ -153,10 +153,11 @@ struct SidebarFolderRows: View {
             .help(rule.map { model.folderRuleSummary($0) } ?? "")
             if expanded {
                 // 子資料夾（案子）：縮排列在上層底下，可以點、拖會議進去、有自己的選單
-                ForEach(model.folderTree.first { $0.name == name }?.children ?? [], id: \.name) { child in
+                let children = model.folderTree.first { $0.name == name }?.children ?? []
+                ForEach(children, id: \.name) { child in
                     SubfolderRow(path: child.name, count: child.count)
                 }
-                SidebarPeek(rows: model.peekRows(folder: name)) { model.showFolder(name) }
+                SidebarPeek(rows: model.peekRows(folder: name), key: name, hasChildren: !children.isEmpty)
             }
         }
     }
@@ -184,7 +185,7 @@ struct SubfolderRow: View {
         .padding(.leading, 18)
         .help(rule.map { model.folderRuleSummary($0) } ?? FolderPath.display(path))
         if expanded {
-            SidebarPeek(rows: model.peekRows(folder: path)) { model.showFolder(path) }
+            SidebarPeek(rows: model.peekRows(folder: path), key: path)
                 .padding(.leading, 18)
         }
     }

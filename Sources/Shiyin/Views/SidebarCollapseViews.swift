@@ -217,27 +217,41 @@ struct OpenFolderShape: Shape {
 /// 資料夾在原地展開的最近 5 場；超過時最後一列「顯示全部 N 場」（下面的列表只看這個資料夾）；
 /// 沒有會議時一列「沒有會議」
 struct SidebarPeek: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let rows: [MeetingRow]
-    let showAll: () -> Void
+    /// 展開全部的記號（資料夾路徑）：「顯示全部」在原地展開，不跳到下面的列表（fork，使用者覺得跳到下面不好用）
+    var key: String = ""
+    /// 有子資料夾：自己沒有會議時不寫「沒有會議」（會議在子資料夾裡）
+    var hasChildren = false
+    /// 舊的用法：沒有 key 時「顯示全部」交給下面的列表
+    var showAll: (() -> Void)? = nil
 
     var body: some View {
-        if rows.isEmpty {
+        let all = !key.isEmpty && model.peekShowsAll.contains(key)
+        if rows.isEmpty && !hasChildren {
             SidebarPeekLine { Text("沒有會議").foregroundStyle(.secondary) }
                 .selectionDisabled()
         }
         // id 用字串：ForEach 會把 id 當成列的 tag，用會議 id 的話 List 會把這幾列當成選取（跟下面的列表一起亮成一整條）
-        ForEach(rows.prefix(5).map { (key: "peek:\($0.id)", row: $0) }, id: \.key) { item in
+        ForEach((all ? Array(rows) : Array(rows.prefix(5))).map { (key: "peek:\($0.id)", row: $0) }, id: \.key) { item in
             SidebarPeekRow(row: item.row)
         }
         if rows.count > 5 {
+            let toggle = {
+                if key.isEmpty { showAll?(); return }
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
+                    if all { model.peekShowsAll.remove(key) } else { model.peekShowsAll.insert(key) }
+                }
+            }
             SidebarPeekLine {
-                Text("顯示全部 \(rows.count) 場").foregroundStyle(.secondary)
+                Text(all ? String(localized: "顯示較少") : String(localized: "顯示全部 \(rows.count) 場")).foregroundStyle(.secondary)
                     .accessibilityAddTraits(.isButton)
-                    .accessibilityAction(.default, showAll)
+                    .accessibilityAction(.default, toggle)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .sidebarClick(showAll)
+            .sidebarClick(toggle)
             .sidebarHover()
             .selectionDisabled()
         }

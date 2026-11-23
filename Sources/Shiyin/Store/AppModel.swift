@@ -1821,6 +1821,8 @@ final class AppModel {
     var peopleOverview: [PersonOverview] = []
     /// 人物群組（fork），照使用者排的順序
     var personGroups: [String] = []
+    /// 側欄資料夾展開了「顯示全部」的（fork；不存，重開 app 回到前 5 場）
+    var peekShowsAll: Set<String> = []
     /// 移除一個人的確認（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
     /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾的確認、正在就地改的那一條紀錄

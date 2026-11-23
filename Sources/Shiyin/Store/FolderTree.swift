@@ -42,3 +42,63 @@ extension Meeting {
     /// 會議在不在這個資料夾（包括它的子資料夾）裡
     func isIn(folder scope: String) -> Bool { FolderPath.contains(scope, folder) }
 }
+
+import SwiftUI
+
+/// 選一個資料夾的選單（fork，Ask、關係人地圖共用）：上層（客戶）是一段，第一項「整個 <客戶>」，
+/// 下面縮排列它的案子；不把客戶和案子攤成同一排（使用者：「為什麼都放在同一個下拉選單」）
+struct FolderScopePicker: View {
+    @Binding var selection: String
+    /// 有會議的資料夾（上層、子資料夾都在裡面）
+    let folders: [String]
+    /// 有值：多一項「所有會議」（tag 是空字串）
+    var allTitle: String? = nil
+
+    private var accounts: [String] {
+        var seen: [String] = []
+        for f in folders { let a = FolderPath.account(f); if !seen.contains(a) { seen.append(a) } }
+        return seen.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    private func projects(_ account: String) -> [String] {
+        folders.filter { FolderPath.isSub($0) && FolderPath.account($0) == account }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    private var label: String {
+        if selection.isEmpty { return allTitle ?? "" }
+        return FolderPath.project(selection) ?? selection
+    }
+
+    var body: some View {
+        Menu {
+            if let allTitle {
+                Button { selection = "" } label: { check(selection.isEmpty, allTitle) }
+                Divider()
+            }
+            ForEach(accounts, id: \.self) { account in
+                let children = projects(account)
+                if children.isEmpty {
+                    Button { selection = account } label: { check(selection == account, account, icon: "folder") }
+                } else {
+                    Section(account) {
+                        Button { selection = account } label: { check(selection == account, String(localized: "整個「\(account)」"), icon: "folder") }
+                        ForEach(children, id: \.self) { path in
+                            Button { selection = path } label: { check(selection == path, "    " + (FolderPath.project(path) ?? path)) }
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label(label, systemImage: selection.isEmpty ? "tray.full" : FolderPath.isSub(selection) ? "folder" : "folder.fill")
+        }
+        .fixedSize()
+        .help(selection.isEmpty ? (allTitle ?? "") : FolderPath.display(selection))
+    }
+
+    @ViewBuilder private func check(_ on: Bool, _ title: String, icon: String? = nil) -> some View {
+        if on { Label(title, systemImage: "checkmark") }
+        else if let icon { Label(title, systemImage: icon) }
+        else { Text(title) }
+    }
+}

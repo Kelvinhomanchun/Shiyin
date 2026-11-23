@@ -936,6 +936,8 @@ enum DebugControl {
         case "folder": if let id { model.moveToFolder(id, folder: args[2] == "-" ? "" : args[2]) }
         case "folderfilter": model.folderFilter = args.count > 1 && args[1] != "-" ? args[1] : nil
         case "renamefolder": model.renameFolder(args[1], to: args[2])
+        case "showfolder": model.showFolder(args[1])
+        case "openperson": if let id { model.openPerson(id) }
         case "mapgroup": model.stakeholderMapGroup = args.count > 1 ? args[1] : ""
         case "persongroup": model.createPersonGroup(args[1])   // persongroup <名稱>
         case "setpersongroup": model.setPersonGroup([Int64(args[1]) ?? 0], group: args.count > 2 && !args[2].isEmpty ? args[2] : nil)

@@ -21,7 +21,7 @@ struct PersonPage: View {
     @Environment(AppModel.self) private var model
     let person: PersonOverview
     @State private var meetings: [PersonMeeting] = []
-    @State private var items: [PersonActionItem] = []
+    @State var items: [PersonActionItem] = []
 
     var body: some View {
         bodyContent
@@ -145,7 +145,7 @@ struct PersonPage: View {
     }
 
     /// 他負責的待辦：事項、期限、哪一場會議和時間點（點了打開那場、從那裡播放）
-    private var itemsGrid: some View {
+    var itemsGrid: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 18, verticalSpacing: 9) {
             GridRow {
                 Text("事項")
@@ -155,10 +155,24 @@ struct PersonPage: View {
             .contentFont(.caption)
             .foregroundStyle(.secondary)
             Divider().gridCellUnsizedAxes(.horizontal)
-            ForEach(items) { entry in
+            // 沒完成的在上面（UX 檢查 B1）；打勾跟會議頁是同一份資料
+            ForEach(items.sorted { !model.isActionDone($0.meeting.id, $0.item.task) && model.isActionDone($1.meeting.id, $1.item.task) }) { entry in
+                let done = model.isActionDone(entry.meeting.id, entry.item.task)
                 GridRow {
-                    Text(entry.item.task).meetingText().textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Button { model.toggleActionDone(entry.meeting.id, entry.item.task) } label: {
+                            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(done ? Color.celadon : Color.secondary)
+                                .contentFont(.body)
+                        }
+                        .buttonStyle(.plain)
+                        .help(done ? "標成還沒完成" : "標成完成")
+                        .accessibilityLabel(Text(done ? "已完成" : "未完成"))
+                        Text(entry.item.task).meetingText().textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                            .strikethrough(done, color: .secondary)
+                            .foregroundStyle(done ? Color.secondary : Color.primary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Text(entry.item.due.isEmpty ? "—" : entry.item.due).monospacedDigit()
                         .foregroundStyle(entry.item.due.isEmpty ? .secondary : .primary)
                     Button {
@@ -180,6 +194,7 @@ struct PersonPage: View {
     private func load() {
         meetings = (try? model.db.personMeetings(person.id)) ?? []
         items = (try? model.db.personActionItems(person.name)) ?? []
+        model.reloadActionDone()
     }
 
     /// 「N 場會議・最近 <日期>」；人物頁上方用長的寫法
