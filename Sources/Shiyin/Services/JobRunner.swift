@@ -748,6 +748,8 @@ final class JobRunner {
         let stored = try db.stakeholderProfile(personId)
         // 只有使用者背景、還沒分析過（profile 是空的）也算重做
         let existing = rebuild || stored?.profile.isEmpty != false ? nil : stored
+        let meIds = try db.myPersonIds()
+        let meName = try db.peopleOverview().first { meIds.contains($0.id) }?.name
         let done = existing?.analyzedMeetings ?? []
         let all = try db.personMeetings(personId).map(\.meeting)   // 新到舊
         let fresh = all.filter { !done.contains($0.id ?? 0) }
@@ -763,12 +765,15 @@ final class JobRunner {
             let names = Dictionary(uniqueKeysWithValues: speakers.map { ($0.idx, $0.name) })
             let language = meeting.meetingLanguage
             let segments = try db.segments(id)
+            // 使用者（我）的說話者：標 ▲，分析才看得出他們兩個人之間怎麼互動
+            let myIdx = Set(speakers.filter { $0.personId.map(meIds.contains) == true }.map(\.idx))
             var lines: [String] = []
             var lastAdded = -1
             for (i, s) in segments.enumerated() where s.speaker.map(mine.contains) == true {
                 if i - 1 > lastAdded, i > 0, let prev = Optional(segments[i - 1]), prev.speaker.map(mine.contains) != true {
                     let who = prev.speaker.map { names[$0] ?? language.defaultSpeaker($0) } ?? "?"
-                    lines.append("  [\(TimeFormat.string(prev.start))] \(who): \(prev.text)")
+                    let mark = prev.speaker.map(myIdx.contains) == true ? "▲" : " "
+                    lines.append("\(mark) [\(TimeFormat.string(prev.start))] \(who): \(prev.text)")
                 }
                 lines.append("★ [\(TimeFormat.string(s.start))] \(name): \(s.text)")
                 lastAdded = i
@@ -806,7 +811,8 @@ final class JobRunner {
         let language = AppSettings.defaultNotesLanguage ?? MeetingLanguage.interface
         let system = StakeholderPrompt.system(language)
         let prompt = StakeholderPrompt.prompt(person: name, otherNames: otherNames.sorted(), previous: existing?.decoded, meetings: materials,
-                                              userRole: stored?.userRole ?? "", userOrg: stored?.userOrg ?? "", userNotes: stored?.userNotes ?? "")
+                                              userRole: stored?.userRole ?? "", userOrg: stored?.userOrg ?? "", userNotes: stored?.userNotes ?? "",
+                                              me: meName)
         let data = try await callLLM(lane) { onStart in
             try await LLMClient.generateJSON(provider: provider, model: AppSettings.model, system: system, prompt: prompt,
                                              format: StakeholderProfile.format, onStart: onStart)

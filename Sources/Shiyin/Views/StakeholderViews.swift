@@ -6,6 +6,8 @@ import SwiftUI
 struct StakeholderSection: View {
     @Environment(AppModel.self) private var model
     let person: PersonOverview
+    /// 「記錄」分頁：人物頁原本的待辦、會議
+    var record: AnyView? = nil
     @State private var editing = false
 
     var body: some View {
@@ -24,7 +26,7 @@ struct StakeholderSection: View {
                     StakeholderContextEditor(person: person, record: record) { editing = false }
                 }
                 if let profile {
-                    StakeholderDetails(profile: profile)
+                    StakeholderDetails(profile: profile, record: self.record)
                 } else if analyzing {
                     Text("正在分析他在會議裡說的話…").foregroundStyle(.secondary)
                 } else {
@@ -110,31 +112,6 @@ struct StakeholderCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                     .padding(.top, 2)
-            }
-            // 每個案子各自的份量（關係人地圖照這個放）
-            if let profile, !profile.projects.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("在各個案子").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
-                    ForEach(profile.projects, id: \.folder) { p in
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 8) {
-                                Button { model.openStakeholderMap(folder: p.folder) } label: {
-                                    Label(p.folder, systemImage: "folder").foregroundStyle(Color.celadon)
-                                }
-                                .buttonStyle(.plain)
-                                .help("打開這個案子的關係人地圖")
-                                QuadrantBadge(quadrant: StakeholderProfile.Quadrant(power: p.power, interest: p.interest))
-                                if !p.attitude.isEmpty { AttitudeBadge(attitude: p.attitude, trend: "") }
-                            }
-                            if !p.note.isEmpty {
-                                Text(p.note).foregroundStyle(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .font(.callout)
-                    }
-                }
             }
             if let record, let profile { footnote(record, profile) }
         }
@@ -247,37 +224,194 @@ struct StakeholderContextEditor: View {
 
 // MARK: - 內容
 
-/// 結論、行動在前，描述和出處在後
-struct StakeholderDetails: View {
-    let profile: StakeholderProfile
+/// 分析的內容分成五個分頁（UX：一頁太長、沒有分組）。照顧問準備見面的順序：
+/// 先「怎麼做」（下次見面、怎麼跟你合作）→「讀懂他」→「他在意什麼」→「他的人脈」→「記錄」（待辦、會議）
+enum StakeholderTab: String, CaseIterable, Identifiable {
+    case plan, read, interests, network, record
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .plan: return String(localized: "怎麼做")
+        case .read: return String(localized: "讀懂他")
+        case .interests: return String(localized: "在意什麼")
+        case .network: return String(localized: "人脈與承諾")
+        case .record: return String(localized: "記錄")
+        }
+    }
+}
+
+struct StakeholderTabBar: View {
+    @Binding var selection: StakeholderTab
 
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            bar
+            ScrollView(.horizontal, showsIndicators: false) { bar }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("分頁"))
+    }
+
+    private var bar: some View {
+        HStack(spacing: 4) {
+            ForEach(StakeholderTab.allCases) { tab in
+                let on = selection == tab
+                Button { selection = tab } label: {
+                    Text(tab.label)
+                        .font(.callout.weight(on ? .semibold : .regular))
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .foregroundStyle(on ? Color.celadon : .secondary)
+                        .background(on ? Color.celadon.opacity(0.13) : Color.clear, in: Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .fixedSize()
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .background(Color.secondary.opacity(0.07), in: Capsule())
+    }
+}
+
+struct StakeholderDetails: View {
+    @Environment(AppModel.self) private var model
+    let profile: StakeholderProfile
+    /// 「記錄」分頁的內容（待辦、會議），由人物頁傳進來
+    var record: AnyView? = nil
+
+    var body: some View {
+        @Bindable var model = model
+        VStack(alignment: .leading, spacing: 18) {
+            // 不用 segmented Picker：它的寬度跟著內容的文字大小長，字放大時會超出閱讀欄、蓋到側欄（使用者截圖）。
+            // 自己畫的分頁列放得下就一行，放不下就可以左右捲，不會撐出欄外
+            StakeholderTabBar(selection: $model.stakeholderTab)
+            switch model.stakeholderTab {
+            case .plan: plan
+            case .read: read
+            case .interests: interests
+            case .network: network
+            case .record: record ?? AnyView(EmptyView())
+            }
+            if model.stakeholderTab != .record {
+                Text("這是整理工具從他說的話推測的，只供參考；你填的背景會優先。").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: 怎麼做
+
+    @ViewBuilder
+    private var plan: some View {
         VStack(alignment: .leading, spacing: 22) {
             nextMeeting
-            if !profile.needs.isEmpty || !profile.commitments.isEmpty {
-                HStack(alignment: .top, spacing: 28) {
-                    if !profile.needs.isEmpty {
-                        block(String(localized: "他需要我們提供的")) { bullets(profile.needs) }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    if !profile.commitments.isEmpty {
-                        block(String(localized: "雙方的承諾")) { commitments }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+            workingWithMe
+            if profile.nextMeeting.objective.isEmpty && profile.workingWithMe.isEmpty && profile.advice.isEmpty {
+                empty
+            }
+        }
+    }
+
+    /// 下次見面：目標、要談的、要問的、要避免的
+    @ViewBuilder
+    private var nextMeeting: some View {
+        let n = profile.nextMeeting
+        if !n.objective.isEmpty || !n.talkingPoints.isEmpty || !n.questions.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("下次見面", systemImage: "target").font(.headline).foregroundStyle(Color.celadon)
+                if !n.objective.isEmpty { Text(n.objective).fontWeight(.medium).fixedSize(horizontal: false, vertical: true) }
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 24) { nextColumns(n) }
+                    VStack(alignment: .leading, spacing: 12) { nextColumns(n) }
                 }
             }
-            if !profile.readings.isEmpty {
-                block(String(localized: "話中的意思")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(Array(profile.readings.enumerated()), id: \.offset) { _, reading in
-                            ReadingRow(reading: reading)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.celadon.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    @ViewBuilder
+    private func nextColumns(_ n: StakeholderProfile.NextMeeting) -> some View {
+        if !n.talkingPoints.isEmpty { column(String(localized: "要談的"), n.talkingPoints) }
+        if !n.questions.isEmpty { column(String(localized: "要問的"), n.questions) }
+        if !n.avoid.isEmpty { column(String(localized: "避免"), n.avoid) }
+    }
+
+    /// 跟你合作：他怎麼看你、信任程度、他對你的期待、溝通方式、建立信用、要小心的地方、你們之間的互動
+    @ViewBuilder
+    private var workingWithMe: some View {
+        let w = profile.workingWithMe
+        if !w.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Label("怎麼跟他合作", systemImage: "person.2.wave.2").font(.headline)
+                    if !w.trust.isEmpty {
+                        HStack(spacing: 4) {
+                            Text("他對你的信任").font(.callout).foregroundStyle(.secondary)
+                            LevelBadge(level: w.trust)
                         }
                     }
                 }
+                if !w.relationship.isEmpty {
+                    Text(w.relationship).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                }
+                twoColumns(
+                    (String(localized: "他對你的期待"), w.expectations),
+                    (String(localized: "怎麼溝通最有效"), w.communication))
+                twoColumns(
+                    (String(localized: "建立信用"), w.buildTrust),
+                    (String(localized: "要小心的地方"), w.watchOuts))
+                if !w.interactions.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("你們之間的互動").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+                        ForEach(Array(w.interactions.enumerated()), id: \.offset) { _, r in ReadingRow(reading: r) }
+                    }
+                }
             }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.2)))
+        } else if !profile.advice.isEmpty {
+            // 舊的分析沒有「跟你合作」：先顯示一般的互動建議
+            block(String(localized: "互動建議")) { bullets(profile.advice) }
+        }
+        if !w.isEmpty && !profile.advice.isEmpty {
+            block(String(localized: "互動建議")) { bullets(profile.advice) }
+        }
+    }
+
+    // MARK: 讀懂他
+
+    @ViewBuilder
+    private var read: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            if !profile.readings.isEmpty {
+                block(String(localized: "話中的意思")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(Array(profile.readings.enumerated()), id: \.offset) { _, reading in ReadingRow(reading: reading) }
+                    }
+                }
+            }
+            if !profile.personality.isEmpty { block(String(localized: "個性與溝通風格")) { points(profile.personality) } }
+            if !profile.motivations.isEmpty { block(String(localized: "在意的事、動機")) { points(profile.motivations) } }
+            if !profile.openQuestions.isEmpty { block(String(localized: "還看不出來的地方")) { bullets(profile.openQuestions) } }
+            if profile.readings.isEmpty && profile.personality.isEmpty && profile.motivations.isEmpty { empty }
+        }
+    }
+
+    // MARK: 在意什麼
+
+    @ViewBuilder
+    private var interests: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            if !profile.needs.isEmpty { block(String(localized: "他需要我們提供的")) { bullets(profile.needs) } }
             if !profile.topics.isEmpty {
                 block(String(localized: "關心的議題和立場")) {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         ForEach(Array(profile.topics.enumerated()), id: \.offset) { _, topic in
                             // 議題一行、立場在下一行：並排時長的議題名稱把立場擠成很窄的一欄（UX 檢查）
                             VStack(alignment: .leading, spacing: 2) {
@@ -294,17 +428,41 @@ struct StakeholderDetails: View {
                     }
                 }
             }
-            HStack(alignment: .top, spacing: 28) {
-                if !profile.personality.isEmpty {
-                    block(String(localized: "個性與溝通風格")) { points(profile.personality) }.frame(maxWidth: .infinity, alignment: .leading)
-                }
-                if !profile.motivations.isEmpty {
-                    block(String(localized: "在意的事、動機")) { points(profile.motivations) }.frame(maxWidth: .infinity, alignment: .leading)
+            if !profile.projects.isEmpty {
+                block(String(localized: "在各個案子")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(profile.projects, id: \.folder) { p in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 8) {
+                                    Button { model.openStakeholderMap(folder: p.folder) } label: {
+                                        Label(p.folder, systemImage: "folder").foregroundStyle(Color.celadon)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("打開這個案子的關係人地圖")
+                                    QuadrantBadge(quadrant: StakeholderProfile.Quadrant(power: p.power, interest: p.interest))
+                                    if !p.attitude.isEmpty { AttitudeBadge(attitude: p.attitude, trend: "") }
+                                }
+                                if !p.note.isEmpty {
+                                    Text(p.note).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
                 }
             }
+            if profile.needs.isEmpty && profile.topics.isEmpty && profile.projects.isEmpty { empty }
+        }
+    }
+
+    // MARK: 人脈與承諾
+
+    @ViewBuilder
+    private var network: some View {
+        VStack(alignment: .leading, spacing: 22) {
             if !profile.relationships.isEmpty {
                 block(String(localized: "人際關係")) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 8) {
                         ForEach(Array(profile.relationships.enumerated()), id: \.offset) { _, r in
                             VStack(alignment: .leading, spacing: 1) {
                                 HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -319,35 +477,30 @@ struct StakeholderDetails: View {
                     }
                 }
             }
-            if !profile.openQuestions.isEmpty {
-                block(String(localized: "還看不出來的地方")) { bullets(profile.openQuestions) }
-            }
-            Text("這是整理工具從他說的話推測的，只供參考；你填的背景會優先。").font(.caption).foregroundStyle(.secondary)
+            if !profile.commitments.isEmpty { block(String(localized: "雙方的承諾")) { commitments } }
+            if profile.relationships.isEmpty && profile.commitments.isEmpty { empty }
         }
     }
 
-    /// 下次見面：目標、要談的、要問的、要避免的（舊版的分析只有 advice，就顯示 advice）
+    private var empty: some View {
+        Text("這一頁還沒有內容。按「重新分析」用最新的分析方式整理。").foregroundStyle(.secondary)
+    }
+
+    // MARK: 共用
+
     @ViewBuilder
-    private var nextMeeting: some View {
-        let n = profile.nextMeeting
-        if !n.objective.isEmpty || !n.talkingPoints.isEmpty || !n.questions.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Label("下次見面", systemImage: "target").font(.headline).foregroundStyle(Color.celadon)
-                if !n.objective.isEmpty { Text(n.objective).fontWeight(.medium).fixedSize(horizontal: false, vertical: true) }
+    private func twoColumns(_ a: (String, [String]), _ b: (String, [String])) -> some View {
+        if !a.1.isEmpty || !b.1.isEmpty {
+            ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 24) {
-                    if !n.talkingPoints.isEmpty { column(String(localized: "要談的"), n.talkingPoints) }
-                    if !n.questions.isEmpty { column(String(localized: "要問的"), n.questions) }
-                    if !n.avoid.isEmpty { column(String(localized: "避免"), n.avoid) }
+                    if !a.1.isEmpty { column(a.0, a.1) }
+                    if !b.1.isEmpty { column(b.0, b.1) }
                 }
-                if !profile.advice.isEmpty {
-                    Divider()
-                    column(String(localized: "互動建議"), profile.advice)
+                VStack(alignment: .leading, spacing: 12) {
+                    if !a.1.isEmpty { column(a.0, a.1) }
+                    if !b.1.isEmpty { column(b.0, b.1) }
                 }
             }
-            .padding(14)
-            .background(Color.celadon.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
-        } else if !profile.advice.isEmpty {
-            block(String(localized: "互動建議")) { bullets(profile.advice) }
         }
     }
 
@@ -356,7 +509,7 @@ struct StakeholderDetails: View {
             Text(title).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
             bullets(items)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(minWidth: 200, maxWidth: .infinity, alignment: .leading)
     }
 
     private var commitments: some View {

@@ -24,9 +24,30 @@ struct PersonPage: View {
     @State private var items: [PersonActionItem] = []
 
     var body: some View {
-        ReadingColumn {
+        bodyContent
+        .navigationTitle(person.name)
+        // 改名、合併、刪除放在工具列右上角的「更多」，跟會議頁同一個位置
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) { moreMenu }
+            SettingsToolbarItem()
+        }
+        .task(id: person) { load() }
+    }
+
+    private var bodyContent: some View {
+        // 有分析時，待辦和會議收進分析的「記錄」分頁；沒有分析（或是自己）時照舊直接列出
+        let isMe = person.isMe || model.stakeholderMe.contains(person.id)
+        let hasProfile = !isMe && model.stakeholderPersonId == person.id && model.stakeholder?.decoded != nil
+        return ReadingColumn {
             header
-            StakeholderSection(person: person)
+            StakeholderSection(person: person, record: AnyView(recordSections))
+            if !hasProfile { recordSections }
+        }
+    }
+
+    /// 負責的待辦、一起開過的會議
+    private var recordSections: some View {
+        VStack(alignment: .leading, spacing: 26) {
             NotesSection(title: String(localized: "負責的待辦")) {
                 if !items.isEmpty {
                     Button("加到提醒事項", systemImage: "checklist") { model.addPersonItemsToReminders(items) }
@@ -61,13 +82,6 @@ struct PersonPage: View {
                 }
             }
         }
-        .navigationTitle(person.name)
-        // 改名、合併、刪除放在工具列右上角的「更多」，跟會議頁同一個位置
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) { moreMenu }
-            SettingsToolbarItem()
-        }
-        .task(id: person) { load() }
     }
 
     /// 頭像、名字、摘要；改名、合併、刪除收在右邊的「更多」（同會議頁的「更多」，破壞性的動作不跟其他並排）

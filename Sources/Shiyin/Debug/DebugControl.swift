@@ -395,6 +395,7 @@ enum DebugControl {
         case "peopledeleteall": model.deleteAllPeople()
         case "stakeholder": if let id { model.analyzeStakeholder(id) }   // stakeholder <人物 id>：從全部會議重新分析
         case "stakeholdercontext": if let id { model.saveStakeholderContext(id, role: args[2], org: args.count > 3 ? args[3] : "", notes: args.count > 4 ? args[4] : "") }   // stakeholdercontext <人物 id> <角色> [組織] [背景]
+        case "stakeholdertab": if args.count > 1, let tab = StakeholderTab(rawValue: args[1]) { model.stakeholderTab = tab }   // stakeholdertab plan|read|interests|network|record
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)

@@ -1728,6 +1728,8 @@ final class AppModel {
     var analyzingStakeholders: Set<Int64> = []
     /// 當成「自己」、不做分析的人
     var stakeholderMe: Set<Int64> = []
+    /// 人物頁分析看哪個分頁（換人時保留，比較同一面向）
+    var stakeholderTab: StakeholderTab = .plan
     /// 關係人地圖看哪個資料夾（空字串 = 所有會議）
     var stakeholderMapFolder = ""
     var stakeholderMapChosen = false

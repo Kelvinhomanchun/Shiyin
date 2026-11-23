@@ -77,6 +77,25 @@ struct StakeholderProfile: Codable, Hashable {
         var attitude: String
         var note: String
     }
+    /// 跟使用者（我）的關係和怎麼跟他合作：專門寫給使用者的，用他們兩個人之間實際的互動當依據
+    struct WorkingWithMe: Codable, Hashable {
+        /// 一兩句：他怎麼看我、我們之間的關係（例如他把我當執行者、當顧問、當對手）
+        var relationship: String
+        /// 他對我的信任程度：high / medium / low
+        var trust: String
+        /// 他對我的期待
+        var expectations: [String]
+        /// 怎麼跟他溝通最有效（形式、頻率、細節程度、語言）
+        var communication: [String]
+        /// 在他面前建立信用的做法
+        var buildTrust: [String]
+        /// 我跟他互動時要小心的地方（我的習慣可能跟他衝突的地方）
+        var watchOuts: [String]
+        /// 我們之間互動的例子：我說了什麼、他怎麼反應（附出處）
+        var interactions: [Reading]
+        static let empty = WorkingWithMe(relationship: "", trust: "", expectations: [], communication: [], buildTrust: [], watchOuts: [], interactions: [])
+        var isEmpty: Bool { relationship.isEmpty && expectations.isEmpty && communication.isEmpty && buildTrust.isEmpty && watchOuts.isEmpty }
+    }
     /// 下一次見面的準備
     struct NextMeeting: Codable, Hashable {
         var objective: String
@@ -102,6 +121,7 @@ struct StakeholderProfile: Codable, Hashable {
     var relationships: [Relationship] = []
     var nextMeeting: NextMeeting = .empty
     var projects: [Project] = []
+    var workingWithMe: WorkingWithMe = .empty
 
     /// 這個案子的評估；沒有時用整體的
     func project(_ folder: String?) -> Project? {
@@ -135,6 +155,7 @@ struct StakeholderProfile: Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case summary, role, power, powerReason, interest, personality, motivations, topics, readings, advice, openQuestions
         case organization, attitude, attitudeTrend, decisionRole, confidence, needs, commitments, relationships, nextMeeting, projects
+        case workingWithMe
     }
 
     init(from decoder: Decoder) throws {
@@ -146,7 +167,7 @@ struct StakeholderProfile: Codable, Hashable {
         organization = v(.organization, ""); attitude = v(.attitude, ""); attitudeTrend = v(.attitudeTrend, "")
         decisionRole = v(.decisionRole, ""); confidence = v(.confidence, ""); needs = v(.needs, [])
         commitments = v(.commitments, []); relationships = v(.relationships, []); nextMeeting = v(.nextMeeting, .empty)
-        projects = v(.projects, [])
+        projects = v(.projects, []); workingWithMe = v(.workingWithMe, .empty)
     }
 
     static let empty = StakeholderProfile(summary: "", role: "", power: "", powerReason: "", interest: "",
@@ -169,12 +190,13 @@ struct StakeholderProfile: Codable, Hashable {
         let next = #"{"type":"object","additionalProperties":false,"required":["objective","talkingPoints","questions","avoid"],"properties":{"objective":{"type":"string"},"talkingPoints":"# + strings + #","questions":"# + strings + #","avoid":"# + strings + "}}"
         let level = #"{"type":"string","enum":["high","medium","low"]}"#
         let attitude = #"{"type":"string","enum":["champion","supporter","neutral","skeptic","blocker"]}"#
+        let working = #"{"type":"object","additionalProperties":false,"required":["relationship","trust","expectations","communication","buildTrust","watchOuts","interactions"],"properties":{"relationship":{"type":"string"},"trust":"# + level + #","expectations":"# + strings + #","communication":"# + strings + #","buildTrust":"# + strings + #","watchOuts":"# + strings + #","interactions":"# + readings + "}}"
         let projects = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["folder","power","interest","attitude","note"],"properties":{"folder":{"type":"string"},"power":"# + level + #","interest":"# + level + #","attitude":"# + attitude + #","note":{"type":"string"}}}}"#
-        return #"{"type":"object","additionalProperties":false,"required":["summary","role","organization","power","powerReason","interest","attitude","attitudeTrend","decisionRole","confidence","personality","motivations","needs","topics","readings","commitments","relationships","nextMeeting","projects","advice","openQuestions"],"properties":{"summary":{"type":"string"},"role":{"type":"string"},"organization":{"type":"string"},"power":"# + level
+        return #"{"type":"object","additionalProperties":false,"required":["summary","role","organization","power","powerReason","interest","attitude","attitudeTrend","decisionRole","confidence","personality","motivations","needs","topics","readings","commitments","relationships","nextMeeting","projects","workingWithMe","advice","openQuestions"],"properties":{"summary":{"type":"string"},"role":{"type":"string"},"organization":{"type":"string"},"power":"# + level
             + #","powerReason":{"type":"string"},"interest":"# + level
             + #","attitude":{"type":"string","enum":["champion","supporter","neutral","skeptic","blocker"]},"attitudeTrend":{"type":"string","enum":["improving","stable","declining","unknown"]},"decisionRole":{"type":"string","enum":["decision maker","influencer","gatekeeper","expert","user","other"]},"confidence":"# + level
             + #","personality":"# + point + #","motivations":"# + point + #","needs":"# + strings + #","topics":"# + topics + #","readings":"# + readings
-            + #","commitments":"# + commitments + #","relationships":"# + relationships + #","nextMeeting":"# + next + #","projects":"# + projects + #","advice":"# + strings + #","openQuestions":"# + strings + "}}"
+            + #","commitments":"# + commitments + #","relationships":"# + relationships + #","nextMeeting":"# + next + #","projects":"# + projects + #","workingWithMe":"# + working + #","advice":"# + strings + #","openQuestions":"# + strings + "}}"
     }()
 
     static let format = LLMClient.OutputFormat(schema: jsonSchema, toolName: "save_stakeholder_profile",
@@ -208,6 +230,11 @@ struct StakeholderProfile: Codable, Hashable {
             return c
         }
         p.projects = projects.filter { !$0.folder.isEmpty }
+        p.workingWithMe.interactions = workingWithMe.interactions.compactMap { r in
+            var r = r
+            r.time = TimeFormat.clean(r.time)
+            return meetingIds.contains(r.meetingId) && TimeFormat.seconds(r.time) != nil ? r : nil
+        }
         return p
     }
 }
@@ -349,7 +376,7 @@ enum StakeholderPrompt {
         8. openQuestions: what cannot be judged yet from these meetings.
         9. When a previous profile is given, update it with the new meetings: keep what still holds, revise what the new evidence changes, add new points, and keep the old evidence that still applies. Do not drop earlier meetings' insights just because they are not in the new excerpts.
         10. Be concise and professional. This is a private working note for the user; avoid judgmental or offensive wording, and do not speculate about health, religion, politics or other sensitive personal attributes.
-        11. Write every text value (summary, role, organization, powerReason, personality, motivations, needs, topics, stance, meaning, commitments, relationships, nextMeeting, advice, openQuestions) in \(name). Keep quotes in the original language of the transcript. The enum fields (power, interest, attitude, attitudeTrend, decisionRole, confidence, who) stay exactly as the allowed English values.
+        11. Write every text value (summary, role, organization, powerReason, personality, motivations, needs, topics, stance, meaning, commitments, relationships, nextMeeting, workingWithMe, advice, openQuestions) in \(name). Keep quotes in the original language of the transcript. The enum fields (power, interest, attitude, attitudeTrend, decisionRole, confidence, trust, who) stay exactly as the allowed English values.
         12. If "Facts from the user" are given, they are ground truth: use them for role, organization, power and decision role, and interpret everything the target says in that light. Do not contradict them; if the meetings seem to conflict, mention it in openQuestions.
         13. organization: the company or team the target belongs to (client, our firm, vendor, department), if known.
         14. attitude toward the user's work / project / proposal: champion (actively advocates), supporter, neutral, skeptic (doubts, pushes back), blocker (actively resists). attitudeTrend: improving / stable / declining across the meetings in date order, or unknown with only one meeting.
@@ -360,13 +387,15 @@ enum StakeholderPrompt {
         19. relationships: how the target relates to other named people in the excerpts (defers to, aligned with, tension with, manages, reports to), with a short note. Only what the excerpts show.
         20. nextMeeting: a practical plan for the user's next conversation with the target — objective (one sentence), talkingPoints (2 to 4), questions to ask to close the openQuestions (2 to 4), avoid (1 to 3 things that would likely backfire).
         21. projects: meetings are grouped into projects (the "project/folder" shown on each meeting). For EACH project the target appears in, assess power, interest and attitude on THAT project specifically — the same person can be a decision maker on one project and a bystander on another — with a one-sentence note on their stake in it. folder must be exactly the project name as given. Keep entries from the previous profile for projects not in the new excerpts. The top-level power / interest / attitude are the overall view across all projects.
+        22. workingWithMe: advice written specifically for the user (named in "The user" below; their lines are marked ▲). Base it on how the target and the user actually interact in the excerpts — what the user says and how the target responds, who drives, where they agree or push back. relationship: how the target sees and treats the user (e.g. as an executor, trusted advisor, junior, peer, vendor). trust: high / medium / low. expectations (2 to 4): what the target expects from the user. communication (2 to 4): the format, level of detail, cadence and language that work best with this target. buildTrust (2 to 4): concrete moves that would raise the user's credibility with the target. watchOuts (1 to 3): habits or behaviours of the user in these meetings that may land badly with this target. interactions (1 to 4): telling exchanges, quote = the target's words in reply to the user (meetingId, time), meaning = what it reveals about their working relationship. If the user does not appear with the target, give empty arrays and say so in relationship.
         """
     }
 
     static func prompt(person: String, otherNames: [String], previous: StakeholderProfile?, meetings: [MeetingMaterial],
-                       userRole: String = "", userOrg: String = "", userNotes: String = "") -> String {
+                       userRole: String = "", userOrg: String = "", userNotes: String = "", me: String? = nil) -> String {
         var out: [String] = []
         out.append("Target person: \(person)")
+        out.append("The user (who will read this analysis): " + (me ?? "the person who recorded these meetings (not identified in the transcript)"))
         if !userRole.isEmpty || !userOrg.isEmpty || !userNotes.isEmpty {
             out.append("")
             out.append("Facts from the user (ground truth):")
@@ -387,7 +416,7 @@ enum StakeholderPrompt {
                 out.append("Meeting notes (context):")
                 out += m.context.map { "- " + $0 }
             }
-            out.append("Excerpts (the target's lines are marked with ★; unmarked lines are the line just before, for context):")
+            out.append("Excerpts (the target's lines are marked ★, the user's lines ▲; unmarked lines are the line just before, for context):")
             out += m.lines
         }
         return out.joined(separator: "\n")
