@@ -28470,6 +28470,40 @@
           }
         }
       }
+    },
+    "每場會議整理完都更新與會者的利害關係人分析": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update attendees’ stakeholder analysis after every meeting"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每场会议整理完都更新与会者的利害关系人分析"
+          }
+        }
+      }
+    },
+    "會議紀錄整理好、重新整理或校稿之後，以及改了說話者的名字、合併說話者、改了哪句是誰說的之後，都會把這場會議裡每個認得名字的與會者（你自己除外）說的話交給整理工具，更新他的分析和「怎麼跟他合作」。結果在側欄「人物」的人物頁。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whenever a meeting’s notes are generated, regenerated or revised — and whenever you rename or merge speakers or change who said a line — what each named attendee (except you) said in that meeting is sent to your summarizer to update their analysis and “Working with you”. See it on each person’s page under People in the sidebar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议记录整理好、重新整理或校稿之后，以及改了说话者的名字、合并说话者、改了哪句是谁说的之后，都会把这场会议里每个认得名字的与会者（你自己除外）说的话交给整理工具，更新他的分析和“怎么跟他合作”。结果在侧边栏“人物”的人物页。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

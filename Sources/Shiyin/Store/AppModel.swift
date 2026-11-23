@@ -1252,6 +1252,7 @@ final class AppModel {
             }
             noticeMessage = String(localized: "已把「\(fromName)」合併到「\(intoName)」。要復原的話，點說話者的名字選「復原」。")
         }
+        refreshStakeholders(id)
     }
 
     /// 「這句是誰說的」（R23.2）：to 是 nil 時新增一位說話者
@@ -1267,6 +1268,7 @@ final class AppModel {
         perform(.detail([.speakers, .segments])) {
             try db.reassignSegments(id, ids: ids, to: idx, label: label)
         }
+        refreshStakeholders(id)
     }
 
     /// 「拆成兩句…」（R70、design §46）：at 是 UTF-16 的位置，to 是後半句的說話者（nil 是新的說話者）
@@ -1556,6 +1558,14 @@ final class AppModel {
             // 會議紀錄裡的舊名字換成新名字（design §21.6）
             if let old { try db.replaceSpeakerNameInNotes(id, from: old, to: name) }
         }
+        // 說話者改名、對到人：這場會議的分析要重做（新對到的人才有分析，名字也要換成新的）
+        refreshStakeholders(id)
+    }
+
+    /// 與會者的利害關係人分析排一次更新（會議紀錄已經好了才排，同一場會議只排一個）
+    func refreshStakeholders(_ meetingId: Int64) {
+        guard AppSettings.summarizerReady, (try? db.enqueueStakeholderRefresh(meetingId)) == true else { return }
+        runner.wake()
     }
 
     /// 「不是他」：聲紋自動帶入的名字不對，回到預設名稱（design §21.4）；會議紀錄裡的名字也換回去
@@ -1564,10 +1574,13 @@ final class AppModel {
         let language = detail?.meeting.meetingLanguage ?? .zh
         let fallback = language.defaultSpeaker(idx)  // l10n-skip
         let old = detail?.speakers[idx]
+        // 被認錯的那個人：他的分析裡有不是他說的話，從頭重做
+        let wrongPerson = (try? db.speakers(id))?.first { $0.idx == idx }?.personId
         perform(.detail([.speakers, .meeting])) {
             try db.rejectVoiceprintMatch(id, idx: idx, defaultName: fallback)
             if let old { try db.replaceSpeakerNameInNotes(id, from: old, to: fallback) }
         }
+        if let wrongPerson, AppSettings.stakeholderAnalysis, (try? db.stakeholderProfile(wrongPerson)) != nil { analyzeStakeholder(wrongPerson) }
     }
 
     // MARK: 猜說話者的建議（design §21.5、R19.2）

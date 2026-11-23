@@ -559,6 +559,8 @@ final class JobRunner {
             }
             let count = Set(assigned.compactMap { $0 }).count
             log.info("rediarized meeting \(job.meetingId): \(count) speakers, \(inherited.count) names kept")
+            // 誰說了哪句換過了：與會者的分析重送這場會議
+            if AppSettings.summarizerReady { try db.enqueueStakeholderRefresh(job.meetingId) }
             onRediarized?(job.meetingId, .success(count))
             wake()
         } catch {
@@ -731,7 +733,8 @@ final class JobRunner {
             running[lane]?.stage = String(localized: "分析與會者")
             running[lane]?.progress = Double(n) / Double(max(people.count, 1))
             do {
-                try await updateStakeholder(personId, rebuild: payload?.rebuild ?? false, lane: lane, provider: provider)
+                try await updateStakeholder(personId, rebuild: payload?.rebuild ?? false, refresh: payload == nil ? job.meetingId : nil,
+                                            lane: lane, provider: provider)
             } catch is CancellationError {
                 return
             } catch {
@@ -743,7 +746,8 @@ final class JobRunner {
         if failures > 0 && failures == people.count, let lastError { throw lastError }
     }
 
-    private func updateStakeholder(_ personId: Int64, rebuild: Bool, lane: JobLane, provider: LLMProvider) async throws {
+    /// refresh：這場會議就算分析過也再送一次（會議紀錄、說話者名字改過了）
+    private func updateStakeholder(_ personId: Int64, rebuild: Bool, refresh: Int64? = nil, lane: JobLane, provider: LLMProvider) async throws {
         guard let name = try db.peopleOverview().first(where: { $0.id == personId })?.name else { return }
         let stored = try db.stakeholderProfile(personId)
         // 只有使用者背景、還沒分析過（profile 是空的）也算重做
@@ -752,7 +756,7 @@ final class JobRunner {
         let meName = try db.peopleOverview().first { meIds.contains($0.id) }?.name
         let done = existing?.analyzedMeetings ?? []
         let all = try db.personMeetings(personId).map(\.meeting)   // 新到舊
-        let fresh = all.filter { !done.contains($0.id ?? 0) }
+        let fresh = all.filter { !done.contains($0.id ?? 0) || $0.id == refresh }
         guard !fresh.isEmpty else { return }
         // 材料：他說的每一句（加上前一句別人說的話），會議紀錄的摘要、決議
         var materials: [StakeholderPrompt.MeetingMaterial] = []
@@ -913,11 +917,9 @@ final class JobRunner {
                                               reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
                                               source: answers == nil ? .generated : .revised)
         if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
-        // 正式的會議紀錄好了：更新這場會議裡每個人的利害關係人分析（輔助線，不擋別的工作）
-        if answers == nil, AppSettings.stakeholderAnalysis, try !db.peopleInMeeting(job.meetingId).isEmpty {
-            try db.enqueue(job.meetingId, kind: .stakeholders)
-            wake()
-        }
+        // 正式的會議紀錄好了（整理、重新整理、校稿都算）：更新這場會議裡每個人的利害關係人分析
+        //（輔助線，不擋別的工作）。這場會議就算分析過也重送，用最新的紀錄和名字
+        if AppSettings.summarizerReady, try db.enqueueStakeholderRefresh(job.meetingId) { wake() }
         // 整理完有標題了，照資料夾的條件放（design §72）
         if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder) }
         return answers != nil || hadDraft == 0

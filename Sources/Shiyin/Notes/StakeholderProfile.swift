@@ -321,6 +321,26 @@ extension AppDatabase {
         try pool.write { db in try db.execute(sql: "DELETE FROM stakeholder_profiles WHERE person_id = ?", arguments: [personId]) }
     }
 
+    /// 排一個「更新這場會議與會者的分析」：設定關掉、沒有認得名字的人、還沒有正式的會議紀錄時不排；
+    /// 已經有一個在排隊就不再排（連續改好幾個名字時只做一次，跑的時候讀最新的名字）。回傳有沒有排
+    @discardableResult
+    func enqueueStakeholderRefresh(_ meetingId: Int64) throws -> Bool {
+        guard AppSettings.stakeholderAnalysis else { return false }
+        let ready = try pool.read { db in
+            try Bool.fetchOne(db, sql: """
+                SELECT 1 FROM meetings WHERE id = ? AND deleted_at IS NULL AND notes IS NOT NULL AND notes <> '' AND notes_draft = 0
+                """, arguments: [meetingId]) ?? false
+        }
+        guard ready, try !peopleInMeeting(meetingId).isEmpty else { return false }
+        let queued = try pool.read { db in
+            try Bool.fetchOne(db, sql: "SELECT 1 FROM jobs WHERE meeting_id = ? AND kind = 'stakeholders' AND status = 'queued' AND payload IS NULL",
+                              arguments: [meetingId]) ?? false
+        }
+        if queued { return false }
+        _ = try enqueue(meetingId, kind: .stakeholders)
+        return true
+    }
+
     /// 這場會議裡對到人物的說話者（要更新分析的人）
     func peopleInMeeting(_ meetingId: Int64) throws -> [Int64] {
         try pool.read { db in
