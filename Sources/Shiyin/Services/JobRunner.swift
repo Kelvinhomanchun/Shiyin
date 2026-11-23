@@ -745,7 +745,9 @@ final class JobRunner {
 
     private func updateStakeholder(_ personId: Int64, rebuild: Bool, lane: JobLane, provider: LLMProvider) async throws {
         guard let name = try db.peopleOverview().first(where: { $0.id == personId })?.name else { return }
-        let existing = rebuild ? nil : try db.stakeholderProfile(personId)
+        let stored = try db.stakeholderProfile(personId)
+        // 只有使用者背景、還沒分析過（profile 是空的）也算重做
+        let existing = rebuild || stored?.profile.isEmpty != false ? nil : stored
         let done = existing?.analyzedMeetings ?? []
         let all = try db.personMeetings(personId).map(\.meeting)   // 新到舊
         let fresh = all.filter { !done.contains($0.id ?? 0) }
@@ -775,7 +777,7 @@ final class JobRunner {
             let notes = meeting.decodedNotes
             let context = ((notes?.summary ?? []) + (notes?.decisions ?? [])).map(\.text)
                 + (notes?.people ?? []).filter { $0.name.caseInsensitiveCompare(name) == .orderedSame }.flatMap { $0.points.map(\.text) }
-            materials.append(.init(id: id, title: meeting.displayTitle, date: meeting.meetingDate, context: context, lines: lines))
+            materials.append(.init(id: id, title: meeting.displayTitle, date: meeting.meetingDate, context: context, folder: meeting.folder, lines: lines))
         }
         guard !materials.isEmpty else {
             // 沒有他說的話（只是被對到名字）：記下已經看過，下次不再送
@@ -803,7 +805,8 @@ final class JobRunner {
         materials.removeAll { $0.lines.isEmpty }
         let language = AppSettings.defaultNotesLanguage ?? MeetingLanguage.interface
         let system = StakeholderPrompt.system(language)
-        let prompt = StakeholderPrompt.prompt(person: name, otherNames: otherNames.sorted(), previous: existing?.decoded, meetings: materials)
+        let prompt = StakeholderPrompt.prompt(person: name, otherNames: otherNames.sorted(), previous: existing?.decoded, meetings: materials,
+                                              userRole: stored?.userRole ?? "", userOrg: stored?.userOrg ?? "", userNotes: stored?.userNotes ?? "")
         let data = try await callLLM(lane) { onStart in
             try await LLMClient.generateJSON(provider: provider, model: AppSettings.model, system: system, prompt: prompt,
                                              format: StakeholderProfile.format, onStart: onStart)

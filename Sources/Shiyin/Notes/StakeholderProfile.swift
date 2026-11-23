@@ -52,6 +52,103 @@ struct StakeholderProfile: Codable, Hashable {
     /// 還不確定、需要更多會議才看得出來的地方
     var openQuestions: [String]
 
+    // MARK: 顧問用的欄位（第二版）：舊的分析沒有這些，讀的時候給預設值
+
+    /// 他答應的事、我們答應他的事
+    struct Commitment: Codable, Hashable {
+        /// them（他答應的）／us（我們答應他的）
+        var who: String
+        var text: String
+        var meetingId: Int64
+        var time: String
+    }
+    /// 跟其他人的關係：聽誰的、跟誰站同一邊、跟誰有摩擦
+    struct Relationship: Codable, Hashable {
+        var person: String
+        /// defers to / aligned with / tension with / manages / reports to（照分析的語言寫，短）
+        var relation: String
+        var note: String
+    }
+    /// 在一個案子（資料夾）上的影響力、關心程度、態度：同一個人在不同案子的份量不一樣（關係人地圖照這個放）
+    struct Project: Codable, Hashable {
+        var folder: String
+        var power: String
+        var interest: String
+        var attitude: String
+        var note: String
+    }
+    /// 下一次見面的準備
+    struct NextMeeting: Codable, Hashable {
+        var objective: String
+        var talkingPoints: [String]
+        var questions: [String]
+        var avoid: [String]
+        static let empty = NextMeeting(objective: "", talkingPoints: [], questions: [], avoid: [])
+    }
+
+    /// 組織（客戶、內部部門、供應商）
+    var organization: String = ""
+    /// 態度：champion / supporter / neutral / skeptic / blocker
+    var attitude: String = ""
+    /// 態度的變化：improving / stable / declining / unknown
+    var attitudeTrend: String = ""
+    /// 在決策裡的角色：decision maker / influencer / gatekeeper / expert / user / other
+    var decisionRole: String = ""
+    /// 分析的把握：high / medium / low（他說了多少、出現在幾場會議）
+    var confidence: String = ""
+    /// 他需要我們提供的東西
+    var needs: [String] = []
+    var commitments: [Commitment] = []
+    var relationships: [Relationship] = []
+    var nextMeeting: NextMeeting = .empty
+    var projects: [Project] = []
+
+    /// 這個案子的評估；沒有時用整體的
+    func project(_ folder: String?) -> Project? {
+        guard let folder, !folder.isEmpty else { return nil }
+        return projects.first { $0.folder.caseInsensitiveCompare(folder) == .orderedSame }
+    }
+
+    /// 影響力 × 關心程度的四個象限（Mendelow）：高高 = 密切管理、高低 = 讓他滿意、低高 = 隨時告知、低低 = 留意
+    var quadrant: Quadrant { Quadrant(power: power, interest: interest) }
+
+    enum Quadrant: String, CaseIterable {
+        case manageClosely, keepSatisfied, keepInformed, monitor
+        /// 影響力要「高」才算在上面（真的能拍板、能擋的人）；關心程度「中」以上就算在右邊
+        init(power: String, interest: String) {
+            switch (power == "high", interest != "low") {
+            case (true, true): self = .manageClosely
+            case (true, false): self = .keepSatisfied
+            case (false, true): self = .keepInformed
+            case (false, false): self = .monitor
+            }
+        }
+    }
+
+    init(summary: String, role: String, power: String, powerReason: String, interest: String, personality: [Point], motivations: [Point],
+         topics: [Topic], readings: [Reading], advice: [String], openQuestions: [String]) {
+        self.summary = summary; self.role = role; self.power = power; self.powerReason = powerReason; self.interest = interest
+        self.personality = personality; self.motivations = motivations; self.topics = topics; self.readings = readings
+        self.advice = advice; self.openQuestions = openQuestions
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case summary, role, power, powerReason, interest, personality, motivations, topics, readings, advice, openQuestions
+        case organization, attitude, attitudeTrend, decisionRole, confidence, needs, commitments, relationships, nextMeeting, projects
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func v<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T { (try? c.decodeIfPresent(T.self, forKey: key)) ?? fallback }
+        summary = v(.summary, ""); role = v(.role, ""); power = v(.power, ""); powerReason = v(.powerReason, "")
+        interest = v(.interest, ""); personality = v(.personality, []); motivations = v(.motivations, [])
+        topics = v(.topics, []); readings = v(.readings, []); advice = v(.advice, []); openQuestions = v(.openQuestions, [])
+        organization = v(.organization, ""); attitude = v(.attitude, ""); attitudeTrend = v(.attitudeTrend, "")
+        decisionRole = v(.decisionRole, ""); confidence = v(.confidence, ""); needs = v(.needs, [])
+        commitments = v(.commitments, []); relationships = v(.relationships, []); nextMeeting = v(.nextMeeting, .empty)
+        projects = v(.projects, [])
+    }
+
     static let empty = StakeholderProfile(summary: "", role: "", power: "", powerReason: "", interest: "",
                                           personality: [], motivations: [], topics: [], readings: [], advice: [], openQuestions: [])
 
@@ -67,8 +164,17 @@ struct StakeholderProfile: Codable, Hashable {
         let topics = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["topic","interest","stance","evidence"],"properties":{"topic":{"type":"string"},"interest":{"type":"string","enum":["high","medium","low"]},"stance":{"type":"string"},"evidence":"# + evidence + "}}}"
         let readings = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["meetingId","time","quote","meaning"],"properties":{"meetingId":{"type":"integer"},"time":{"type":"string"},"quote":{"type":"string"},"meaning":{"type":"string"}}}}"#
         let strings = #"{"type":"array","items":{"type":"string"}}"#
-        return #"{"type":"object","additionalProperties":false,"required":["summary","role","power","powerReason","interest","personality","motivations","topics","readings","advice","openQuestions"],"properties":{"summary":{"type":"string"},"role":{"type":"string"},"power":{"type":"string","enum":["high","medium","low"]},"powerReason":{"type":"string"},"interest":{"type":"string","enum":["high","medium","low"]},"personality":"# + point
-            + #","motivations":"# + point + #","topics":"# + topics + #","readings":"# + readings + #","advice":"# + strings + #","openQuestions":"# + strings + "}}"
+        let commitments = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["who","text","meetingId","time"],"properties":{"who":{"type":"string","enum":["them","us"]},"text":{"type":"string"},"meetingId":{"type":"integer"},"time":{"type":"string"}}}}"#
+        let relationships = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["person","relation","note"],"properties":{"person":{"type":"string"},"relation":{"type":"string"},"note":{"type":"string"}}}}"#
+        let next = #"{"type":"object","additionalProperties":false,"required":["objective","talkingPoints","questions","avoid"],"properties":{"objective":{"type":"string"},"talkingPoints":"# + strings + #","questions":"# + strings + #","avoid":"# + strings + "}}"
+        let level = #"{"type":"string","enum":["high","medium","low"]}"#
+        let attitude = #"{"type":"string","enum":["champion","supporter","neutral","skeptic","blocker"]}"#
+        let projects = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["folder","power","interest","attitude","note"],"properties":{"folder":{"type":"string"},"power":"# + level + #","interest":"# + level + #","attitude":"# + attitude + #","note":{"type":"string"}}}}"#
+        return #"{"type":"object","additionalProperties":false,"required":["summary","role","organization","power","powerReason","interest","attitude","attitudeTrend","decisionRole","confidence","personality","motivations","needs","topics","readings","commitments","relationships","nextMeeting","projects","advice","openQuestions"],"properties":{"summary":{"type":"string"},"role":{"type":"string"},"organization":{"type":"string"},"power":"# + level
+            + #","powerReason":{"type":"string"},"interest":"# + level
+            + #","attitude":{"type":"string","enum":["champion","supporter","neutral","skeptic","blocker"]},"attitudeTrend":{"type":"string","enum":["improving","stable","declining","unknown"]},"decisionRole":{"type":"string","enum":["decision maker","influencer","gatekeeper","expert","user","other"]},"confidence":"# + level
+            + #","personality":"# + point + #","motivations":"# + point + #","needs":"# + strings + #","topics":"# + topics + #","readings":"# + readings
+            + #","commitments":"# + commitments + #","relationships":"# + relationships + #","nextMeeting":"# + next + #","projects":"# + projects + #","advice":"# + strings + #","openQuestions":"# + strings + "}}"
     }()
 
     static let format = LLMClient.OutputFormat(schema: jsonSchema, toolName: "save_stakeholder_profile",
@@ -94,6 +200,14 @@ struct StakeholderProfile: Codable, Hashable {
             r.time = TimeFormat.clean(r.time)
             return meetingIds.contains(r.meetingId) && TimeFormat.seconds(r.time) != nil ? r : nil
         }
+        p.commitments = commitments.compactMap { c in
+            var c = c
+            c.time = TimeFormat.clean(c.time)
+            guard !c.text.isEmpty, meetingIds.contains(c.meetingId) else { return nil }
+            if TimeFormat.seconds(c.time) == nil { c.time = "" }
+            return c
+        }
+        p.projects = projects.filter { !$0.folder.isEmpty }
         return p
     }
 }
@@ -107,6 +221,12 @@ struct StakeholderRecord: SnakeCaseRecord, Hashable {
     var language: String         // 分析用的語言
     var provider: String
     var updatedAt: String = Clock.now()
+    /// 使用者自己填的：角色、組織、知道的背景（重新分析時保留，送給整理工具當成事實）
+    var userRole: String = ""
+    var userOrg: String = ""
+    var userNotes: String = ""
+
+    var hasUserContext: Bool { !userRole.isEmpty || !userOrg.isEmpty || !userNotes.isEmpty }
 
     var decoded: StakeholderProfile? { try? JSONDecoder().decode(StakeholderProfile.self, from: Data(profile.utf8)) }
     var analyzedMeetings: Set<Int64> { Set((try? JSONDecoder().decode([Int64].self, from: Data(meetingIds.utf8))) ?? []) }
@@ -117,11 +237,56 @@ extension AppDatabase {
         try pool.read { db in try StakeholderRecord.fetchOne(db, sql: "SELECT * FROM stakeholder_profiles WHERE person_id = ?", arguments: [personId]) }
     }
 
+    /// 存分析：使用者填的背景照舊（不會被分析蓋掉）
     func saveStakeholderProfile(_ record: StakeholderRecord) throws {
         try pool.write { db in
-            try db.execute(sql: "DELETE FROM stakeholder_profiles WHERE person_id = ?", arguments: [record.personId])
             var record = record
+            if let old = try StakeholderRecord.fetchOne(db, sql: "SELECT * FROM stakeholder_profiles WHERE person_id = ?", arguments: [record.personId]) {
+                record.userRole = old.userRole
+                record.userOrg = old.userOrg
+                record.userNotes = old.userNotes
+            }
+            try db.execute(sql: "DELETE FROM stakeholder_profiles WHERE person_id = ?", arguments: [record.personId])
             try record.insert(db)
+        }
+    }
+
+    /// 使用者填的角色、組織、背景；還沒分析過也可以先填（profile 先放空的）
+    func saveStakeholderContext(_ personId: Int64, role: String, org: String, notes: String) throws {
+        try pool.write { db in
+            let exists = try Bool.fetchOne(db, sql: "SELECT 1 FROM stakeholder_profiles WHERE person_id = ?", arguments: [personId]) ?? false
+            if exists {
+                try db.execute(sql: "UPDATE stakeholder_profiles SET user_role = ?, user_org = ?, user_notes = ? WHERE person_id = ?",
+                               arguments: [role, org, notes, personId])
+            } else {
+                var record = StakeholderRecord(personId: personId, profile: "", meetingIds: "[]", language: "", provider: "",
+                                               userRole: role, userOrg: org, userNotes: notes)
+                try record.insert(db)
+            }
+        }
+    }
+
+    /// 所有分析過的人（關係人地圖）
+    func allStakeholderProfiles() throws -> [StakeholderRecord] {
+        try pool.read { db in try StakeholderRecord.fetchAll(db, sql: "SELECT * FROM stakeholder_profiles WHERE profile <> ''") }
+    }
+
+    /// 合併人物前：被併掉的人的背景接到留下的人（留下的人沒填的欄位才接），分析之後重做
+    func mergeStakeholderContext(from: Int64, into: Int64) throws {
+        try pool.write { db in
+            guard let old = try StakeholderRecord.fetchOne(db, sql: "SELECT * FROM stakeholder_profiles WHERE person_id = ?", arguments: [from]),
+                  old.hasUserContext else { return }
+            if var keep = try StakeholderRecord.fetchOne(db, sql: "SELECT * FROM stakeholder_profiles WHERE person_id = ?", arguments: [into]) {
+                if keep.userRole.isEmpty { keep.userRole = old.userRole }
+                if keep.userOrg.isEmpty { keep.userOrg = old.userOrg }
+                if keep.userNotes.isEmpty { keep.userNotes = old.userNotes } else if !old.userNotes.isEmpty { keep.userNotes += "\n" + old.userNotes }
+                try db.execute(sql: "UPDATE stakeholder_profiles SET user_role = ?, user_org = ?, user_notes = ? WHERE person_id = ?",
+                               arguments: [keep.userRole, keep.userOrg, keep.userNotes, into])
+            } else {
+                var record = StakeholderRecord(personId: into, profile: "", meetingIds: "[]", language: "", provider: "",
+                                               userRole: old.userRole, userOrg: old.userOrg, userNotes: old.userNotes)
+                try record.insert(db)
+            }
         }
     }
 
@@ -160,6 +325,7 @@ enum StakeholderPrompt {
         var title: String
         var date: String
         var context: [String]   // 摘要、決議
+        var folder: String = ""  // 這場會議放在哪個資料夾（案子）
         var lines: [String]     // [時間] 說話者：內容（他自己的話，加上前一句別人說的話當上下文）
     }
 
@@ -183,13 +349,31 @@ enum StakeholderPrompt {
         8. openQuestions: what cannot be judged yet from these meetings.
         9. When a previous profile is given, update it with the new meetings: keep what still holds, revise what the new evidence changes, add new points, and keep the old evidence that still applies. Do not drop earlier meetings' insights just because they are not in the new excerpts.
         10. Be concise and professional. This is a private working note for the user; avoid judgmental or offensive wording, and do not speculate about health, religion, politics or other sensitive personal attributes.
-        11. Write every text value (summary, role, powerReason, personality, motivations, topics, stance, meaning, advice, openQuestions) in \(name). Keep quotes in the original language of the transcript. power and interest stay as high / medium / low.
+        11. Write every text value (summary, role, organization, powerReason, personality, motivations, needs, topics, stance, meaning, commitments, relationships, nextMeeting, advice, openQuestions) in \(name). Keep quotes in the original language of the transcript. The enum fields (power, interest, attitude, attitudeTrend, decisionRole, confidence, who) stay exactly as the allowed English values.
+        12. If "Facts from the user" are given, they are ground truth: use them for role, organization, power and decision role, and interpret everything the target says in that light. Do not contradict them; if the meetings seem to conflict, mention it in openQuestions.
+        13. organization: the company or team the target belongs to (client, our firm, vendor, department), if known.
+        14. attitude toward the user's work / project / proposal: champion (actively advocates), supporter, neutral, skeptic (doubts, pushes back), blocker (actively resists). attitudeTrend: improving / stable / declining across the meetings in date order, or unknown with only one meeting.
+        15. decisionRole: decision maker (signs off, owns budget), influencer (shapes the decision), gatekeeper (controls access or process), expert (technical/subject authority), user (affected by the outcome), other.
+        16. confidence: high when the target spoke a lot across several meetings, low when there is little to go on (one short meeting, few lines).
+        17. needs: 2 to 5 concrete things the target needs from the user or the user's team (information, deliverables, reassurance, decisions).
+        18. commitments: promises in the meetings — who "them" (the target promised) or "us" (the user / the user's side promised the target), the commitment in a few words, meetingId and time. Only explicit commitments.
+        19. relationships: how the target relates to other named people in the excerpts (defers to, aligned with, tension with, manages, reports to), with a short note. Only what the excerpts show.
+        20. nextMeeting: a practical plan for the user's next conversation with the target — objective (one sentence), talkingPoints (2 to 4), questions to ask to close the openQuestions (2 to 4), avoid (1 to 3 things that would likely backfire).
+        21. projects: meetings are grouped into projects (the "project/folder" shown on each meeting). For EACH project the target appears in, assess power, interest and attitude on THAT project specifically — the same person can be a decision maker on one project and a bystander on another — with a one-sentence note on their stake in it. folder must be exactly the project name as given. Keep entries from the previous profile for projects not in the new excerpts. The top-level power / interest / attitude are the overall view across all projects.
         """
     }
 
-    static func prompt(person: String, otherNames: [String], previous: StakeholderProfile?, meetings: [MeetingMaterial]) -> String {
+    static func prompt(person: String, otherNames: [String], previous: StakeholderProfile?, meetings: [MeetingMaterial],
+                       userRole: String = "", userOrg: String = "", userNotes: String = "") -> String {
         var out: [String] = []
         out.append("Target person: \(person)")
+        if !userRole.isEmpty || !userOrg.isEmpty || !userNotes.isEmpty {
+            out.append("")
+            out.append("Facts from the user (ground truth):")
+            if !userRole.isEmpty { out.append("- Role / title: \(userRole)") }
+            if !userOrg.isEmpty { out.append("- Organization: \(userOrg)") }
+            if !userNotes.isEmpty { out.append("- What the user knows: \(userNotes)") }
+        }
         if !otherNames.isEmpty { out.append("Other names this person may be referred to by in the transcript: \(otherNames.joined(separator: ", "))") }
         if let previous {
             out.append("")
@@ -198,7 +382,7 @@ enum StakeholderPrompt {
         }
         for m in meetings {
             out.append("")
-            out.append("[Meeting \(m.id)] \(m.title) (\(m.date))")
+            out.append("[Meeting \(m.id)] \(m.title) (\(m.date))" + (m.folder.isEmpty ? "" : " — project/folder: \(m.folder)"))
             if !m.context.isEmpty {
                 out.append("Meeting notes (context):")
                 out += m.context.map { "- " + $0 }

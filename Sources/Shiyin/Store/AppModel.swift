@@ -1728,6 +1728,9 @@ final class AppModel {
     var analyzingStakeholders: Set<Int64> = []
     /// 當成「自己」、不做分析的人
     var stakeholderMe: Set<Int64> = []
+    /// 關係人地圖看哪個資料夾（空字串 = 所有會議）
+    var stakeholderMapFolder = ""
+    var stakeholderMapChosen = false
 
     // MARK: 認識的人（設定頁，design §21.4）
 
@@ -1748,8 +1751,12 @@ final class AppModel {
     }
 
     func renamePerson(_ id: Int64, to name: String) {
+        // 合併到另一個人：先把使用者填的背景接過去，合併完重新分析留下的人
+        let target = peopleOverview.first { $0.id != id && $0.name.caseInsensitiveCompare(name.trimmingCharacters(in: .whitespaces)) == .orderedSame }
+        if let target { try? db.mergeStakeholderContext(from: id, into: target.id) }
         perform { try db.renamePerson(id, to: name) }
         reloadPeople()
+        if let target, AppSettings.stakeholderAnalysis, (try? db.stakeholderProfile(target.id)) != nil { analyzeStakeholder(target.id) }
     }
 
     func deletePerson(_ id: Int64) {

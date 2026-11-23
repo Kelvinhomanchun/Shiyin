@@ -2,7 +2,8 @@
   "sourceLanguage": "zh-Hant",
   "strings": {
     "": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "## 問題描述": {
       "extractionState": "manual",
@@ -56,7 +57,8 @@
       }
     },
     "%@ %@": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "%@ 回傳 HTTP %lld%@：%@": {
       "extractionState": "manual",
@@ -149,7 +151,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ isn’t signed in. Shiyin will use it once you sign in."
+            "value": "%@ isn’t signed in. KelNote will use it once you sign in."
           }
         },
         "zh-Hans": {
@@ -212,7 +214,8 @@
       }
     },
     "%@・%@": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "%@・%@・大約 %lld 人": {
       "extractionState": "manual",
@@ -339,13 +342,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ failed (error %d). Make sure Shiyin is allowed to record system audio."
+            "value": "%@ failed (error %d). Make sure KelNote is allowed to record system audio."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@失败（错误代码 %d）。请确认已允许拾音“录制系统音频”"
+            "value": "%@失败（错误代码 %d）。请确认已允许 KelNote“录制系统音频”"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@失敗（錯誤代碼 %d）。請確認已允許 KelNote「錄製系統音訊」"
           }
         }
       }
@@ -812,7 +821,8 @@
       }
     },
     "%lld": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "%lld 人": {
       "extractionState": "manual",
@@ -1047,7 +1057,8 @@
       }
     },
     "%lld%%": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "%lld／%lld 段": {
       "extractionState": "manual",
@@ -1067,7 +1078,8 @@
       }
     },
     "+%lld": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "- %@ %@：%@": {
       "extractionState": "manual",
@@ -1160,13 +1172,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "- Shiyin %1$@ (build %2$@)"
+            "value": "- KelNote %1$@ (build %2$@)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "- 拾音 %@（build %@）"
+            "value": "- KelNote %@（build %@）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- KelNote %@（build %@）"
           }
         }
       }
@@ -1325,7 +1343,8 @@
       }
     },
     "API key": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "API key 存在 macOS 鑰匙圈，不會寫進任何檔案。": {
       "extractionState": "manual",
@@ -1345,7 +1364,8 @@
       }
     },
     "Anthropic API": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "Apple Silicon（M1 以上）": {
       "extractionState": "manual",
@@ -1416,10 +1436,12 @@
       }
     },
     "ChatGPT": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "Claude": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "Claude Code 的用量額度用完了，等恢復後再試，或到設定 → 整理工具先換成 Codex 或 API。": {
       "extractionState": "manual",
@@ -1495,13 +1517,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can search and read your meeting notes and transcripts (read-only), even when Shiyin isn't open. What they read is handled by that AI tool and leaves this Mac, just like when meeting notes are written."
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can search and read your meeting notes and transcripts (read-only), even when KelNote isn't open. What they read is handled by that AI tool and leaves this Mac, just like when meeting notes are written."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以搜索、读你的会议记录和逐字稿（只能读、不能改），拾音不用开着。读到的内容会交给那个 AI 工具处理，跟整理会议记录一样会离开这台电脑。"
+            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以搜索、读你的会议记录和逐字稿（只能读、不能改），KelNote 不用开着。读到的内容会交给那个 AI 工具处理，跟整理会议记录一样会离开这台电脑。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以搜尋、讀你的會議紀錄和逐字稿（只能讀、不能改），KelNote 不用開著。讀到的內容會交給那個 AI 工具處理，跟整理會議紀錄一樣會離開這台電腦。"
           }
         }
       }
@@ -1512,13 +1540,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your Shiyin meetings directly: in Settings › AI Tools, turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. Shiyin doesn't need to be open."
+            "value": "AI tools that support MCP, such as Claude Code, Claude Desktop and Codex, can read your KelNote meetings directly: in Settings › AI Tools, turn on “Let AI tools read meetings”, then click “Add to Claude Code”, “Add to Codex” or “Add to Claude Desktop”. For other tools, use Copy and paste the settings yourself. KelNote doesn't need to be open."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以直接读拾音的会议：到“设置 → AI 工具”打开“让 AI 工具读取会议”，再按“加到 Claude Code”“加到 Codex”或“加到 Claude Desktop”。其他工具用“复制”自己粘贴设置。拾音不用开着。"
+            "value": "Claude Code、Claude Desktop、Codex 等支持 MCP 的 AI 工具可以直接读 KelNote 的会议：到“设置 → AI 工具”打开“让 AI 工具读取会议”，再按“加到 Claude Code”“加到 Codex”或“加到 Claude Desktop”。其他工具用“复制”自己粘贴设置。KelNote 不用开着。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code、Claude Desktop、Codex 等支援 MCP 的 AI 工具可以直接讀 KelNote 的會議：到「設定 → AI 工具」打開「讓 AI 工具讀取會議」，再按「加到 Claude Code」「加到 Codex」或「加到 Claude Desktop」。其他工具用「複製」自己貼上設定。KelNote 不用開著。"
           }
         }
       }
@@ -1546,13 +1580,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin couldn't read Claude Desktop's settings file, so it wasn't changed: %@"
+            "value": "KelNote couldn't read Claude Desktop's settings file, so it wasn't changed: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Desktop 的配置文件不是拾音看得懂的格式，没有改动：%@"
+            "value": "Claude Desktop 的配置文件不是 KelNote 看得懂的格式，没有改动：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Desktop 的設定檔不是 KelNote 看得懂的格式，沒有改動：%@"
           }
         }
       }
@@ -1728,10 +1768,12 @@
       }
     },
     "Gemini": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "Gemini API": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "Gemini 沒有完成整理（status：%@）": {
       "extractionState": "manual",
@@ -1802,7 +1844,8 @@
       }
     },
     "OpenAI API": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "OpenAI 相容 API": {
       "extractionState": "manual",
@@ -2014,13 +2057,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zoom、Teams、Webex、Google Meet（浏览器）等开始用麦克风、拾音没在录音时提醒你，不会自动开始录音。会议 app 停止用麦克风时倒数 60 秒，没按“继续录”就停止并转录；关掉“自动停止”时只问要不要停止。"
+            "value": "Zoom、Teams、Webex、Google Meet（浏览器）等开始用麦克风、KelNote 没在录音时提醒你，不会自动开始录音。会议 app 停止用麦克风时倒数 60 秒，没按“继续录”就停止并转录；关掉“自动停止”时只问要不要停止。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When Zoom, Teams, Webex, Google Meet (in a browser) or another meeting app starts using the microphone and Shiyin isn't recording, Shiyin asks whether to record; it never starts recording on its own. When the meeting app stops using the microphone, a 60-second countdown starts and the recording stops and is transcribed unless you click Keep Recording. With automatic stop turned off, Shiyin only asks whether to stop."
+            "value": "When Zoom, Teams, Webex, Google Meet (in a browser) or another meeting app starts using the microphone and KelNote isn't recording, KelNote asks whether to record; it never starts recording on its own. When the meeting app stops using the microphone, a 60-second countdown starts and the recording stops and is transcribed unless you click Keep Recording. With automatic stop turned off, KelNote only asks whether to stop."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom、Teams、Webex、Google Meet（瀏覽器）等開始用麥克風、KelNote 沒在錄音時提醒你，不會自動開始錄音。會議 app 停止用麥克風時倒數 60 秒，沒按「繼續錄」就停止並轉錄；關掉「自動停止」時只問要不要停止。"
           }
         }
       }
@@ -2133,13 +2182,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS didn’t let Shiyin read the API key from the keychain. Try again, and when macOS asks, enter this Mac’s login password (not the API key) and click “Always Allow”. Or paste the key again in Settings → Summarizer."
+            "value": "macOS didn’t let KelNote read the API key from the keychain. Try again, and when macOS asks, enter this Mac’s login password (not the API key) and click “Always Allow”. Or paste the key again in Settings → Summarizer."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS 没有让拾音读取钥匙串里的 API key。再试一次时，系统询问就输入这台 Mac 的登录密码（不是 API key），按“永远允许”；或到设置 → 整理工具重新粘贴 key。"
+            "value": "macOS 没有让 KelNote 读取钥匙串里的 API key。再试一次时，系统询问就输入这台 Mac 的登录密码（不是 API key），按“永远允许”；或到设置 → 整理工具重新粘贴 key。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 沒有讓 KelNote 讀取鑰匙圈裡的 API key。再試一次時，系統詢問就輸入這台 Mac 的登入密碼（不是 API key），按「永遠允許」；或到設定 → 整理工具重新貼上 key。"
           }
         }
       }
@@ -2179,13 +2234,16 @@
       }
     },
     "yyyy-MM-dd": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "•": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "…": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "……還有 %lld 項，完整說明在官網。": {
       "extractionState": "manual",
@@ -2380,13 +2438,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@” is password-protected, so Shiyin can't read it. Remove the password and add it again."
+            "value": "“%@” is password-protected, so KelNote can't read it. Remove the password and add it again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@”有密码保护，拾音读不了。请先移除密码再加入。"
+            "value": "“%@”有密码保护，KelNote 读不了。请先移除密码再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」有密碼保護，KelNote 讀不了。請先移除密碼再加入。"
           }
         }
       }
@@ -2465,13 +2529,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@” is larger than 200 MB. Shiyin doesn't read documents that large."
+            "value": "“%@” is larger than 200 MB. KelNote doesn't read documents that large."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@”超过 200 MB，拾音不读这么大的文档。"
+            "value": "“%@”超过 200 MB，KelNote 不读这么大的文档。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」超過 200 MB，KelNote 不讀這麼大的文件。"
           }
         }
       }
@@ -2482,13 +2552,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "General, “Hide Shiyin's windows when sharing the screen”: when on, people can't see Shiyin when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
+            "value": "General, “Hide KelNote's windows when sharing the screen”: when on, people can't see KelNote when you share your whole screen in Zoom, Teams, or Google Meet, and screenshots and screen recordings won't show it either."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“一般”的“分享画面时藏起拾音的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到拾音，截图、屏幕录像也拍不到。"
+            "value": "“一般”的“分享画面时藏起 KelNote 的窗口”：打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时别人看不到 KelNote，截图、屏幕录像也拍不到。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「一般」的「分享畫面時藏起 KelNote 的視窗」：打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時別人看不到 KelNote，截圖、螢幕錄影也拍不到。"
           }
         }
       }
@@ -2533,13 +2609,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Status & Updates: check for updates (when a new version is available Shiyin asks, then downloads, verifies and relaunches; also available from the Shiyin menu → Check for Updates…), and the environment check; the space used by recordings and models is under Models & Storage."
+            "value": "Status & Updates: check for updates (when a new version is available KelNote asks, then downloads, verifies and relaunches; also available from the KelNote menu → Check for Updates…), and the environment check; the space used by recordings and models is under Models & Storage."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“检查与更新”：检查更新（有新版时拾音会询问，同意后自动下载、验证并重新打开；也可以从“拾音”菜单选“检查更新…”）、环境检查；录音和模型占用的空间在“模型与空间”。"
+            "value": "“检查与更新”：检查更新（有新版时 KelNote 会询问，同意后自动下载、验证并重新打开；也可以从“KelNote”菜单选“检查更新…”）、环境检查；录音和模型占用的空间在“模型与空间”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「檢查與更新」：檢查更新（有新版時 KelNote 會詢問，同意後自動下載、驗證並重新打開；也可以從「KelNote」選單選「檢查更新…」）、環境檢查；錄音和模型佔用的空間在「模型與空間」。"
           }
         }
       }
@@ -2550,13 +2632,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Speakers and Glossary: the people Shiyin recognizes and their voiceprints, which you can rename or delete, or turn off remembering voices; the glossary holds the correct spelling of system names, product names and people's names, which greatly improves proper-noun accuracy."
+            "value": "Speakers and Glossary: the people KelNote recognizes and their voiceprints, which you can rename or delete, or turn off remembering voices; the glossary holds the correct spelling of system names, product names and people's names, which greatly improves proper-noun accuracy."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“说话者”“词汇表”：拾音认识的人和他们的声纹，可以改名、删除，或关掉记住声音的功能；词汇表加入系统名、产品名、人名的正确写法，这对专有名词的正确率影响很大。"
+            "value": "“说话者”“词汇表”：KelNote 认识的人和他们的声纹，可以改名、删除，或关掉记住声音的功能；词汇表加入系统名、产品名、人名的正确写法，这对专有名词的正确率影响很大。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「說話者」「詞彙表」：KelNote 認識的人和他們的聲紋，可以改名、刪除，或關掉記住聲音的功能；詞彙表加入系統名、產品名、人名的正確寫法，這對專有名詞的正確率影響很大。"
           }
         }
       }
@@ -2579,7 +2667,8 @@
       }
     },
     "・": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {}
     },
     "一般": {
       "extractionState": "manual",
@@ -2871,7 +2960,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin will reopen when it's done"
+            "value": "KelNote will reopen when it's done"
           }
         },
         "zh-Hans": {
@@ -3381,13 +3470,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can open this guide again any time from the Help menu (⌘?) or the Shiyin icon in the menu bar."
+            "value": "You can open this guide again any time from the Help menu (⌘?) or the KelNote icon in the menu bar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "之后随时可以从“辅助说明”菜单（⌘?）或菜单栏的拾音图标，再打开这份说明。"
+            "value": "之后随时可以从“辅助说明”菜单（⌘?）或菜单栏的 KelNote 图标，再打开这份说明。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之後隨時可以從「輔助說明」選單（⌘?）或選單列的 KelNote 圖示，再打開這份說明。"
           }
         }
       }
@@ -3449,13 +3544,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "With many people, noise, or a phone on the table, telling Shiyin roughly how many people there are helps it tell speakers apart"
+            "value": "With many people, noise, or a phone on the table, telling KelNote roughly how many people there are helps it tell speakers apart"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "人多、吵杂或手机放在桌上录音时，先告诉拾音大约几个人，说话者会分得比较准"
+            "value": "人多、吵杂或手机放在桌上录音时，先告诉 KelNote 大约几个人，说话者会分得比较准"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人多、吵雜或手機放在桌上錄音時，先告訴 KelNote 大約幾個人，說話者會分得比較準"
           }
         }
       }
@@ -3636,13 +3737,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The enterprise server asked to redirect to another address (HTTP %lld). Shiyin doesn't follow redirects. Check the URL, or ask your company's administrator to check the server settings."
+            "value": "The enterprise server asked to redirect to another address (HTTP %lld). KelNote doesn't follow redirects. Check the URL, or ask your company's administrator to check the server settings."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "企业服务器要求转到别的网址（HTTP %lld），拾音不会跟着转。请确认网址，或请公司的管理者检查服务器的设置。"
+            "value": "企业服务器要求转到别的网址（HTTP %lld），KelNote 不会跟着转。请确认网址，或请公司的管理者检查服务器的设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "企業伺服器要求轉到別的網址（HTTP %lld），KelNote 不會跟著轉。請確認網址，或請公司的管理者檢查伺服器的設定。"
           }
         }
       }
@@ -3772,13 +3879,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You have the Claude desktop app. Install Claude Code (the command-line version) as well, and Shiyin can summarize with your Claude subscription (Pro or higher)."
+            "value": "You have the Claude desktop app. Install Claude Code (the command-line version) as well, and KelNote can summarize with your Claude subscription (Pro or higher)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你有 Claude 桌面版：另外安装 Claude Code（命令行版）之后，拾音就能用你的 Claude 订阅（Pro 以上）整理。"
+            "value": "你有 Claude 桌面版：另外安装 Claude Code（命令行版）之后，KelNote 就能用你的 Claude 订阅（Pro 以上）整理。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你有 Claude 桌面版：另外安裝 Claude Code（命令列版）之後，KelNote 就能用你的 Claude 訂閱（Pro 以上）整理。"
           }
         }
       }
@@ -3903,13 +4016,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "For example: “What prices did we discuss with clients last month?” or “What did we decide about sending email?” Shiyin first finds the relevant parts of your meetings, then asks the summarizer. Answers show which meeting and what time each point comes from."
+            "value": "For example: “What prices did we discuss with clients last month?” or “What did we decide about sending email?” KelNote first finds the relevant parts of your meetings, then asks the summarizer. Answers show which meeting and what time each point comes from."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "例如：“上个月跟客户谈过哪些价格？”“寄信的机制最后怎么决定的？”拾音会先找出相关的会议片段，再请整理工具回答，回答附上是哪一场会议、哪个时间点。"
+            "value": "例如：“上个月跟客户谈过哪些价格？”“寄信的机制最后怎么决定的？”KelNote 会先找出相关的会议片段，再请整理工具回答，回答附上是哪一场会议、哪个时间点。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：「上個月跟客戶談過哪些價格？」「寄信的機制最後怎麼決定的？」KelNote 會先找出相關的會議片段，再請整理工具回答，回答附上是哪一場會議、哪個時間點。"
           }
         }
       }
@@ -4221,13 +4340,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "侧边栏上方切到“人物”，可以看拾音认识的每个人：一起开过哪些会议、每场说了多久、负责哪些待办（点了就打开那场会议、从那里播放）。人物页的名字下面可以重新命名、把被记成两个名字的同一个人合并，或移除这个人；侧边栏的人按右键或滑过时右边的“⋯”也一样。"
+            "value": "侧边栏上方切到“人物”，可以看 KelNote 认识的每个人：一起开过哪些会议、每场说了多久、负责哪些待办（点了就打开那场会议、从那里播放）。人物页的名字下面可以重新命名、把被记成两个名字的同一个人合并，或移除这个人；侧边栏的人按右键或滑过时右边的“⋯”也一样。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Switch to People at the top of the sidebar to see everyone Shiyin knows: the meetings you had together, how long they spoke in each, and the action items they own (click one to open that meeting and play from there). Below a person’s name you can rename them, merge two names that are the same person, or remove them; right-click a person in the sidebar, or use the “⋯” that appears when you hover, to do the same."
+            "value": "Switch to People at the top of the sidebar to see everyone KelNote knows: the meetings you had together, how long they spoke in each, and the action items they own (click one to open that meeting and play from there). Below a person’s name you can rename them, merge two names that are the same person, or remove them; right-click a person in the sidebar, or use the “⋯” that appears when you hover, to do the same."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "側欄上方切到「人物」，可以看 KelNote 認識的每個人：一起開過哪些會議、每場說了多久、負責哪些待辦（點了就打開那場會議、從那裡播放）。人物頁的名字下面可以重新命名、把被記成兩個名字的同一個人合併，或移除這個人；側欄的人按右鍵或滑過時右邊的「⋯」也一樣。"
           }
         }
       }
@@ -4374,13 +4499,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "允许之后，拾音会自己接上电脑的声音"
+            "value": "允许之后，KelNote 会自己接上电脑的声音"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once allowed, Shiyin picks up the computer's audio on its own"
+            "value": "Once allowed, KelNote picks up the computer's audio on its own"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許之後，KelNote 會自己接上電腦的聲音"
           }
         }
       }
@@ -4442,13 +4573,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Move Shiyin to the Applications folder and open it from there first, so AI tools can find it."
+            "value": "Move KelNote to the Applications folder and open it from there first, so AI tools can find it."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "先把拾音拖进“应用程序”文件夹再打开，AI 工具才找得到它。"
+            "value": "先把 KelNote 拖进“应用程序”文件夹再打开，AI 工具才找得到它。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先把 KelNote 拖進「應用程式」資料夾再打開，AI 工具才找得到它。"
           }
         }
       }
@@ -4743,13 +4880,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If your company runs a Shiyin enterprise server, enter the URL they gave you, click Sign In, and sign in with your company account on the page that opens. Recordings are then transcribed on the company's server — fast even without an NVIDIA graphics card — and summaries can use the company's model."
+            "value": "If your company runs a KelNote enterprise server, enter the URL they gave you, click Sign In, and sign in with your company account on the page that opens. Recordings are then transcribed on the company's server — fast even without an NVIDIA graphics card — and summaries can use the company's model."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "公司有拾音的企业服务器时，填入公司给的网址、按“登录”，在打开的网页用公司账号登录。登录后录音交给公司的服务器转录，没有 NVIDIA 显卡的电脑也很快；整理也可以用公司提供的模型。"
+            "value": "公司有 KelNote 的企业服务器时，填入公司给的网址、按“登录”，在打开的网页用公司账号登录。登录后录音交给公司的服务器转录，没有 NVIDIA 显卡的电脑也很快；整理也可以用公司提供的模型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公司有 KelNote 的企業伺服器時，填入公司給的網址、按「登入」，在打開的網頁用公司帳號登入。登入後錄音交給公司的伺服器轉錄，沒有 NVIDIA 顯示卡的電腦也很快；整理也可以用公司提供的模型。"
           }
         }
       }
@@ -4760,7 +4903,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your company's Shiyin server has turned this off."
+            "value": "Your company's KelNote server has turned this off."
           }
         },
         "zh-Hans": {
@@ -5050,7 +5193,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keep reading a little longer: Shiyin needs at least 10 seconds of speech."
+            "value": "Keep reading a little longer: KelNote needs at least 10 seconds of speech."
           }
         }
       }
@@ -5146,13 +5289,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分享画面时藏起拾音的窗口"
+            "value": "分享画面时藏起 KelNote 的窗口"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hide Shiyin's windows when sharing the screen"
+            "value": "Hide KelNote's windows when sharing the screen"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享畫面時藏起 KelNote 的視窗"
           }
         }
       }
@@ -5665,7 +5814,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete the voice samples of everyone Shiyin knows?"
+            "value": "Delete the voice samples of everyone KelNote knows?"
           }
         },
         "zh-Hans": {
@@ -5852,7 +6001,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record your own voice in Settings → Speakers → My voice (read the passage on screen for about 20 seconds), and Shiyin recognizes you from your first meeting: a speaker who sounds like you gets your name, or Shiyin asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
+            "value": "Record your own voice in Settings → Speakers → My voice (read the passage on screen for about 20 seconds), and KelNote recognizes you from your first meeting: a speaker who sounds like you gets your name, or KelNote asks you in the questions to confirm when it isn't sure. The recording is used only to work out your voice profile and is deleted right after."
           }
         },
         "zh-Hans": {
@@ -6153,13 +6302,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Then just ask in the AI tool, for example “List my meetings this week”, “What are the action items from last week's meetings?” or “Find the meetings that discussed the budget and summarize them for my manager”. It also works together with your other tools (turning action items into tickets, writing a weekly report). Meeting links in the answers open Shiyin at that moment."
+            "value": "Then just ask in the AI tool, for example “List my meetings this week”, “What are the action items from last week's meetings?” or “Find the meetings that discussed the budget and summarize them for my manager”. It also works together with your other tools (turning action items into tickets, writing a weekly report). Meeting links in the answers open KelNote at that moment."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "加好之后在 AI 工具里直接问，例如“列出我这周的会议”“上周所有会议的待办有哪些”“找出提到预算的会议，整理成一段给主管”，也可以跟其他工具一起用（把待办开成工单、写周报）。回答里的会议链接点了会打开拾音、跳到那个时间点。"
+            "value": "加好之后在 AI 工具里直接问，例如“列出我这周的会议”“上周所有会议的待办有哪些”“找出提到预算的会议，整理成一段给主管”，也可以跟其他工具一起用（把待办开成工单、写周报）。回答里的会议链接点了会打开 KelNote、跳到那个时间点。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開 KelNote、跳到那個時間點。"
           }
         }
       }
@@ -6204,13 +6359,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Includes the recording, transcript, speakers, meeting notes, your notes and bookmarks. A colleague can double-click it to import into Shiyin."
+            "value": "Includes the recording, transcript, speakers, meeting notes, your notes and bookmarks. A colleague can double-click it to import into KelNote."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "包含录音、逐字稿、说话者、会议记录、笔记和重点标记。传给同事后，对方双击就能导入拾音。"
+            "value": "包含录音、逐字稿、说话者、会议记录、笔记和重点标记。传给同事后，对方双击就能导入 KelNote。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含錄音、逐字稿、說話者、會議紀錄、筆記和重點標記。傳給同事後，對方雙擊就能匯入 KelNote。"
           }
         }
       }
@@ -6522,13 +6683,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reason: %@\n\nYour data has not been changed. The backup made before the upgrade is in: %@\nPlease send a screenshot of this message to whoever maintains Shiyin."
+            "value": "Reason: %@\n\nYour data has not been changed. The backup made before the upgrade is in: %@\nPlease send a screenshot of this message to whoever maintains KelNote."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "原因：%@\n\n你的资料没有被改动。升级前的备份在：%@\n请把这个消息截图给维护拾音的人。"
+            "value": "原因：%@\n\n你的资料没有被改动。升级前的备份在：%@\n请把这个消息截图给维护 KelNote 的人。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原因：%@\n\n你的資料沒有被改動。升級前的備份在：%@\n請把這個訊息截圖給維護 KelNote 的人。"
           }
         }
       }
@@ -6874,13 +7041,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only works out again who is speaking; the transcript text doesn't change. With many people, a noisy room or a phone recording from across the table, telling Shiyin roughly how many people there are helps."
+            "value": "Only works out again who is speaking; the transcript text doesn't change. With many people, a noisy room or a phone recording from across the table, telling KelNote roughly how many people there are helps."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "只重新分辨谁在说话，逐字稿的文字不会变。人多、吵杂或手机远距收音时，告诉拾音大约几个人会分得比较准。"
+            "value": "只重新分辨谁在说话，逐字稿的文字不会变。人多、吵杂或手机远距收音时，告诉 KelNote 大约几个人会分得比较准。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只重新分辨誰在說話，逐字稿的文字不會變。人多、吵雜或手機遠距收音時，告訴 KelNote 大約幾個人會分得比較準。"
           }
         }
       }
@@ -7622,13 +7795,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在逐字稿点“说话者 1”改成名字，或到设置录一段你自己的声音，拾音就会记住这个人。"
+            "value": "在逐字稿点“说话者 1”改成名字，或到设置录一段你自己的声音，KelNote 就会记住这个人。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Click “Speaker 1” in a transcript to give them a name, or record your own voice in Settings, and Shiyin will remember them."
+            "value": "Click “Speaker 1” in a transcript to give them a name, or record your own voice in Settings, and KelNote will remember them."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，KelNote 就會記住這個人。"
           }
         }
       }
@@ -7770,13 +7949,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin quit unexpectedly twice while running this task, so it won't retry automatically. Click “Retry” to try again."
+            "value": "KelNote quit unexpectedly twice while running this task, so it won't retry automatically. Click “Retry” to try again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "运行这个工作时拾音意外结束了 2 次，已经停止自动重试。可以按“重试”再试一次。"
+            "value": "运行这个工作时 KelNote 意外结束了 2 次，已经停止自动重试。可以按“重试”再试一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "執行這個工作時 KelNote 意外結束了 2 次，已經停止自動重試。可以按「重試」再試一次。"
           }
         }
       }
@@ -9458,7 +9643,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin now knows your voice. When it hears a voice like yours in later meetings, it fills in “%@” or asks you in the questions to confirm."
+            "value": "KelNote now knows your voice. When it hears a voice like yours in later meetings, it fills in “%@” or asks you in the questions to confirm."
           }
         }
       }
@@ -9811,13 +9996,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "待办可以加到 macOS 的“提醒事项”：在记录的“待办”右边按“加到提醒事项”，会加进“拾音”列表；期限是日期的会设成到期日，点提醒里的链接就回到这场会议的那个时间点。加过的不会重复加，在提醒事项里完成的，记录里那一条会打勾。"
+            "value": "待办可以加到 macOS 的“提醒事项”：在记录的“待办”右边按“加到提醒事项”，会加进“KelNote”列表；期限是日期的会设成到期日，点提醒里的链接就回到这场会议的那个时间点。加过的不会重复加，在提醒事项里完成的，记录里那一条会打勾。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To-dos can go into the macOS Reminders app: click “Add to Reminders” next to To-dos in the notes, and they're added to the “Shiyin” list. Deadlines that are dates become due dates, and the link in each reminder takes you back to that moment in the meeting. To-dos already added aren't added again, and ones you complete in Reminders get a check mark in the notes."
+            "value": "To-dos can go into the macOS Reminders app: click “Add to Reminders” next to To-dos in the notes, and they're added to the “KelNote” list. Deadlines that are dates become due dates, and the link in each reminder takes you back to that moment in the meeting. To-dos already added aren't added again, and ones you complete in Reminders get a check mark in the notes."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待辦可以加到 macOS 的「提醒事項」：在紀錄的「待辦」右邊按「加到提醒事項」，會加進「KelNote」列表；期限是日期的會設成到期日，點提醒裡的連結就回到這場會議的那個時間點。加過的不會重複加，在提醒事項裡完成的，紀錄裡那一條會打勾。"
           }
         }
       }
@@ -10464,13 +10655,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时，别人看不到拾音（例如其他会议的记录）。截图、屏幕录像也拍不到拾音。"
+            "value": "打开后，用 Zoom、Teams、Google Meet 分享整个屏幕时，别人看不到 KelNote （例如其他会议的记录）。截图、屏幕录像也拍不到 KelNote。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When on, people can't see Shiyin (for example, notes from other meetings) when you share your whole screen in Zoom, Teams, or Google Meet. Screenshots and screen recordings won't show Shiyin either."
+            "value": "When on, people can't see KelNote (for example, notes from other meetings) when you share your whole screen in Zoom, Teams, or Google Meet. Screenshots and screen recordings won't show KelNote either."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開後，用 Zoom、Teams、Google Meet 分享整個螢幕時，別人看不到 KelNote （例如其他會議的紀錄）。截圖、螢幕錄影也拍不到 KelNote。"
           }
         }
       }
@@ -10481,13 +10678,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open Shiyin"
+            "value": "Open KelNote"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开拾音"
+            "value": "打开 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開 KelNote"
           }
         }
       }
@@ -10702,13 +10905,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "找不到提醒事项里的“拾音”列表"
+            "value": "找不到提醒事项里的“KelNote”列表"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't find the “Shiyin” list in Reminders"
+            "value": "Couldn't find the “KelNote” list in Reminders"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到提醒事項裡的「KelNote」列表"
           }
         }
       }
@@ -11197,13 +11406,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin"
+            "value": "KelNote"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音"
+            "value": "KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote"
           }
         }
       }
@@ -11214,13 +11429,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin %@ is available"
+            "value": "KelNote %@ is available"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音 %@ 可以更新了"
+            "value": "KelNote %@ 可以更新了"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote %@ 可以更新了"
           }
         }
       }
@@ -11231,13 +11452,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin API key (%@)"
+            "value": "KelNote API key (%@)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音 API key（%@）"
+            "value": "KelNote API key（%@）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote API key（%@）"
           }
         }
       }
@@ -11248,13 +11475,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin Guide"
+            "value": "KelNote Guide"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音使用说明"
+            "value": "KelNote 使用说明"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 使用說明"
           }
         }
       }
@@ -11265,13 +11498,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin turns meetings into transcripts and meeting notes. Recording, transcription and speaker recognition all happen on this Mac."
+            "value": "KelNote turns meetings into transcripts and meeting notes. Recording, transcription and speaker recognition all happen on this Mac."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音把会议变成逐字稿和会议记录。录音、转录、说话者识别都在这台 Mac 上完成。"
+            "value": "KelNote 把会议变成逐字稿和会议记录。录音、转录、说话者识别都在这台 Mac 上完成。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 把會議變成逐字稿和會議紀錄。錄音、轉錄、說話者辨識都在這台 Mac 上完成。"
           }
         }
       }
@@ -11282,13 +11521,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音会在这台 Mac 上把会议录下来，转成逐字稿，再整理成会议记录。我现在念这一段，是要让拾音记住我的声音。之后开会的时候，拾音听到这个声音，就会在逐字稿上标出我的名字。声音特征只存在这台电脑里，不会上传。下午三点，我们要讨论下一季的计划，请大家先看一下上周的数字。"
+            "value": "KelNote 会在这台 Mac 上把会议录下来，转成逐字稿，再整理成会议记录。我现在念这一段，是要让 KelNote 记住我的声音。之后开会的时候，KelNote 听到这个声音，就会在逐字稿上标出我的名字。声音特征只存在这台电脑里，不会上传。下午三点，我们要讨论下一季的计划，请大家先看一下上周的数字。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin records meetings on this Mac, turns them into transcripts, and writes up meeting notes. I'm reading this so Shiyin can learn my voice. In future meetings, when Shiyin hears this voice, it will put my name next to what I said. The voice profile stays on this computer and is never uploaded. At three this afternoon we'll talk about next quarter's plan, so please take a look at last week's numbers first."
+            "value": "KelNote records meetings on this Mac, turns them into transcripts, and writes up meeting notes. I'm reading this so KelNote can learn my voice. In future meetings, when KelNote hears this voice, it will put my name next to what I said. The voice profile stays on this computer and is never uploaded. At three this afternoon we'll talk about next quarter's plan, so please take a look at last week's numbers first."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 會在這台 Mac 上把會議錄下來，轉成逐字稿，再整理成會議紀錄。我現在唸這一段，是要讓 KelNote 記住我的聲音。之後開會的時候，KelNote 聽到這個聲音，就會在逐字稿上標出我的名字。聲音特徵只存在這台電腦裡，不會上傳。下午三點，我們要討論下一季的計畫，請大家先看一下上週的數字。"
           }
         }
       }
@@ -11299,13 +11544,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin is transcribing or summarizing meeting notes"
+            "value": "KelNote is transcribing or summarizing meeting notes"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音正在转录或整理会议记录"
+            "value": "KelNote 正在转录或整理会议记录"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 正在轉錄或整理會議紀錄"
           }
         }
       }
@@ -11316,13 +11567,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin is recording"
+            "value": "KelNote is recording"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音正在录音"
+            "value": "KelNote 正在录音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 正在錄音"
           }
         }
       }
@@ -11333,13 +11590,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音没有“录制系统音频”的权限，录不到电脑的声音（线上会议里其他人说话的声音）：请到“系统设置 → 隐私与安全性 → 录制屏幕与系统录音”允许拾音。"
+            "value": "KelNote 没有“录制系统音频”的权限，录不到电脑的声音（线上会议里其他人说话的声音）：请到“系统设置 → 隐私与安全性 → 录制屏幕与系统录音”允许 KelNote。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin doesn't have permission to record system audio, so it can't record your computer's audio (other people talking in an online meeting). Allow Shiyin in System Settings → Privacy & Security → Screen & System Audio Recording."
+            "value": "KelNote doesn't have permission to record system audio, so it can't record your computer's audio (other people talking in an online meeting). Allow KelNote in System Settings → Privacy & Security → Screen & System Audio Recording."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 沒有「錄製系統音訊」的權限，錄不到電腦的聲音（線上會議裡其他人說話的聲音）：請到「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許 KelNote。"
           }
         }
       }
@@ -11350,13 +11613,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音没有使用提醒事项的权限"
+            "value": "KelNote 没有使用提醒事项的权限"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin doesn't have access to Reminders"
+            "value": "KelNote doesn't have access to Reminders"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 沒有使用提醒事項的權限"
           }
         }
       }
@@ -11367,13 +11636,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音没有使用提醒事项的权限：请到“系统设置 → 隐私与安全性 → 提醒事项”允许拾音。"
+            "value": "KelNote 没有使用提醒事项的权限：请到“系统设置 → 隐私与安全性 → 提醒事项”允许 KelNote。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin doesn't have access to Reminders. Allow Shiyin in System Settings → Privacy & Security → Reminders."
+            "value": "KelNote doesn't have access to Reminders. Allow KelNote in System Settings → Privacy & Security → Reminders."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 沒有使用提醒事項的權限：請到「系統設定 → 隱私權與安全性 → 提醒事項」允許 KelNote。"
           }
         }
       }
@@ -11384,13 +11659,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin doesn't have microphone access"
+            "value": "KelNote doesn't have microphone access"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音没有麦克风权限"
+            "value": "KelNote 没有麦克风权限"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 沒有麥克風權限"
           }
         }
       }
@@ -11401,13 +11682,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't open its database"
+            "value": "KelNote can't open its database"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音没办法打开数据库"
+            "value": "KelNote 没办法打开数据库"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 沒辦法開啟資料庫"
           }
         }
       }
@@ -11418,13 +11705,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This version of Shiyin is too old. Please update Shiyin first."
+            "value": "This version of KelNote is too old. Please update KelNote first."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音的版本太旧，请先更新拾音"
+            "value": "KelNote 的版本太旧，请先更新 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 的版本太舊，請先更新 KelNote"
           }
         }
       }
@@ -11435,13 +11728,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin System Audio"
+            "value": "KelNote System Audio"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音系统声音"
+            "value": "KelNote 系统声音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 系統聲音"
           }
         }
       }
@@ -11452,13 +11751,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin recognized this person's voice and filled in the name. Click the name if it's wrong."
+            "value": "KelNote recognized this person's voice and filled in the name. Click the name if it's wrong."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音认出这个人的声音，自动带入名字。不对的话点名字"
+            "value": "KelNote 认出这个人的声音，自动带入名字。不对的话点名字"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 認出這個人的聲音，自動帶入名字。不對的話點名字"
           }
         }
       }
@@ -11469,13 +11774,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't read .%@ files. Export it as PDF and add that instead."
+            "value": "KelNote can't read .%@ files. Export it as PDF and add that instead."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音读不了 .%@ 文件。请先导出成 PDF 再加入。"
+            "value": "KelNote 读不了 .%@ 文件。请先导出成 PDF 再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 讀不了 .%@ 檔。請先匯出成 PDF 再加入。"
           }
         }
       }
@@ -11486,13 +11797,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't read Keynote files. Export it as PDF in Keynote and add that instead."
+            "value": "KelNote can't read Keynote files. Export it as PDF in Keynote and add that instead."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音读不了 Keynote 文件。请先在 Keynote 导出成 PDF 再加入。"
+            "value": "KelNote 读不了 Keynote 文件。请先在 Keynote 导出成 PDF 再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 讀不了 Keynote 檔。請先在 Keynote 匯出成 PDF 再加入。"
           }
         }
       }
@@ -11503,13 +11820,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't read Numbers files. Export it as PDF in Numbers and add that instead."
+            "value": "KelNote can't read Numbers files. Export it as PDF in Numbers and add that instead."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音读不了 Numbers 文件。请先在 Numbers 导出成 PDF 再加入。"
+            "value": "KelNote 读不了 Numbers 文件。请先在 Numbers 导出成 PDF 再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 讀不了 Numbers 檔。請先在 Numbers 匯出成 PDF 再加入。"
           }
         }
       }
@@ -11520,13 +11843,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't read Pages files. Export it as PDF in Pages and add that instead."
+            "value": "KelNote can't read Pages files. Export it as PDF in Pages and add that instead."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音读不了 Pages 文件。请先在 Pages 导出成 PDF 再加入。"
+            "value": "KelNote 读不了 Pages 文件。请先在 Pages 导出成 PDF 再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 讀不了 Pages 檔。請先在 Pages 匯出成 PDF 再加入。"
           }
         }
       }
@@ -11537,13 +11866,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't read files without an extension. Export it as PDF and add that instead."
+            "value": "KelNote can't read files without an extension. Export it as PDF and add that instead."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音读不了没有扩展名的文件。请先导出成 PDF 再加入。"
+            "value": "KelNote 读不了没有扩展名的文件。请先导出成 PDF 再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 讀不了沒有副檔名的檔案。請先匯出成 PDF 再加入。"
           }
         }
       }
@@ -11554,13 +11889,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't read old Word files (.doc). Save it as docx or PDF and add that instead."
+            "value": "KelNote can't read old Word files (.doc). Save it as docx or PDF and add that instead."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音读不了旧版的 Word 文件（.doc）。请另存成 docx 或 PDF 再加入。"
+            "value": "KelNote 读不了旧版的 Word 文件（.doc）。请另存成 docx 或 PDF 再加入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote 讀不了舊版的 Word 檔（.doc）。請另存成 docx 或 PDF 再加入。"
           }
         }
       }
@@ -11571,13 +11912,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin: opening your browser to sign in to %@. When you’re done, go back to Shiyin and click “Retry” or “Test Summarizer”."
+            "value": "KelNote: opening your browser to sign in to %@. When you’re done, go back to KelNote and click “Retry” or “Test Summarizer”."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拾音：正在打开浏览器登录 %@。登录完成后，回到拾音按“重试”或“测试整理工具”。"
+            "value": "KelNote：正在打开浏览器登录 %@。登录完成后，回到 KelNote 按“重试”或“测试整理工具”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KelNote：正在打開瀏覽器登入 %@。登入完成後，回到 KelNote 按「重試」或「測試整理工具」。"
           }
         }
       }
@@ -11622,13 +11969,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After you press Stop & Transcribe, Shiyin re-transcribes the recording on this Mac (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for %@, Qwen3-ASR for %@) and tells the speakers apart. While you wait, the notes are drafted from the live transcript and replaced automatically once the final version is ready. Click \"Speaker 1\" in the transcript to give them a name and it changes throughout the meeting; Shiyin remembers their voice and fills in the name in later meetings (marked \"auto\"; one click fixes a wrong guess)."
+            "value": "After you press Stop & Transcribe, KelNote re-transcribes the recording on this Mac (Breeze ASR 25 for Chinese and English, Whisper large-v3-turbo for %@, Qwen3-ASR for %@) and tells the speakers apart. While you wait, the notes are drafted from the live transcript and replaced automatically once the final version is ready. Click \"Speaker 1\" in the transcript to give them a name and it changes throughout the meeting; KelNote remembers their voice and fills in the name in later meetings (marked \"auto\"; one click fixes a wrong guess)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按“停止并转录”后，拾音会在这台 Mac 上重新转录（中文、英文用 Breeze ASR 25，%@用 Whisper large-v3-turbo，%@用 Qwen3-ASR），并分辨不同的说话者。等待的时候，会议记录会先用实时逐字稿整理一份草稿，正式版好了会自动换掉。逐字稿上点“说话者 1”可以改成人名，整场都会跟着改；拾音会记住这个人的声音，之后的会议自动带入名字（标“自动”，认错了点一下就能改）。"
+            "value": "按“停止并转录”后，KelNote 会在这台 Mac 上重新转录（中文、英文用 Breeze ASR 25，%@用 Whisper large-v3-turbo，%@用 Qwen3-ASR），并分辨不同的说话者。等待的时候，会议记录会先用实时逐字稿整理一份草稿，正式版好了会自动换掉。逐字稿上点“说话者 1”可以改成人名，整场都会跟着改；KelNote 会记住这个人的声音，之后的会议自动带入名字（标“自动”，认错了点一下就能改）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按「停止並轉錄」後，KelNote 會在這台 Mac 上重新轉錄（中文、英文用 Breeze ASR 25，%@用 Whisper large-v3-turbo，%@用 Qwen3-ASR），並分辨不同的說話者。等待的時候，會議紀錄會先用即時逐字稿整理一份草稿，正式版好了會自動換掉。逐字稿上點「說話者 1」可以改成人名，整場都會跟著改；KelNote 會記住這個人的聲音，之後的會議自動帶入名字（標「自動」，認錯了點一下就能改）。"
           }
         }
       }
@@ -11673,13 +12026,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按“开始”，用平常开会说话的音量念下面这段（约 20～30 秒），念完按“完成”。拾音只用这段声音算出你的声音特征，算完就删掉录音。"
+            "value": "按“开始”，用平常开会说话的音量念下面这段（约 20～30 秒），念完按“完成”。KelNote 只用这段声音算出你的声音特征，算完就删掉录音。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Click Start and read the passage below at your usual meeting volume (about 20–30 seconds), then click Done. Shiyin uses the recording only to work out your voice profile and deletes it right after."
+            "value": "Click Start and read the passage below at your usual meeting volume (about 20–30 seconds), then click Done. KelNote uses the recording only to work out your voice profile and deletes it right after."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按「開始」，用平常開會說話的音量唸下面這段（約 20～30 秒），唸完按「完成」。KelNote 只用這段聲音算出你的聲音特徵，算完就刪掉錄音。"
           }
         }
       }
@@ -11741,13 +12100,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Click “Record” (⌘R) in the toolbar to start. Click the arrow next to it to choose the source and microphone; for online meetings choose “Microphone + computer audio (online meetings)” so the other side is recorded too. While recording, the microphone in use is shown next to the level meter; click it to switch. When Bluetooth headphones are connected, macOS may switch to their microphone, so for in-person meetings switch back to this Mac’s microphone. If you already have a recording, drag it into the window, click “Import” (⌘O), or drop it on the Shiyin icon in the Dock."
+            "value": "Click “Record” (⌘R) in the toolbar to start. Click the arrow next to it to choose the source and microphone; for online meetings choose “Microphone + computer audio (online meetings)” so the other side is recorded too. While recording, the microphone in use is shown next to the level meter; click it to switch. When Bluetooth headphones are connected, macOS may switch to their microphone, so for in-person meetings switch back to this Mac’s microphone. If you already have a recording, drag it into the window, click “Import” (⌘O), or drop it on the KelNote icon in the Dock."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按工具栏的“录音”（⌘R）开始录；点按钮旁的箭头可以选录音来源和麦克风，线上会议请选“麦克风＋电脑声音（线上会议）”，对方的声音也会录进来。录音画面的音量条旁写着正在用哪一支麦克风，点一下可以换；蓝牙耳机连着时，系统可能自动改用耳机的麦克风，现场会议记得换成这台 Mac 的麦克风。已经有录音文件的话，拖进窗口、按“导入”（⌘O），或拖到 Dock 上的拾音图标都可以。"
+            "value": "按工具栏的“录音”（⌘R）开始录；点按钮旁的箭头可以选录音来源和麦克风，线上会议请选“麦克风＋电脑声音（线上会议）”，对方的声音也会录进来。录音画面的音量条旁写着正在用哪一支麦克风，点一下可以换；蓝牙耳机连着时，系统可能自动改用耳机的麦克风，现场会议记得换成这台 Mac 的麦克风。已经有录音文件的话，拖进窗口、按“导入”（⌘O），或拖到 Dock 上的 KelNote 图标都可以。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按工具列的「錄音」（⌘R）開始錄；點按鈕旁的箭頭可以選錄音來源和麥克風，線上會議請選「麥克風＋電腦聲音（線上會議）」，對方的聲音也會錄進來。錄音畫面的音量條旁寫著正在用哪一支麥克風，點一下可以換；藍牙耳機連著時，系統可能自動改用耳機的麥克風，現場會議記得換成這台 Mac 的麥克風。已經有錄音檔的話，拖進視窗、按「匯入」（⌘O），或拖到 Dock 上的 KelNote 圖示都可以。"
           }
         }
       }
@@ -12513,13 +12878,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The whole transcript and future meeting notes use this name. Shiyin also remembers this person's voice and fills in the name in future meetings."
+            "value": "The whole transcript and future meeting notes use this name. KelNote also remembers this person's voice and fills in the name in future meetings."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "整场逐字稿和之后的会议记录都会用这个名字；拾音也会记住这个人的声音，之后的会议自动带入。"
+            "value": "整场逐字稿和之后的会议记录都会用这个名字；KelNote 也会记住这个人的声音，之后的会议自动带入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整場逐字稿和之後的會議紀錄都會用這個名字；KelNote 也會記住這個人的聲音，之後的會議自動帶入。"
           }
         }
       }
@@ -13278,13 +13649,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The new version's signature doesn't match this Shiyin, so it wasn't installed (%@)"
+            "value": "The new version's signature doesn't match this KelNote, so it wasn't installed (%@)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新版的签名跟目前的拾音不符，拒绝安装（%@）"
+            "value": "新版的签名跟目前的 KelNote 不符，拒绝安装（%@）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新版的簽章跟目前的 KelNote 不符，拒絕安裝（%@）"
           }
         }
       }
@@ -13703,13 +14080,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin wasn't found in the update"
+            "value": "KelNote wasn't found in the update"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新文件里找不到拾音"
+            "value": "更新文件里找不到 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新檔裡找不到 KelNote"
           }
         }
       }
@@ -13805,13 +14188,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "An update is still downloading. Quit Shiyin?"
+            "value": "An update is still downloading. Quit KelNote?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新还在下载，要退出拾音吗？"
+            "value": "更新还在下载，要退出 KelNote 吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新還在下載，要結束 KelNote 嗎？"
           }
         }
       }
@@ -13839,13 +14228,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When you name a speaker, Shiyin saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it “Auto”; you can change it if it's wrong. Voice features stay in the database on this Mac. They're never uploaded or included in exported .shiyin packages."
+            "value": "When you name a speaker, KelNote saves that person's voice features. When it recognizes the same person in a later meeting, it fills in the name and marks it “Auto”; you can change it if it's wrong. Voice features stay in the database on this Mac. They're never uploaded or included in exported .shiyin packages."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "替说话者取名时，拾音会记下这个人的声音特征。之后的会议认出同一个人，就自动带入名字并标“自动”，不对可以改。声音特征只存在这台 Mac 的数据库，不会上传，也不会放进导出的 .shiyin 文件包。"
+            "value": "替说话者取名时，KelNote 会记下这个人的声音特征。之后的会议认出同一个人，就自动带入名字并标“自动”，不对可以改。声音特征只存在这台 Mac 的数据库，不会上传，也不会放进导出的 .shiyin 文件包。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替說話者取名時，KelNote 會記下這個人的聲音特徵。之後的會議認出同一個人，就自動帶入名字並標「自動」，不對可以改。聲音特徵只存在這台 Mac 的資料庫，不會上傳，也不會放進匯出的 .shiyin 封包。"
           }
         }
       }
@@ -14526,13 +14921,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Claude desktop app is installed, but Shiyin needs Claude Code (the command-line version): run %@ in Terminal, then sign in by running claude"
+            "value": "The Claude desktop app is installed, but KelNote needs Claude Code (the command-line version): run %@ in Terminal, then sign in by running claude"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "有 Claude 桌面版，但拾音要另外安装 Claude Code（命令行版）：在终端运行 %@，再运行 claude 登录"
+            "value": "有 Claude 桌面版，但 KelNote 要另外安装 Claude Code（命令行版）：在终端运行 %@，再运行 claude 登录"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 Claude 桌面版，但 KelNote 要另外安裝 Claude Code（命令列版）：在終端機執行 %@，再執行 claude 登入"
           }
         }
       }
@@ -15172,13 +15573,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Welcome to Shiyin"
+            "value": "Welcome to KelNote"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "欢迎使用拾音"
+            "value": "欢迎使用 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歡迎使用 KelNote"
           }
         }
       }
@@ -15240,13 +15647,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Downloading the update. Shiyin will reopen when it's done."
+            "value": "Downloading the update. KelNote will reopen when it's done."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在下载更新，完成后拾音会自动重新打开"
+            "value": "正在下载更新，完成后 KelNote 会自动重新打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載更新，完成後 KelNote 會自動重新打開"
           }
         }
       }
@@ -15762,13 +16175,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recording in progress. Quit Shiyin?"
+            "value": "Recording in progress. Quit KelNote?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在录音，要退出拾音吗？"
+            "value": "正在录音，要退出 KelNote 吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在錄音，要結束 KelNote 嗎？"
           }
         }
       }
@@ -16000,13 +16419,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once a day, Shiyin sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind. It never sends meeting titles, transcripts, notes, names, voiceprints or any files."
+            "value": "Once a day, KelNote sends its developer an anonymous summary: version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind. It never sends meeting titles, transcripts, notes, names, voiceprints or any files."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "每天送一份匿名的使用统计给拾音的开发者：版本、系统、录音和转录了几分钟、用了哪些功能、失败几次和哪一种失败。不会送会议标题、逐字稿、会议记录、人名、声纹或任何文件。"
+            "value": "每天送一份匿名的使用统计给 KelNote 的开发者：版本、系统、录音和转录了几分钟、用了哪些功能、失败几次和哪一种失败。不会送会议标题、逐字稿、会议记录、人名、声纹或任何文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每天送一份匿名的使用統計給 KelNote 的開發者：版本、系統、錄音和轉錄了幾分鐘、用了哪些功能、失敗幾次和哪一種失敗。不會送會議標題、逐字稿、會議紀錄、人名、聲紋或任何檔案。"
           }
         }
       }
@@ -16017,7 +16442,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once a day, Shiyin sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind) that never includes meeting content. You can turn it off in Settings → General."
+            "value": "Once a day, KelNote sends an anonymous usage summary (version, system, minutes recorded and transcribed, which features were used, and how many tasks failed and of what kind) that never includes meeting content. You can turn it off in Settings → General."
           }
         },
         "zh-Hans": {
@@ -16449,13 +16874,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin can't replace the app in “%@”. The downloaded DMG is open; drag Shiyin to Applications to replace the old version."
+            "value": "KelNote can't replace the app in “%@”. The downloaded DMG is open; drag KelNote to Applications to replace the old version."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "没有权限替换“%@”里的拾音，已经打开下载好的 DMG，请把拾音拖进“应用程序”取代旧版"
+            "value": "没有权限替换“%@”里的 KelNote，已经打开下载好的 DMG，请把 KelNote 拖进“应用程序”取代旧版"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有權限替換「%@」裡的 KelNote，已經打開下載好的 DMG，請把 KelNote 拖進「應用程式」取代舊版"
           }
         }
       }
@@ -16557,7 +16988,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin couldn't hear your voice clearly. Please record again somewhere quiet and read the whole passage."
+            "value": "KelNote couldn't hear your voice clearly. Please record again somewhere quiet and read the whole passage."
           }
         }
       }
@@ -17624,13 +18055,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Whoever distributes Shiyin gives you this URL (shiyin-update.json). Leave it blank to use the one built into this version; if neither is set, Shiyin doesn't check for updates."
+            "value": "Whoever distributes KelNote gives you this URL (shiyin-update.json). Leave it blank to use the one built into this version; if neither is set, KelNote doesn't check for updates."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "发布拾音的人会给你这个网址（shiyin-update.json）。留空就用安装版本内建的网址；都没有的话不会检查更新。"
+            "value": "发布 KelNote 的人会给你这个网址（shiyin-update.json）。留空就用安装版本内建的网址；都没有的话不会检查更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發布 KelNote 的人會給你這個網址（shiyin-update.json）。留空就用安裝版本內建的網址；都沒有的話不會檢查更新。"
           }
         }
       }
@@ -17658,13 +18095,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You have %@. Shiyin will quit and reopen to update; your meetings are kept."
+            "value": "You have %@. KelNote will quit and reopen to update; your meetings are kept."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "目前是 %@。更新时拾音会结束并重新打开，会议资料都会保留。"
+            "value": "目前是 %@。更新时 KelNote 会结束并重新打开，会议资料都会保留。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前是 %@。更新時 KelNote 會結束並重新打開，會議資料都會保留。"
           }
         }
       }
@@ -18146,13 +18589,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You'll be asked the first time you record. If denied, turn on Shiyin in System Settings → Privacy & Security → Microphone."
+            "value": "You'll be asked the first time you record. If denied, turn on KelNote in System Settings → Privacy & Security → Microphone."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "第一次录音时会询问；被拒绝的话到“系统设置 → 隐私与安全性 → 麦克风”打开拾音"
+            "value": "第一次录音时会询问；被拒绝的话到“系统设置 → 隐私与安全性 → 麦克风”打开 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一次錄音時會詢問；被拒絕的話到「系統設定 → 隱私權與安全性 → 麥克風」打開 KelNote"
           }
         }
       }
@@ -18299,13 +18748,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "模板、会议语言、大约几个人。人多、吵杂或手机放在桌上录音时，先告诉拾音大约几个人，说话者会分得比较准"
+            "value": "模板、会议语言、大约几个人。人多、吵杂或手机放在桌上录音时，先告诉 KelNote 大约几个人，说话者会分得比较准"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Template, meeting language and about how many people. When there are many people, it's noisy, or the phone is on the table, tell Shiyin about how many people there are so speakers are separated better"
+            "value": "Template, meeting language and about how many people. When there are many people, it's noisy, or the phone is on the table, tell KelNote about how many people there are so speakers are separated better"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範本、會議語言、大約幾個人。人多、吵雜或手機放在桌上錄音時，先告訴 KelNote 大約幾個人，說話者會分得比較準"
           }
         }
       }
@@ -18707,13 +19162,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quit Shiyin"
+            "value": "Quit KelNote"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出拾音"
+            "value": "退出 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束 KelNote"
           }
         }
       }
@@ -19285,13 +19746,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "It’s a bit noisy, so speakers may get mixed up. After recording, use “Identify Speakers Again” to tell Shiyin roughly how many people there were."
+            "value": "It’s a bit noisy, so speakers may get mixed up. After recording, use “Identify Speakers Again” to tell KelNote roughly how many people there were."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "背景有点吵，说话者可能分不准。录完可以用“重新识别说话者”告诉拾音大约几个人。"
+            "value": "背景有点吵，说话者可能分不准。录完可以用“重新识别说话者”告诉 KelNote 大约几个人。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "背景有點吵，說話者可能分不準。錄完可以用「重新辨識說話者」告訴 KelNote 大約幾個人。"
           }
         }
       }
@@ -20164,7 +20631,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "People Shiyin Knows"
+            "value": "People KelNote Knows"
           }
         },
         "zh-Hans": {
@@ -20329,13 +20796,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "说话者分得太少（人多、吵杂、手机放在桌上远距收音）时，从“更多 → 重新处理”选“重新识别说话者…”，告诉拾音大约几个人。只会重新分辨谁在说话，逐字稿的文字不会变。录音中（会议标题下方右边的菜单里的“大约几个人”）或导入时也可以先选。"
+            "value": "说话者分得太少（人多、吵杂、手机放在桌上远距收音）时，从“更多 → 重新处理”选“重新识别说话者…”，告诉 KelNote 大约几个人。只会重新分辨谁在说话，逐字稿的文字不会变。录音中（会议标题下方右边的菜单里的“大约几个人”）或导入时也可以先选。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Too few speakers detected (many people, noise, or a phone on the table far from everyone)? Choose More → Reprocess → Re-identify speakers… and tell Shiyin roughly how many people there were. Only the speaker labels change; the transcript text stays. You can also set the count while recording (Roughly how many people, in the menu on the right below the meeting title) or when importing."
+            "value": "Too few speakers detected (many people, noise, or a phone on the table far from everyone)? Choose More → Reprocess → Re-identify speakers… and tell KelNote roughly how many people there were. Only the speaker labels change; the transcript text stays. You can also set the count while recording (Roughly how many people, in the menu on the right below the meeting title) or when importing."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "說話者分得太少（人多、吵雜、手機放在桌上遠距收音）時，從「更多 → 重新處理」選「重新辨識說話者…」，告訴 KelNote 大約幾個人。只會重新分辨誰在說話，逐字稿的文字不會變。錄音中（會議標題下方右邊的選單裡的「大約幾個人」）或匯入時也可以先選。"
           }
         }
       }
@@ -20363,13 +20836,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Some speakers may be missing: different people may have been treated as one. This often happens with many people, noise, or a phone on the table. Telling Shiyin roughly how many people there were helps."
+            "value": "Some speakers may be missing: different people may have been treated as one. This often happens with many people, noise, or a phone on the table. Telling KelNote roughly how many people there were helps."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "说话者可能分得不够：有些不同的人可能被当成同一位。人多、吵杂或手机放在桌上录音时常发生，告诉拾音大约几个人会分得比较准。"
+            "value": "说话者可能分得不够：有些不同的人可能被当成同一位。人多、吵杂或手机放在桌上录音时常发生，告诉 KelNote 大约几个人会分得比较准。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "說話者可能分得不夠：有些不同的人可能被當成同一位。人多、吵雜或手機放在桌上錄音時常發生，告訴 KelNote 大約幾個人會分得比較準。"
           }
         }
       }
@@ -20516,13 +20995,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请到“系统设置 → 隐私与安全性 → 提醒事项”允许拾音，再按一次“加到提醒事项”。"
+            "value": "请到“系统设置 → 隐私与安全性 → 提醒事项”允许 KelNote，再按一次“加到提醒事项”。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allow Shiyin in System Settings → Privacy & Security → Reminders, then click “Add to Reminders” again."
+            "value": "Allow KelNote in System Settings → Privacy & Security → Reminders, then click “Add to Reminders” again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請到「系統設定 → 隱私權與安全性 → 提醒事項」允許 KelNote，再按一次「加到提醒事項」。"
           }
         }
       }
@@ -20533,13 +21018,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn on Shiyin in System Settings → Privacy & Security → Microphone, then start recording again."
+            "value": "Turn on KelNote in System Settings → Privacy & Security → Microphone, then start recording again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请到“系统设置 → 隐私与安全性 → 麦克风”打开“拾音”，再重新开始录音。"
+            "value": "请到“系统设置 → 隐私与安全性 → 麦克风”打开“KelNote”，再重新开始录音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請到「系統設定 → 隱私權與安全性 → 麥克風」打開「KelNote」，再重新開始錄音。"
           }
         }
       }
@@ -20788,7 +21279,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin uses %@ after you paste an API key and click “Save”. No key? Choose “Not now”."
+            "value": "KelNote uses %@ after you paste an API key and click “Save”. No key? Choose “Not now”."
           }
         },
         "zh-Hans": {
@@ -20890,13 +21381,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No system audio for over 15 seconds. Check that the meeting is playing sound and that Shiyin is allowed in System Settings → Privacy & Security → Screen & System Audio Recording."
+            "value": "No system audio for over 15 seconds. Check that the meeting is playing sound and that KelNote is allowed in System Settings → Privacy & Security → Screen & System Audio Recording."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "超过 15 秒没有收到系统声音：请确认线上会议有声音，并在“系统设置 → 隐私与安全性 → 录制屏幕与系统录音”允许拾音"
+            "value": "超过 15 秒没有收到系统声音：请确认线上会议有声音，并在“系统设置 → 隐私与安全性 → 录制屏幕与系统录音”允许 KelNote"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過 15 秒沒有收到系統聲音：請確認線上會議有聲音，並在「系統設定 → 隱私權與安全性 → 錄製螢幕與系統錄音」允許 KelNote"
           }
         }
       }
@@ -21560,13 +22057,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This isn't a valid Shiyin package: %@"
+            "value": "This isn't a valid KelNote package: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这不是有效的拾音文件包：%@"
+            "value": "这不是有效的 KelNote 文件包：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這不是有效的 KelNote 封包：%@"
           }
         }
       }
@@ -21645,13 +22148,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin filled in this name after recognizing the voice. If it's wrong, rename the speaker or click “Not this person”."
+            "value": "KelNote filled in this name after recognizing the voice. If it's wrong, rename the speaker or click “Not this person”."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这个名字是拾音认出声音后自动带入的。不对的话直接改名，或按“不是他”。"
+            "value": "这个名字是 KelNote 认出声音后自动带入的。不对的话直接改名，或按“不是他”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個名字是 KelNote 認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。"
           }
         }
       }
@@ -21662,13 +22171,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This package was exported by a newer Shiyin (format %lld). Update Shiyin first, then import it."
+            "value": "This package was exported by a newer KelNote (format %lld). Update KelNote first, then import it."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这个文件包是新版拾音导出的（格式 %lld），请先更新拾音再导入"
+            "value": "这个文件包是新版 KelNote 导出的（格式 %lld），请先更新 KelNote 再导入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個封包是新版 KelNote 匯出的（格式 %lld），請先更新 KelNote 再匯入"
           }
         }
       }
@@ -21713,13 +22228,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This URL is not a Shiyin enterprise server"
+            "value": "This URL is not a KelNote enterprise server"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这个网址不是拾音的企业服务器"
+            "value": "这个网址不是 KelNote 的企业服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個網址不是 KelNote 的企業伺服器"
           }
         }
       }
@@ -22507,7 +23028,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transcription or summarizing in progress will stop and start over the next time you open Shiyin."
+            "value": "Transcription or summarizing in progress will stop and start over the next time you open KelNote."
           }
         },
         "zh-Hans": {
@@ -22854,13 +23375,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Work is still in progress. Quit Shiyin?"
+            "value": "Work is still in progress. Quit KelNote?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还有工作在进行，要退出拾音吗？"
+            "value": "还有工作在进行，要退出 KelNote 吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還有工作在進行，要結束 KelNote 嗎？"
           }
         }
       }
@@ -23194,13 +23721,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No one yet. Click “Speaker 1” in a transcript and give them a name, and Shiyin will remember that person."
+            "value": "No one yet. Click “Speaker 1” in a transcript and give them a name, and KelNote will remember that person."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还没有认识的人。在逐字稿点“说话者 1”改成名字，拾音就会记住这个人。"
+            "value": "还没有认识的人。在逐字稿点“说话者 1”改成名字，KelNote 就会记住这个人。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有認識的人。在逐字稿點「說話者 1」改成名字，KelNote 就會記住這個人。"
           }
         }
       }
@@ -23880,7 +24413,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record your own voice so Shiyin recognizes you from your first meeting."
+            "value": "Record your own voice so KelNote recognizes you from your first meeting."
           }
         }
       }
@@ -24061,13 +24594,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recordings, transcripts and meeting notes are stored only on this Mac (~/Library/Application Support/Shiyin) and aren't synced to iCloud."
+            "value": "Recordings, transcripts and meeting notes are stored only on this Mac (~/Library/Application Support/KelNote) and aren't synced to iCloud."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音、逐字稿和会议记录都只存在这台 Mac 上（~/Library/Application Support/Shiyin），不会被 iCloud 同步。"
+            "value": "录音、逐字稿和会议记录都只存在这台 Mac 上（~/Library/Application Support/KelNote），不会被 iCloud 同步。"
           }
         }
       }
@@ -24129,7 +24662,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin reminds you after 15 minutes with nobody talking. After 15 more minutes of silence it stops recording and transcribes only up to the last speech; the full recording is kept."
+            "value": "KelNote reminds you after 15 minutes with nobody talking. After 15 more minutes of silence it stops recording and transcribes only up to the last speech; the full recording is kept."
           }
         },
         "zh-Hans": {
@@ -24197,13 +24730,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nobody spoke for a long time, so Shiyin stopped recording. To transcribe everything, use More → Reprocess → Transcribe Again."
+            "value": "Nobody spoke for a long time, so KelNote stopped recording. To transcribe everything, use More → Reprocess → Transcribe Again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音中很久没人说话，拾音自动停止了录音。要转录全部的话，用“更多 → 重新处理 → 重新转录”。"
+            "value": "录音中很久没人说话，KelNote 自动停止了录音。要转录全部的话，用“更多 → 重新处理 → 重新转录”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄音中很久沒人說話，KelNote 自動停止了錄音。要轉錄全部的話，用「更多 → 重新處理 → 重新轉錄」。"
           }
         }
       }
@@ -24265,13 +24804,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "While recording, the recording island appears at the top center of the screen (on Macs with a notch, on either side of it), showing how long you've recorded, the level and any audio alerts. Hover over it to Pause, Bookmark or Stop & Transcribe without switching back to Shiyin. It stays visible in full-screen meetings and on every desktop, and others can't see it when you share your screen. To turn it off, go to Settings → Recording and turn off “Show the recording island at the top of the screen”."
+            "value": "While recording, the recording island appears at the top center of the screen (on Macs with a notch, on either side of it), showing how long you've recorded, the level and any audio alerts. Hover over it to Pause, Bookmark or Stop & Transcribe without switching back to KelNote. It stays visible in full-screen meetings and on every desktop, and others can't see it when you share your screen. To turn it off, go to Settings → Recording and turn off “Show the recording island at the top of the screen”."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音中屏幕上方正中间会出现录音岛（有浏海的 Mac 接在浏海两侧），显示录了多久、音量和收音提醒；鼠标移上去可以暂停、标记重点、停止并转录，不用切回拾音。全屏开会、换桌面都看得到，分享画面时对方看不到。不想要的话到“设置 → 录音”关掉“在屏幕上方显示录音岛”。"
+            "value": "录音中屏幕上方正中间会出现录音岛（有浏海的 Mac 接在浏海两侧），显示录了多久、音量和收音提醒；鼠标移上去可以暂停、标记重点、停止并转录，不用切回 KelNote。全屏开会、换桌面都看得到，分享画面时对方看不到。不想要的话到“设置 → 录音”关掉“在屏幕上方显示录音岛”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回 KelNote。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音」關掉「在螢幕上方顯示錄音島」。"
           }
         }
       }
@@ -24367,7 +24912,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shiyin couldn't write the recording to disk (the disk may be full), so recording has stopped. Everything recorded before that is kept and will be transcribed as usual."
+            "value": "KelNote couldn't write the recording to disk (the disk may be full), so recording has stopped. Everything recorded before that is kept and will be transcribed as usual."
           }
         },
         "zh-Hans": {
@@ -24469,13 +25014,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The recording will be saved and transcribed the next time you open Shiyin."
+            "value": "The recording will be saved and transcribed the next time you open KelNote."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音会先存好，下次打开拾音时开始转录。"
+            "value": "录音会先存好，下次打开 KelNote 时开始转录。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄音會先存好，下次開啟 KelNote 時開始轉錄。"
           }
         }
       }
@@ -24486,7 +25037,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recordings are sent to %@ (your company's server) for transcription and deleted afterwards; speaker identification and voiceprints stay on this Mac. Uses the glossary. If the server can't be reached, Shiyin waits, or you can transcribe on this Mac instead."
+            "value": "Recordings are sent to %@ (your company's server) for transcription and deleted afterwards; speaker identification and voiceprints stay on this Mac. Uses the glossary. If the server can't be reached, KelNote waits, or you can transcribe on this Mac instead."
           }
         },
         "zh-Hans": {
@@ -24622,13 +25173,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The keychain already has an older key, and macOS didn’t let Shiyin replace it. Open Keychain Access, delete “Shiyin API key (%@)”, then save again."
+            "value": "The keychain already has an older key, and macOS didn’t let KelNote replace it. Open Keychain Access, delete “KelNote API key (%@)”, then save again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "钥匙串里已经有旧的 key，macOS 没有让拾音取代它。请打开“钥匙串访问”，删除“拾音 API key（%@）”后再存一次。"
+            "value": "钥匙串里已经有旧的 key，macOS 没有让 KelNote 取代它。请打开“钥匙串访问”，删除“KelNote API key（%@）”后再存一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鑰匙圈裡已經有舊的 key，macOS 沒有讓 KelNote 取代它。請打開「鑰匙圈存取」，刪除「KelNote API key（%@）」後再存一次。"
           }
         }
       }
@@ -24673,13 +25230,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开 Zoom、Teams、Google Meet 等线上会议时，拾音会提醒你开始录音（打开录音岛时提醒出现在岛上）；会议好像结束时提醒停止。不想被某个 app 提醒，在提醒上按“不要再提醒”。"
+            "value": "开 Zoom、Teams、Google Meet 等线上会议时，KelNote 会提醒你开始录音（打开录音岛时提醒出现在岛上）；会议好像结束时提醒停止。不想被某个 app 提醒，在提醒上按“不要再提醒”。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When you join a Zoom, Teams, Google Meet or other online meeting, Shiyin asks whether to start recording (on the recording island when it's turned on), and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for This App” on the reminder."
+            "value": "When you join a Zoom, Teams, Google Meet or other online meeting, KelNote asks whether to start recording (on the recording island when it's turned on), and reminds you to stop when the meeting seems to be over. To stop the reminders for an app, click “Don't Ask for This App” on the reminder."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開 Zoom、Teams、Google Meet 等線上會議時，KelNote 會提醒你開始錄音（打開錄音島時提醒出現在島上）；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。"
           }
         }
       }
@@ -24996,7 +25559,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Computer audio capture stopped and couldn't reconnect: %@. Shiyin will keep trying; recording continues."
+            "value": "Computer audio capture stopped and couldn't reconnect: %@. KelNote will keep trying; recording continues."
           }
         },
         "zh-Hans": {
@@ -25229,13 +25792,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The microphone is picking up almost nothing: %@ may be using this microphone for echo cancellation (for example Google Meet in Safari), so Shiyin can’t hear you. Join the meeting in Chrome instead, or use different microphones for the meeting and Shiyin."
+            "value": "The microphone is picking up almost nothing: %@ may be using this microphone for echo cancellation (for example Google Meet in Safari), so KelNote can’t hear you. Join the meeting in Chrome instead, or use different microphones for the meeting and KelNote."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "麦克风几乎收不到声音：%@ 可能正在用这个麦克风做回音消除（例如用 Safari 开的 Google Meet），拾音收不到你的声音。请改用 Chrome 开会，或让会议和拾音用不同的麦克风。"
+            "value": "麦克风几乎收不到声音：%@ 可能正在用这个麦克风做回音消除（例如用 Safari 开的 Google Meet），KelNote 收不到你的声音。请改用 Chrome 开会，或让会议和 KelNote 用不同的麦克风。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麥克風幾乎收不到聲音：%@ 可能正在用這支麥克風做回音消除（例如用 Safari 開的 Google Meet），KelNote 收不到你的聲音。請改用 Chrome 開會，或讓會議和 KelNote 用不同的麥克風。"
           }
         }
       }
@@ -25246,13 +25815,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The microphone is picking up almost nothing: %1$@ may be using this microphone for echo cancellation, so Shiyin can’t hear you. Use different microphones for %2$@ and Shiyin."
+            "value": "The microphone is picking up almost nothing: %1$@ may be using this microphone for echo cancellation, so KelNote can’t hear you. Use different microphones for %2$@ and KelNote."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "麦克风几乎收不到声音：%@ 可能正在用这个麦克风做回音消除，拾音收不到你的声音。请让 %@ 和拾音用不同的麦克风。"
+            "value": "麦克风几乎收不到声音：%@ 可能正在用这个麦克风做回音消除，KelNote 收不到你的声音。请让 %@ 和 KelNote 用不同的麦克风。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麥克風幾乎收不到聲音：%@ 可能正在用這支麥克風做回音消除，KelNote 收不到你的聲音。請讓 %@ 和 KelNote 用不同的麥克風。"
           }
         }
       }
@@ -25348,7 +25923,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The microphone stopped sending audio and couldn't reconnect: %@. Shiyin will keep trying; recording continues."
+            "value": "The microphone stopped sending audio and couldn't reconnect: %@. KelNote will keep trying; recording continues."
           }
         },
         "zh-Hans": {
@@ -26059,13 +26634,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "For example: “What’s the current status and risk on this project?” “Which action items are still open?” Shiyin sends the notes of every meeting in this folder, plus transcript excerpts related to your question, and the answer cites the meeting and time."
+            "value": "For example: “What’s the current status and risk on this project?” “Which action items are still open?” KelNote sends the notes of every meeting in this folder, plus transcript excerpts related to your question, and the answer cites the meeting and time."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "例如：“这个项目目前的进度和风险？”“有哪些还没完成的待办？”拾音会带上这个文件夹每一场会议的记录，再加上跟问题有关的逐字稿片段，请整理工具回答。"
+            "value": "例如：“这个项目目前的进度和风险？”“有哪些还没完成的待办？”KelNote 会带上这个文件夹每一场会议的记录，再加上跟问题有关的逐字稿片段，请整理工具回答。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：「這個專案目前的進度和風險？」「有哪些還沒完成的待辦？」KelNote 會帶上這個資料夾每一場會議的紀錄，再加上跟問題有關的逐字稿片段，請整理工具回答。"
           }
         }
       }
@@ -26297,13 +26878,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No analysis yet. Click Analyze and Shiyin sends what this person said in each meeting to your summarizer to work out their personality, influence, the topics they care about and what their words likely mean. After that it updates automatically whenever a meeting with them is summarized."
+            "value": "No analysis yet. Click Analyze and KelNote sends what this person said in each meeting to your summarizer to work out their personality, influence, the topics they care about and what their words likely mean. After that it updates automatically whenever a meeting with them is summarized."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还没有分析。按“分析”，拾音会把他在每场会议说的话交给整理工具，整理出他的个性、影响力、关心的议题，以及话背后可能的意思；之后每场有他的会议整理完都会自动更新。"
+            "value": "还没有分析。按“分析”，KelNote 会把他在每场会议说的话交给整理工具，整理出他的个性、影响力、关心的议题，以及话背后可能的意思；之后每场有他的会议整理完都会自动更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有分析。按「分析」，KelNote 會把他在每場會議說的話交給整理工具，整理出他的個性、影響力、關心的議題，以及話背後可能的意思；之後每場有他的會議整理完都會自動更新。"
           }
         }
       }
@@ -26559,6 +27146,1026 @@
           "stringUnit": {
             "state": "translated",
             "value": "把每个认得名字的与会者（你自己除外）在这场会议说的话交给整理工具，累积更新他的个性、影响力、关心的议题和话中的意思，结果在侧边栏“人物”的人物页。"
+          }
+        }
+      }
+    },
+    "補充背景": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add context"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "补充背景"
+          }
+        }
+      }
+    },
+    "填他的實際角色、組織和你知道的背景；分析會以這些為準": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add their real role, organization and what you know about them; the analysis treats these as facts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填他的实际角色、组织和你知道的背景；分析会以这些为准"
+          }
+        }
+      }
+    },
+    "你填的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你填的"
+          }
+        }
+      }
+    },
+    "推測": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inferred"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推测"
+          }
+        }
+      }
+    },
+    "關心程度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interest"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关心程度"
+          }
+        }
+      }
+    },
+    "把握：%@・根據 %lld 場會議・%@ 更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confidence: %1$@ · %2$lld meetings · updated %3$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把握：%@・根据 %lld 场会议・%@ 更新"
+          }
+        }
+      }
+    },
+    "他說的話還不多。按「補充背景」填他的角色和你知道的事，分析會準一些。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s not much to go on yet. Use Add context to enter their role and what you know — the analysis will be more accurate."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他说的话还不多。按“补充背景”填他的角色和你知道的事，分析会准一些。"
+          }
+        }
+      }
+    },
+    "決策者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decision maker"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "决策者"
+          }
+        }
+      }
+    },
+    "影響者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Influencer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影响者"
+          }
+        }
+      }
+    },
+    "把關者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gatekeeper"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把关者"
+          }
+        }
+      }
+    },
+    "專家": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expert"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专家"
+          }
+        }
+      }
+    },
+    "使用者": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户"
+          }
+        }
+      }
+    },
+    "其他角色": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other role"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他角色"
+          }
+        }
+      }
+    },
+    "你知道的事會當成事實交給整理工具，分析會以這些為準。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What you enter is given to the summarizer as fact, and the analysis follows it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你知道的事会当成事实交给整理工具，分析会以这些为准。"
+          }
+        }
+      }
+    },
+    "角色、職位（例如：客戶的 QE 主管，管預算）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Role / title (e.g. Client Head of QE, owns budget)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角色、职位（例如：客户的 QE 主管，管预算）"
+          }
+        }
+      }
+    },
+    "組織（例如：HKJC、IBM 內部、供應商）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organization (e.g. HKJC, IBM internal, vendor)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "组织（例如：HKJC、IBM 内部、供应商）"
+          }
+        }
+      }
+    },
+    "你知道的背景": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What you know"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你知道的背景"
+          }
+        }
+      }
+    },
+    "例如：向誰報告、在意什麼指標、跟我們合作的歷史、私下聊過的事": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. reporting line, metrics they care about, history with us, things discussed offline"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：向谁报告、在意什么指标、跟我们合作的历史、私下聊过的事"
+          }
+        }
+      }
+    },
+    "儲存並重新分析": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save and Re-analyze"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存并重新分析"
+          }
+        }
+      }
+    },
+    "他需要我們提供的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What they need from us"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他需要我们提供的"
+          }
+        }
+      }
+    },
+    "雙方的承諾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commitments"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双方的承诺"
+          }
+        }
+      }
+    },
+    "關心的議題和立場": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Topics and stance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关心的议题和立场"
+          }
+        }
+      }
+    },
+    "人際關係": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relationships"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人际关系"
+          }
+        }
+      }
+    },
+    "這是整理工具從他說的話推測的，只供參考；你填的背景會優先。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is your summarizer’s inference from what they said — use it as a guide. Context you enter takes priority."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是整理工具从他说的话推测的，只供参考；你填的背景会优先。"
+          }
+        }
+      }
+    },
+    "下次見面": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next meeting"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下次见面"
+          }
+        }
+      }
+    },
+    "要談的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Talking points"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要谈的"
+          }
+        }
+      }
+    },
+    "要問的": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questions to ask"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要问的"
+          }
+        }
+      }
+    },
+    "避免": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avoid"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "避免"
+          }
+        }
+      }
+    },
+    "我們": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Us"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我们"
+          }
+        }
+      }
+    },
+    "他": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Them"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他"
+          }
+        }
+      }
+    },
+    "%lld 個出處": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个出处"
+          }
+        }
+      }
+    },
+    "密切管理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage closely"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密切管理"
+          }
+        }
+      }
+    },
+    "讓他滿意": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep satisfied"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让他满意"
+          }
+        }
+      }
+    },
+    "隨時告知": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep informed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "随时告知"
+          }
+        }
+      }
+    },
+    "留意就好": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留意就好"
+          }
+        }
+      }
+    },
+    "影響力高、關心程度高：重要決定前先跟他談，讓他參與": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High power, high interest: engage them before key decisions and keep them involved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影响力高、关心程度高：重要决定前先跟他谈，让他参与"
+          }
+        }
+      }
+    },
+    "影響力高、關心程度低：顧到他在意的事，不用事事打擾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High power, low interest: address what they care about without over-communicating"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影响力高、关心程度低：顾到他在意的事，不用事事打扰"
+          }
+        }
+      }
+    },
+    "影響力低、關心程度高：定期告知進度，他可能是很好的盟友": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low power, high interest: keep them updated; they can be strong allies"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影响力低、关心程度高：定期告知进度，他可能是很好的盟友"
+          }
+        }
+      }
+    },
+    "影響力低、關心程度低：留意他的態度變化就好": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low power, low interest: just watch for changes in their stance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影响力低、关心程度低：留意他的态度变化就好"
+          }
+        }
+      }
+    },
+    "大力支持": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Champion"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大力支持"
+          }
+        }
+      }
+    },
+    "支持": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supporter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持"
+          }
+        }
+      }
+    },
+    "中立": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neutral"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中立"
+          }
+        }
+      }
+    },
+    "存疑": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skeptic"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存疑"
+          }
+        }
+      }
+    },
+    "反對": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocker"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反对"
+          }
+        }
+      }
+    },
+    "態度越來越正面": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attitude is improving"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "态度越来越正面"
+          }
+        }
+      }
+    },
+    "態度越來越負面，要注意": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attitude is declining — watch this"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "态度越来越负面，要注意"
+          }
+        }
+      }
+    },
+    "態度一直差不多": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attitude is stable"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "态度一直差不多"
+          }
+        }
+      }
+    },
+    "只有一場會議，還看不出變化": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only one meeting so far, so no trend yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有一场会议，还看不出变化"
+          }
+        }
+      }
+    },
+    "關心程度 →": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interest →"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关心程度 →"
+          }
+        }
+      }
+    },
+    "影響力 →": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power →"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影响力 →"
+          }
+        }
+      }
+    },
+    "關係人地圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stakeholder Map"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关系人地图"
+          }
+        }
+      }
+    },
+    "還沒有分析過的人。到側欄「人物」打開一個人，按「分析」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one has been analyzed yet. Open a person under People in the sidebar and click Analyze."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有分析过的人。到侧边栏“人物”打开一个人，按“分析”。"
+          }
+        }
+      }
+    },
+    "顏色是態度：綠色支持、灰色中立、橘色存疑、紅色反對。只放分析過的人；點一個人打開他的人物頁。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colour shows attitude: green supportive, grey neutral, orange skeptical, red blocking. Only analyzed people are shown; click someone to open their page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "颜色是态度：绿色支持、灰色中立、橘色存疑、红色反对。只放分析过的人；点一个人打开他的人物页。"
+          }
+        }
+      }
+    },
+    "所有分析過的人在同一張影響力 × 關心程度的圖上": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everyone analyzed, on one power × interest grid"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有分析过的人在同一张影响力 × 关心程度的图上"
+          }
+        }
+      }
+    },
+    "選一個人，看他的利害關係人分析、一起開過的會議和負責的待辦": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a person to see their stakeholder analysis, shared meetings and action items"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选一个人，看他的利害关系人分析、一起开过的会议和负责的待办"
+          }
+        }
+      }
+    },
+    "關係人地圖：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stakeholder Map: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关系人地图：%@"
+          }
+        }
+      }
+    },
+    "這個資料夾的會議裡還沒有分析過的人。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one in this folder’s meetings has been analyzed yet."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个文件夹的会议里还没有分析过的人。"
+          }
+        }
+      }
+    },
+    "在各個案子": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By project"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在各个案子"
+          }
+        }
+      }
+    },
+    "打開這個案子的關係人地圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open this project’s stakeholder map"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开这个案子的关系人地图"
+          }
+        }
+      }
+    },
+    "放的是他在這個案子的影響力、關心程度和態度；同一個人在別的案子可能不一樣。點一個人打開他的人物頁。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each person is placed by their power, interest and attitude on this project — the same person may differ on another project. Click someone to open their page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放的是他在这个案子的影响力、关心程度和态度；同一个人在别的案子可能不一样。点一个人打开他的人物页。"
           }
         }
       }

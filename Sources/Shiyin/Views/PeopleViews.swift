@@ -64,6 +64,10 @@ struct PersonPage: View {
         .navigationTitle(person.name)
         // 改名、合併、刪除放在工具列右上角的「更多」，跟會議頁同一個位置
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { model.openStakeholderMap(folder: model.folderFilter) } label: { Label("關係人地圖", systemImage: "square.grid.2x2") }
+                    .help("所有分析過的人在同一張影響力 × 關心程度的圖上")
+            }
             ToolbarItem(placement: .primaryAction) { moreMenu }
             SettingsToolbarItem()
         }
@@ -222,7 +226,7 @@ struct PeopleEmptyView: View {
             Image(systemName: "person.2").font(.largeTitle).foregroundStyle(.tertiary)
             Text(model.peopleOverview.isEmpty
                  ? String(localized: "還沒有認識的人")
-                 : String(localized: "選一個人，看一起開過的會議和負責的待辦"))
+                 : String(localized: "選一個人，看他的利害關係人分析、一起開過的會議和負責的待辦"))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

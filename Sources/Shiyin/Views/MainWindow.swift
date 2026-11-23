@@ -125,7 +125,13 @@ struct MainView: View {
             if let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) {
                 PersonPage(person: person).id(person.id)
             } else {
-                PeopleEmptyView().toolbar { SettingsToolbarItem() }
+                PeopleEmptyView().toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { model.openStakeholderMap(folder: model.folderFilter) } label: { Label("關係人地圖", systemImage: "square.grid.2x2") }
+                            .help("所有分析過的人在同一張影響力 × 關心程度的圖上")
+                    }
+                    SettingsToolbarItem()
+                }
             }
         } else if model.multiSelected.count > 1 {
             MultiSelectionView(ids: model.multiSelected).toolbar { SettingsToolbarItem() }

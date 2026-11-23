@@ -72,9 +72,9 @@ cp Resources/ThirdPartyLicenses.txt "$APP/Contents/Resources/ThirdPartyLicenses.
 text = html.escape(open(sys.argv[1], encoding="utf-8").read())
 kofi = "https://ko-fi.com/weiwei_chang"
 sponsor = {
-    "zh-Hant": f"覺得拾音好用的話，可以<a href=\"{kofi}\">請我喝杯咖啡</a>。",
-    "zh-Hans": f"觉得拾音好用的话，可以<a href=\"{kofi}\">请我喝杯咖啡</a>。",
-    "en": f"Enjoying Shiyin? <a href=\"{kofi}\">Buy me a coffee</a>.",
+    "zh-Hant": f"KelNote 改自 weiwei 的拾音（Shiyin）。覺得拾音好用的話，可以<a href=\"{kofi}\">請原作者喝杯咖啡</a>。",
+    "zh-Hans": f"KelNote 改自 weiwei 的拾音（Shiyin）。觉得拾音好用的话，可以<a href=\"{kofi}\">请原作者喝杯咖啡</a>。",
+    "en": f"KelNote is based on Shiyin by weiwei. Enjoying it? <a href=\"{kofi}\">Buy the original author a coffee</a>.",
 }
 for lang, line in sponsor.items():
     with open(f"{sys.argv[2]}/{lang}.lproj/Credits.html", "w", encoding="utf-8") as f:

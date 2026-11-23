@@ -136,6 +136,41 @@ extension AppModel {
         runner.wake()
     }
 
+    /// 使用者填的角色、組織、背景：存起來、重新分析這個人
+    func saveStakeholderContext(_ personId: Int64, role: String, org: String, notes: String) {
+        let trim = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines) }
+        do { try db.saveStakeholderContext(personId, role: trim(role), org: trim(org), notes: trim(notes)) }
+        catch { errorMessage = error.localizedDescription; return }
+        loadStakeholder(personId)
+        if askUnavailableReason == nil { analyzeStakeholder(personId) }
+    }
+
+    /// 關係人地圖：每個分析過的人，可以只看一個資料夾裡的會議出現過的人
+    func stakeholderMap(folder: String?) -> [(person: PersonOverview, record: StakeholderRecord, profile: StakeholderProfile)] {
+        let records = (try? db.allStakeholderProfiles()) ?? []
+        let allowed: Set<Int64>? = folder.map { f in
+            let ids = Set(meetings.filter { $0.meeting.folder == f }.map(\.id))
+            return Set(meetingPeople.filter { ids.contains($0.key) }.flatMap(\.value))
+        }
+        return records.compactMap { r in
+            guard let person = peopleOverview.first(where: { $0.id == r.personId }), let profile = r.decoded,
+                  allowed?.contains(r.personId) ?? true else { return nil }
+            return (person, r, profile)
+        }
+    }
+
+    /// 資料夾的右鍵選單：打開這個資料夾的關係人地圖
+    func openStakeholderMap(folder: String?) {
+        stakeholderMapFolder = folder ?? ""
+        stakeholderMapChosen = true
+        openWindowById?("stakeholders")
+    }
+
+    func openPerson(_ personId: Int64) {
+        sidebarMode = .people
+        selectedPerson = personId
+    }
+
     func stakeholdersFinished(_ job: Job, error: Error?) {
         let payload = job.payload.flatMap { try? JSONDecoder().decode(JobRunner.StakeholderPayload.self, from: Data($0.utf8)) }
         guard let personId = payload?.personId else { return }

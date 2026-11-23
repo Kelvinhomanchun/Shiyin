@@ -50,6 +50,15 @@ struct ShiyinApp: App {
         .defaultSize(width: 680, height: 720)
         .defaultLaunchBehavior(.suppressed)
 
+        // 關係人地圖（fork）：所有分析過的人在同一張影響力 × 關心程度的圖上
+        Window("關係人地圖", id: "stakeholders") {
+            StakeholderMapView()
+                .environment(AppModel.shared)
+                .chineseGlyphs()
+        }
+        .defaultSize(width: 900, height: 620)
+        .defaultLaunchBehavior(.suppressed)
+
         // 設定（R108、design §82）：一般視窗才拉得大，SwiftUI 的 Settings 視窗固定大小（D185）
         Window("設定", id: SettingsPage.windowID) {
             SettingsView()

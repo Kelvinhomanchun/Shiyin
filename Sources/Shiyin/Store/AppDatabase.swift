@@ -394,6 +394,14 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 利害關係人分析的使用者背景（fork）：角色、組織、知道的事，重新分析時保留
+        migrator.registerMigration("fork-stakeholder-context") { db in
+            try db.execute(sql: """
+                ALTER TABLE stakeholder_profiles ADD COLUMN user_role TEXT NOT NULL DEFAULT '';
+                ALTER TABLE stakeholder_profiles ADD COLUMN user_org TEXT NOT NULL DEFAULT '';
+                ALTER TABLE stakeholder_profiles ADD COLUMN user_notes TEXT NOT NULL DEFAULT '';
+                """)
+        }
         return migrator
     }
 

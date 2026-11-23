@@ -394,6 +394,7 @@ enum DebugControl {
             if let id { model.renameTarget = .person(id) }
         case "peopledeleteall": model.deleteAllPeople()
         case "stakeholder": if let id { model.analyzeStakeholder(id) }   // stakeholder <人物 id>：從全部會議重新分析
+        case "stakeholdercontext": if let id { model.saveStakeholderContext(id, role: args[2], org: args.count > 3 ? args[3] : "", notes: args.count > 4 ? args[4] : "") }   // stakeholdercontext <人物 id> <角色> [組織] [背景]
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
@@ -1593,9 +1594,26 @@ enum DebugControl {
             content = AnyView(ReplaceSheet(initialFind: "Lumeo"))
         case "askall":
             content = AnyView(AskAllView().frame(width: 680, height: 720))
+        case "stakeholdermap":   // snapshot … stakeholdermap：看 folderfilter 選的資料夾（沒選是所有會議）
+            model.stakeholderMapFolder = model.folderFilter ?? ""
+            model.stakeholderMapChosen = true
+            content = AnyView(StakeholderMapView().frame(width: 900, height: 620))
         case "person":   // snapshot <輸出> light person：目前選的人物頁
             guard let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) else { return }
             content = AnyView(PersonPage(person: person).frame(width: 820))
+        case "stakeholdercard":   // 人物頁的分析（只到「下次見面」和需要的東西，整頁太高畫不出來）
+            guard let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) else { return }
+            let record = model.stakeholder
+            var profile = record?.decoded
+            if var p = profile {
+                p.readings = Array(p.readings.prefix(2)); p.topics = Array(p.topics.prefix(2))
+                p.personality = []; p.motivations = []; p.openQuestions = []
+                profile = p
+            }
+            content = AnyView(VStack(alignment: .leading, spacing: 22) {
+                StakeholderCard(person: person, record: record, profile: profile, analyzing: false, editing: .constant(false))
+                if let profile { StakeholderDetails(profile: profile) }
+            }.padding(28).frame(width: 820))
         case "folders":
             // 側欄的資料夾區塊（List 畫不出來，用同樣的列重組）
             content = AnyView(VStack(alignment: .leading, spacing: 8) {
