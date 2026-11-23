@@ -25,16 +25,9 @@ extension AppModel {
     /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照名稱
     var sidebarFolderItems: [SidebarFolderItem] {
         // 側欄的上層只有客戶（上層資料夾）；場數含子資料夾。子資料夾列在展開的上層底下
-        let defaults = folderTree.map { SidebarFolderItem(name: $0.name, count: $0.count) }
-        let rank = Dictionary(sidebarOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
-        return defaults.enumerated().sorted { a, b in
-            switch (rank[a.element.key], rank[b.element.key]) {
-            case let (x?, y?): return x < y
-            case (_?, nil): return true
-            case (nil, _?): return false
-            case (nil, nil): return a.offset < b.offset
-            }
-        }.map(\.element)
+        // 依名字排（使用者要的，fork），不再用拖曳排的順序
+        return folderTree.map { SidebarFolderItem(name: $0.name, count: $0.count) }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     /// 把一個資料夾拖到另一個的前面或後面

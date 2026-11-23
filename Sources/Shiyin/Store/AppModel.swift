@@ -564,6 +564,7 @@ final class AppModel {
         let direct = Dictionary(uniqueKeysWithValues: all.map { ($0.name, $0.count) })
         return all.filter { !FolderPath.isSub($0.name) }.map { parent in
             let children = all.filter { FolderPath.isSub($0.name) && FolderPath.account($0.name) == parent.name }
+                .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
             return (parent.name, (direct[parent.name] ?? 0) + children.reduce(0) { $0 + $1.count }, children.map { ($0.name, $0.count) })
         }
     }
