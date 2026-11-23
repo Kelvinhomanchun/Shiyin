@@ -381,6 +381,19 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("fork-notes-language") { db in
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN notes_language TEXT")
         }
+        // 利害關係人分析（fork）：每個人一份，人被刪掉時一起刪
+        migrator.registerMigration("fork-stakeholders") { db in
+            try db.execute(sql: """
+                CREATE TABLE stakeholder_profiles (
+                  person_id   INTEGER PRIMARY KEY REFERENCES people(id) ON DELETE CASCADE,
+                  profile     TEXT NOT NULL,
+                  meeting_ids TEXT NOT NULL DEFAULT '[]',
+                  language    TEXT NOT NULL DEFAULT '',
+                  provider    TEXT NOT NULL DEFAULT '',
+                  updated_at  TEXT NOT NULL
+                );
+                """)
+        }
         return migrator
     }
 

@@ -23,6 +23,7 @@ enum AppSettings {
     static let transcriptionEngineKey = "transcriptionEngine"   // breeze / qwen / system（沒有值 = breeze，design §32.6）
     static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
     static let defaultNotesLanguageKey = "defaultNotesLanguage"   // 會議紀錄的預設語言；空字串 = 跟著會議語言
+    static let stakeholderAnalysisKey = "stakeholderAnalysis"   // 會議整理完自動更新每個人的利害關係人分析，預設開
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
     static let bookmarkHotKeyKey = "bookmarkHotKey"
@@ -88,6 +89,7 @@ enum AppSettings {
         return d.string(forKey: provider.modelKey) ?? ""
     }
     static var autoSummarize: Bool { flag(autoSummarizeKey, default: true) }
+    static var stakeholderAnalysis: Bool { flag(stakeholderAnalysisKey, default: true) }
     static var mcpEnabled: Bool { flag(mcpEnabledKey, default: false) }
     static var compressAudio: Bool { flag(compressAudioKey, default: true) }
     static var diarize: Bool { flag(diarizeKey, default: true) }
@@ -219,6 +221,10 @@ final class JobRunner {
     /// 自動放進資料夾了（design §72）：會議 id、資料夾
     @ObservationIgnored var onOrganized: ((Int64, String?) -> Void)?
     @ObservationIgnored var onAudioReplaced: ((Int64) -> Void)?
+    /// 某個人的利害關係人分析更新了（人物頁重讀）
+    @ObservationIgnored var onStakeholderUpdated: ((Int64) -> Void)?
+    /// 分析的工作結束（成功或失敗）：人物頁的「分析中」要停
+    @ObservationIgnored var onStakeholdersFinished: ((Job, Error?) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
     /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
@@ -321,6 +327,7 @@ final class JobRunner {
             case .compress: try await compress(job)
             case .correct: await correct(job, lane: lane)
             case .clean: try await clean(job, lane: lane)
+            case .stakeholders: try await stakeholders(job, lane: lane)
             case .nameSpeakers: await nameSpeakers(job, lane: lane)
             case .rediarize: try await rediarize(job, lane: lane)
             }
@@ -353,6 +360,7 @@ final class JobRunner {
             }
             // 壓縮、逐字稿校正是背景的輔助工作，不發通知；有草稿時正式版不再發（design §21.3）
             if !job.kind.isAuxiliary && (notify || failure != nil) { onFinished?(job, failure) }
+            if job.kind == .stakeholders { onStakeholdersFinished?(job, failure) }
         }
         onChange?()
     }
@@ -702,6 +710,121 @@ final class JobRunner {
         try db.saveCleanLines(job.meetingId, lines)
     }
 
+    // MARK: 利害關係人分析（fork）
+
+    struct StakeholderPayload: Codable { var personId: Int64; var rebuild: Bool = true }
+
+    /// 這場會議裡的每個人（我除外）：累積更新分析，只送還沒分析過的會議；payload 指定一個人時從他全部的會議重做。
+    /// 一個人失敗只記 log、繼續下一個；全部都失敗才算工作失敗
+    private func stakeholders(_ job: Job, lane: JobLane) async throws {
+        let provider = AppSettings.provider
+        guard provider != .none else { return }
+        let payload = job.payload.flatMap { try? JSONDecoder().decode(StakeholderPayload.self, from: Data($0.utf8)) }
+        let me = try db.myPersonIds()
+        let inMeeting = try db.peopleInMeeting(job.meetingId).filter { !me.contains($0) }
+        let people = payload.map { [$0.personId] } ?? inMeeting
+        running[lane]?.provider = provider
+        var failures = 0
+        var lastError: Error?
+        for (n, personId) in people.enumerated() {
+            guard isStillRunning(job) else { return }
+            running[lane]?.stage = String(localized: "分析與會者")
+            running[lane]?.progress = Double(n) / Double(max(people.count, 1))
+            do {
+                try await updateStakeholder(personId, rebuild: payload?.rebuild ?? false, lane: lane, provider: provider)
+            } catch is CancellationError {
+                return
+            } catch {
+                failures += 1
+                lastError = error
+                log.error("stakeholder \(personId) failed: \(error.logSummary, privacy: .public)")
+            }
+        }
+        if failures > 0 && failures == people.count, let lastError { throw lastError }
+    }
+
+    private func updateStakeholder(_ personId: Int64, rebuild: Bool, lane: JobLane, provider: LLMProvider) async throws {
+        guard let name = try db.peopleOverview().first(where: { $0.id == personId })?.name else { return }
+        let existing = rebuild ? nil : try db.stakeholderProfile(personId)
+        let done = existing?.analyzedMeetings ?? []
+        let all = try db.personMeetings(personId).map(\.meeting)   // 新到舊
+        let fresh = all.filter { !done.contains($0.id ?? 0) }
+        guard !fresh.isEmpty else { return }
+        // 材料：他說的每一句（加上前一句別人說的話），會議紀錄的摘要、決議
+        var materials: [StakeholderPrompt.MeetingMaterial] = []
+        var otherNames = Set<String>()
+        for meeting in fresh {
+            guard let id = meeting.id else { continue }
+            let speakers = try db.speakers(id)
+            let mine = Set(speakers.filter { $0.personId == personId }.map(\.idx))
+            for s in speakers where mine.contains(s.idx) && s.name.caseInsensitiveCompare(name) != .orderedSame { otherNames.insert(s.name) }
+            let names = Dictionary(uniqueKeysWithValues: speakers.map { ($0.idx, $0.name) })
+            let language = meeting.meetingLanguage
+            let segments = try db.segments(id)
+            var lines: [String] = []
+            var lastAdded = -1
+            for (i, s) in segments.enumerated() where s.speaker.map(mine.contains) == true {
+                if i - 1 > lastAdded, i > 0, let prev = Optional(segments[i - 1]), prev.speaker.map(mine.contains) != true {
+                    let who = prev.speaker.map { names[$0] ?? language.defaultSpeaker($0) } ?? "?"
+                    lines.append("  [\(TimeFormat.string(prev.start))] \(who): \(prev.text)")
+                }
+                lines.append("★ [\(TimeFormat.string(s.start))] \(name): \(s.text)")
+                lastAdded = i
+            }
+            guard !lines.isEmpty else { continue }
+            let notes = meeting.decodedNotes
+            let context = ((notes?.summary ?? []) + (notes?.decisions ?? [])).map(\.text)
+                + (notes?.people ?? []).filter { $0.name.caseInsensitiveCompare(name) == .orderedSame }.flatMap { $0.points.map(\.text) }
+            materials.append(.init(id: id, title: meeting.displayTitle, date: meeting.meetingDate, context: context, lines: lines))
+        }
+        guard !materials.isEmpty else {
+            // 沒有他說的話（只是被對到名字）：記下已經看過，下次不再送
+            if let existing {
+                var record = existing
+                record.meetingIds = Self.idsJSON(done.union(fresh.compactMap(\.id)))
+                try db.saveStakeholderProfile(record)
+            }
+            return
+        }
+        // 字數上限：從最舊的會議開始，先拿掉上下文、再截短發言
+        func size() -> Int { materials.reduce(0) { $0 + ($1.context + $1.lines).reduce(0) { $0 + $1.count } } }
+        var i = materials.count - 1
+        while size() > StakeholderPrompt.characterLimit && i >= 0 {
+            if !materials[i].context.isEmpty { materials[i].context = [] }
+            else {
+                let over = size() - StakeholderPrompt.characterLimit
+                var keep = materials[i].lines
+                var cut = 0
+                while cut < over, !keep.isEmpty { cut += keep.removeLast().count }
+                materials[i].lines = keep
+                i -= 1
+            }
+        }
+        materials.removeAll { $0.lines.isEmpty }
+        let language = AppSettings.defaultNotesLanguage ?? MeetingLanguage.interface
+        let system = StakeholderPrompt.system(language)
+        let prompt = StakeholderPrompt.prompt(person: name, otherNames: otherNames.sorted(), previous: existing?.decoded, meetings: materials)
+        let data = try await callLLM(lane) { onStart in
+            try await LLMClient.generateJSON(provider: provider, model: AppSettings.model, system: system, prompt: prompt,
+                                             format: StakeholderProfile.format, onStart: onStart)
+        }
+        let decoded: StakeholderProfile
+        do { decoded = try JSONDecoder().decode(StakeholderProfile.self, from: data) }
+        catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+        // 出處可以指向之前分析過的會議（累積更新時保留舊的依據）
+        let known = done.union(materials.map(\.id))
+        let profile = decoded.validated(meetingIds: known)
+        try db.saveStakeholderProfile(StakeholderRecord(personId: personId, profile: profile.jsonString(),
+                                                        meetingIds: Self.idsJSON(done.union(fresh.compactMap(\.id))),
+                                                        language: language.rawValue, provider: provider.rawValue))
+        onStakeholderUpdated?(personId)
+        log.info("stakeholder \(personId) updated from \(materials.count) meetings")
+    }
+
+    private static func idsJSON(_ ids: Set<Int64>) -> String {
+        (try? JSONEncoder().encode(ids.sorted())).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+    }
+
     // MARK: 壓縮（design §6.4）
 
     private func compress(_ job: Job) async throws {
@@ -781,6 +904,11 @@ final class JobRunner {
                                               reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
                                               source: answers == nil ? .generated : .revised)
         if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
+        // 正式的會議紀錄好了：更新這場會議裡每個人的利害關係人分析（輔助線，不擋別的工作）
+        if answers == nil, AppSettings.stakeholderAnalysis, try !db.peopleInMeeting(job.meetingId).isEmpty {
+            try db.enqueue(job.meetingId, kind: .stakeholders)
+            wake()
+        }
         // 整理完有標題了，照資料夾的條件放（design §72）
         if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder) }
         return answers != nil || hadDraft == 0

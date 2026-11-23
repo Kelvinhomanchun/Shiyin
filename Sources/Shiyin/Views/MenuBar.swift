@@ -163,6 +163,7 @@ struct MenuBarContent: View {
         case .revise: return String(localized: "依回答修正中：\(title)")
         case .correct: return String(localized: "檢查可能聽錯的字：\(title)")
         case .nameSpeakers: return String(localized: "猜說話者：\(title)")
+        case .stakeholders: return String(localized: "分析與會者：\(title)")
         default: return String(localized: "整理中：\(title)")
         }
     }

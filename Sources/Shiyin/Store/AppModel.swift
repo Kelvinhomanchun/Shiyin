@@ -394,6 +394,8 @@ final class AppModel {
             guard let self, self.selection == id else { return }
             self.noticeMessage = String(localized: "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回")
         }
+        runner.onStakeholderUpdated = { [weak self] personId in self?.stakeholderUpdated(personId) }
+        runner.onStakeholdersFinished = { [weak self] job, error in self?.stakeholdersFinished(job, error: error) }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             // 錄音壓縮成 m4a 後換檔案：接著原本的位置，正在播的繼續播
@@ -1716,6 +1718,16 @@ final class AppModel {
     var askFolder: String?
     @ObservationIgnored var askTask: Task<Void, Never>?
     @ObservationIgnored var askProcess: Subprocess?
+
+    // MARK: 利害關係人分析（fork，人物頁）
+
+    /// 人物頁正在看的那個人的分析
+    var stakeholder: StakeholderRecord?
+    var stakeholderPersonId: Int64?
+    /// 按了「重新分析」、還沒好的人
+    var analyzingStakeholders: Set<Int64> = []
+    /// 當成「自己」、不做分析的人
+    var stakeholderMe: Set<Int64> = []
 
     // MARK: 認識的人（設定頁，design §21.4）
 

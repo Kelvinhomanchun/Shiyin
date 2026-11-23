@@ -225,6 +225,7 @@ struct ProviderSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.providerKey) private var storedProvider = ""
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
+    @AppStorage(AppSettings.stakeholderAnalysisKey) private var stakeholderAnalysis = true
     @AppStorage(AppSettings.correctTranscriptKey) private var correctTranscript = true
     @State private var modelName = ""
     @State private var baseURL = ""
@@ -382,6 +383,11 @@ struct ProviderSettings: View {
             Toggle("轉錄完成後檢查可能聽錯的字", isOn: $correctTranscript)
                 .disabled(current == .none)
             Text("依詞彙表和上下文找出可能聽錯的字，標在逐字稿裡，你決定要不要改。不會自動改掉原文。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            // 利害關係人分析（fork）
+            Toggle("會議整理完自動更新與會者的利害關係人分析", isOn: $stakeholderAnalysis)
+                .disabled(current == .none)
+            Text("把每個認得名字的與會者（你自己除外）在這場會議說的話交給整理工具，累積更新他的個性、影響力、關心的議題和話中的意思，結果在側欄「人物」的人物頁。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Section {
                 Text(privacyText)

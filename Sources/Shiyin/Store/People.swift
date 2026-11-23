@@ -112,6 +112,42 @@ extension AppModel {
         if let selected = selectedPerson, !peopleOverview.contains(where: { $0.id == selected }) { selectedPerson = nil }
     }
 
+    // MARK: 利害關係人分析（fork）
+
+    func loadStakeholder(_ personId: Int64) {
+        stakeholderMe = (try? db.myPersonIds()) ?? []
+        stakeholder = (try? db.stakeholderProfile(personId)).flatMap { $0 }
+        stakeholderPersonId = personId
+    }
+
+    /// 這個人正在分析中（排隊或執行中）
+    func isAnalyzingStakeholder(_ personId: Int64) -> Bool { analyzingStakeholders.contains(personId) }
+
+    /// 從他全部的會議重新分析（人物頁的按鈕）。工作要掛在一場會議上：用他最近的一場
+    func analyzeStakeholder(_ personId: Int64) {
+        guard let meetingId = (try? db.personMeetings(personId))?.first?.id else {
+            noticeMessage = String(localized: "這個人還沒有出現在任何會議裡")
+            return
+        }
+        if let reason = askUnavailableReason { errorMessage = reason; return }
+        let payload = (try? JSONEncoder().encode(JobRunner.StakeholderPayload(personId: personId))).flatMap { String(data: $0, encoding: .utf8) }
+        do { _ = try db.enqueue(meetingId, kind: .stakeholders, payload: payload) } catch { errorMessage = error.localizedDescription; return }
+        analyzingStakeholders.insert(personId)
+        runner.wake()
+    }
+
+    func stakeholdersFinished(_ job: Job, error: Error?) {
+        let payload = job.payload.flatMap { try? JSONDecoder().decode(JobRunner.StakeholderPayload.self, from: Data($0.utf8)) }
+        guard let personId = payload?.personId else { return }
+        analyzingStakeholders.remove(personId)
+        if let error, stakeholderPersonId == personId { errorMessage = String(localized: "分析失敗：\(error.localizedDescription)") }
+    }
+
+    func stakeholderUpdated(_ personId: Int64) {
+        analyzingStakeholders.remove(personId)
+        if stakeholderPersonId == personId { loadStakeholder(personId) }
+    }
+
     /// 從人物頁打開一場會議（切回「會議」）；有時間點時從那裡播放
     func openFromPersonPage(_ meetingId: Int64, seconds: Double? = nil) {
         sidebarMode = .meetings

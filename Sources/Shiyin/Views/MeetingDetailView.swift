@@ -384,7 +384,8 @@ struct StatusBanner: View {
             .padding(.vertical, 10)
             .background(background(status), in: RoundedRectangle(cornerRadius: 8))
         } else if let helper = model.runner.running.values.first(where: {
-            $0.job.meetingId == detail.meeting.id && ($0.job.kind == .correct || $0.job.kind == .nameSpeakers || $0.job.kind == .rediarize)
+            $0.job.meetingId == detail.meeting.id && ($0.job.kind == .correct || $0.job.kind == .nameSpeakers || $0.job.kind == .rediarize
+                                                      || $0.job.kind == .stakeholders)
         }) {
             // 背景的輔助工作（design §21.2）：不算會議的狀態，但讓使用者知道還在跑
             let provider = helper.provider?.shortLabel ?? ""
@@ -393,6 +394,7 @@ struct StatusBanner: View {
                 switch helper.job.kind {
                 case .correct: Text("正在用 \(provider) 檢查可能聽錯的字…")
                 case .rediarize: Text("正在重新辨識說話者…")
+                case .stakeholders: Text("正在用 \(provider) 更新與會者的利害關係人分析…")
                 default: Text("正在用 \(provider) 猜說話者的名字…")
                 }
                 Spacer(minLength: 12)

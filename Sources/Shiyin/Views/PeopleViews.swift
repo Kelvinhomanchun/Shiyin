@@ -26,6 +26,7 @@ struct PersonPage: View {
     var body: some View {
         ReadingColumn {
             header
+            StakeholderSection(person: person)
             NotesSection(title: String(localized: "負責的待辦")) {
                 if !items.isEmpty {
                     Button("加到提醒事項", systemImage: "checklist") { model.addPersonItemsToReminders(items) }
