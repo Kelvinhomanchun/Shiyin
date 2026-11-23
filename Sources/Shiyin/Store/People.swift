@@ -46,9 +46,9 @@ extension AppDatabase {
                                    lastMeetingDate: row["last_date"], isMe: row["me"], group: row["group_name"])
                 }
         }
+        // 依名字排（使用者要的，fork）；你自己放最上面
         .sorted { a, b in
             if a.isMe != b.isMe { return a.isMe }
-            if a.lastMeetingDate != b.lastMeetingDate { return (a.lastMeetingDate ?? "") > (b.lastMeetingDate ?? "") }
             return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
     }
