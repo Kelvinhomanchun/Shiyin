@@ -390,6 +390,7 @@ enum DebugControl {
         case "peopledeleteall": model.deleteAllPeople()
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
+        case "noteslanguage": model.selection = id; model.setNotesLanguage(MeetingLanguage(rawValue: args.count > 2 ? args[2] : ""))   // noteslanguage <id> [en|…]；沒給是跟著預設
         case "transcribe-eval": transcribeEval(audio: args[1], options: args[2], output: args[3])   // design §17.1
         case "dump-golden": GoldenDump.run(fixtures: args[1], output: args[2])   // design-windows §4.1
         case "seedfixtures": GoldenDump.seed(fixtures: args[1], keys: Array(args.dropFirst(2)), into: model)   // 本地 MCP 的示範會議（design §44.6）

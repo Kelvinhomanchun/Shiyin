@@ -1182,6 +1182,7 @@ struct RecordingSettings: View {
         return text
     }
     @AppStorage(AppSettings.defaultMeetingLanguageKey) private var meetingLanguage: MeetingLanguage = .systemDefault
+    @AppStorage(AppSettings.defaultNotesLanguageKey) private var notesLanguage = ""
     @AppStorage(AppSettings.recordSourceKey) private var source = "mic"
     @AppStorage(AppSettings.inputDeviceKey) private var device = ""
     @AppStorage(AppSettings.liveTranscriptionKey) private var live = true
@@ -1315,6 +1316,13 @@ struct RecordingSettings: View {
                 ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0) }
             }
             Text("新的錄音和匯入預設用這個語言轉錄、整理會議紀錄；錄音選單、匯入時和會議頁都可以改。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            // 會議紀錄的語言：例如廣東話會議、英文紀錄
+            Picker("會議紀錄的語言", selection: $notesLanguage) {
+                Text("跟著會議語言").tag("")
+                ForEach(MeetingLanguage.allCases) { Text($0.name).tag($0.rawValue) }
+            }
+            Text("會議紀錄（摘要、決議、待辦、心智圖）用這個語言寫；逐字稿仍然照會議語言。每場會議也可以在會議頁的範本選單另外選。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             // 中文的字（R71、design §47.3）
             Picker("中文的字", selection: $chineseScript) {

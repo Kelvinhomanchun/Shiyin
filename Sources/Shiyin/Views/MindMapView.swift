@@ -200,7 +200,7 @@ extension Color {
 enum MindMapExport {
     static func layout(_ b: ExportBundle) -> MindMap.Layout? {
         guard let notes = b.notes, !notes.isEmpty else { return nil }
-        let language = b.meeting.meetingLanguage
+        let language = b.meeting.notesOutputLanguage
         return MindMap.layout(MindMap.tree(notes: notes, title: b.meeting.displayTitle,
                                            labels: .init(language, script: { AppSettings.script($0, for: language) })))
     }

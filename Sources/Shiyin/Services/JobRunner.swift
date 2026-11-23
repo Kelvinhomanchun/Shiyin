@@ -22,6 +22,7 @@ enum AppSettings {
     static let globalHotKeyKey = "globalHotKey"
     static let transcriptionEngineKey = "transcriptionEngine"   // breeze / qwen / system（沒有值 = breeze，design §32.6）
     static let defaultMeetingLanguageKey = "defaultMeetingLanguage"   // zh / en / ja
+    static let defaultNotesLanguageKey = "defaultNotesLanguage"   // 會議紀錄的預設語言；空字串 = 跟著會議語言
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
     static let bookmarkHotKeyKey = "bookmarkHotKey"
@@ -147,6 +148,10 @@ enum AppSettings {
     /// 新會議的會議語言（design §16.3）；沒設定時跟著介面語言
     static var defaultMeetingLanguage: MeetingLanguage {
         MeetingLanguage(rawValue: d.string(forKey: defaultMeetingLanguageKey) ?? "") ?? .systemDefault
+    }
+    /// 會議紀錄的預設語言；nil 是跟著每場會議的會議語言（原本的做法）
+    static var defaultNotesLanguage: MeetingLanguage? {
+        MeetingLanguage(rawValue: d.string(forKey: defaultNotesLanguageKey) ?? "")
     }
 }
 
@@ -731,7 +736,8 @@ final class JobRunner {
         guard !segments.isEmpty || !meeting.userNotes.isEmpty else { throw LLMError.failed(String(localized: "還沒有逐字稿，請先完成轉錄")) }
         let templates = try db.templates()
         let template = templates.first { $0.id == meeting.templateId } ?? templates.first { $0.id == "general" }
-        var definition = template?.definition(for: meeting.meetingLanguage) ?? TemplateDefinition.decode("{}")
+        let notesLanguage = meeting.notesOutputLanguage
+        var definition = template?.definition(for: notesLanguage) ?? TemplateDefinition.decode("{}")
         // 只補上每個人的重點（design §66）：範本只要 people，整理完只換掉 people，其他段落不動
         if peopleOnly {
             guard meeting.decodedNotes != nil else { return false }
@@ -750,13 +756,13 @@ final class JobRunner {
         } else {
             prompt = NotesPrompt.summarize(context)
         }
-        let system = NotesPrompt.system(meeting.meetingLanguage, documents: !context.documents.isEmpty)
+        let system = NotesPrompt.system(notesLanguage, transcript: meeting.meetingLanguage, documents: !context.documents.isEmpty)
         var notes = try await callLLM(lane) { onStart in
             try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
         }
         guard isStillRunning(job) else { return false }
         // 中文會議用簡體時，整理完才轉（提示詞照舊，design §47.2、D154）
-        if AppSettings.simplifiedChinese(for: meeting.meetingLanguage) { notes = notes.simplified() }
+        if AppSettings.simplifiedChinese(for: notesLanguage) { notes = notes.simplified() }
         if peopleOnly {
             // 整理的期間紀錄可能被改過：用現在的紀錄，只換掉 people
             guard var current = try db.meeting(job.meetingId)?.decodedNotes else { return false }

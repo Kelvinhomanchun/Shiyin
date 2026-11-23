@@ -376,6 +376,11 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 會議紀錄的語言：可以跟會議語言不同（粵語會議、英文紀錄）。NULL 是跟著預設；舊版 app 讀得到（多一欄不影響）
+        // 名稱不用 v16：這是 fork 加的，上游之後的 v16 不能被當成已經跑過
+        migrator.registerMigration("fork-notes-language") { db in
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN notes_language TEXT")
+        }
         return migrator
     }
 
@@ -638,6 +643,13 @@ final class AppDatabase: @unchecked Sendable {
     func setLanguage(_ id: Int64, _ language: MeetingLanguage) throws {
         try pool.write { db in
             try db.execute(sql: "UPDATE meetings SET language = ?, updated_at = ? WHERE id = ?", arguments: [language.rawValue, Clock.now(), id])
+        }
+    }
+
+    /// 會議紀錄的語言；nil 是跟著預設
+    func setNotesLanguage(_ id: Int64, _ language: MeetingLanguage?) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET notes_language = ?, updated_at = ? WHERE id = ?", arguments: [language?.rawValue, Clock.now(), id])
         }
     }
 

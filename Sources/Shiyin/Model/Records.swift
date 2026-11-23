@@ -48,8 +48,15 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var speakerHintDismissed: Bool = false
     // v12（design §72）：資料夾已經決定了（自動放過、自己移過、建議按了不用）。定期會議的 series_id 欄位留著不用（D177）
     var folderDecided: Bool = false
+    // fork-notes-language：會議紀錄用的語言，nil 是跟著設定的預設（預設又是跟著會議語言）。例如粵語會議、英文紀錄
+    var notesLanguage: String?
 
     var meetingLanguage: MeetingLanguage { MeetingLanguage(rawValue: language) ?? .zh }
+
+    /// 會議紀錄（整理、心智圖、匯出的標題、待確認題目）實際用的語言：這場會議的選擇 → 設定的預設 → 會議語言
+    var notesOutputLanguage: MeetingLanguage {
+        notesLanguage.flatMap(MeetingLanguage.init(rawValue:)) ?? AppSettings.defaultNotesLanguage ?? meetingLanguage
+    }
 
     /// 說話者辨識的自我檢查覺得可能把不同的人併在一起（design §24.5）
     var mayHaveMergedSpeakers: Bool { (speakerCheck ?? 0) >= Diarizer.Quality.hintThreshold }

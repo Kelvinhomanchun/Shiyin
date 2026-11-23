@@ -72,7 +72,7 @@ struct ReviewTab: View {
             speakerRow(item.idx, item.suggestion, draft: draft)
         }
         ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-            ReviewQuestionRow(index: index, item: item, language: language, draft: draft)
+            ReviewQuestionRow(index: index, item: item, language: detail.meeting.notesOutputLanguage, draft: draft)
         }
     }
 

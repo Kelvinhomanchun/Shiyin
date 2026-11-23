@@ -23,19 +23,36 @@ struct NotesContext {
 enum NotesPrompt {
     /// documents：有參考文件時接上文件的規則（design §39.3、D133）。語言的兩級（design §41.2、D140、D141）：
     /// 共用別的語言那份的精調語言（粵語）最後接一段逐字稿的說明；一般語言（韓文）用英文那份、改成用那個語言寫
-    static func system(_ language: MeetingLanguage, documents: Bool = false) -> String {
+    /// transcript：逐字稿的語言（會議語言）。跟 language（會議紀錄的語言）不同時，例如粵語會議、英文紀錄，
+    /// 不接逐字稿語言的說明（那段要求寫成中文），改接一段「逐字稿是 X，紀錄用 Y 寫」
+    static func system(_ language: MeetingLanguage, transcript: MeetingLanguage? = nil, documents: Bool = false) -> String {
+        let transcript = transcript ?? language
         var text = language.prompt(zh: systemChinese, en: systemEnglish, ja: systemJapanese)
         if language.profile.tier == .general, let name = language.profile.outputName {
             text = text.replacingOccurrences(of: "written entirely in English.", with: "written entirely in \(name).")
                 .replacingOccurrences(of: "(translated into English if it is not in English)", with: "(translated into \(name) if it is not in \(name))")
         }
         if documents { text += "\n" + DocumentPrompt.notesRules(language) }
-        if let note = language.profile.transcriptNote?.notes { text += "\n\n" + note }
+        if transcript == language {
+            if let note = language.profile.transcriptNote?.notes { text += "\n\n" + note }
+        } else {
+            text += "\n\n" + crossLanguageNote(transcript: transcript, notes: language)
+        }
         if language.profile.tier == .general, let name = language.profile.outputName {
             text += "\n\nOutput language: \(name). Every text value in the JSON (title, summary, key points by person, decisions, action items, "
                 + "open questions, topics, custom sections, review questions) must be in \(name); keep the JSON keys and the time format as they are."
         }
         return text
+    }
+
+    /// 逐字稿和會議紀錄的語言不同時接在 system 最後：用紀錄那份提示詞的語言寫
+    static func crossLanguageNote(transcript: MeetingLanguage, notes: MeetingLanguage) -> String {
+        let from = transcript.profile.uiName.en
+        let to = notes.profile.outputName ?? notes.profile.uiName.en
+        return notes.prompt(
+            zh: "注意：逐字稿是\(transcript.profile.uiName.zh)（\(from)），但會議紀錄一律用繁體中文的書面語寫，不要照抄逐字稿的語言或口語。人名、專有名詞照逐字稿的寫法；引用原話時可以保留原文。",
+            en: "Note: the transcript is in \(from), but the meeting notes must be written entirely in \(to). Translate the content; do not copy the transcript's language or colloquial wording. Keep people's names and proper nouns as written in the transcript. Every text value in the JSON (title, summary, key points by person, decisions, action items, open questions, topics, custom sections, review questions) must be in \(to).",
+            ja: "注意：文字起こしは\(from)ですが、議事録はすべて日本語で書いてください。内容を翻訳し、文字起こしの言語や口語をそのまま写さないこと。人名・固有名詞は文字起こしの表記のままにする。")
     }
 
     static let systemChinese = """
@@ -161,7 +178,9 @@ enum NotesPrompt {
 
     static func summarize(_ c: NotesContext) -> String {
         let m = c.meeting
-        let language = m.meetingLanguage
+        // 欄位名稱、範本、日期用會議紀錄的語言；逐字稿的預設說話者名稱用會議語言（逐字稿本身的語言）
+        let language = m.notesOutputLanguage
+        let transcriptLanguage = m.meetingLanguage
         let l = Labels.of(language)
         var lines: [String] = []
         let weekday = DateText.weekday(m.meetingDate, language: language)
@@ -198,14 +217,14 @@ enum NotesPrompt {
         lines.append("")
         lines.append("\(l.transcript)\(l.colon)")
         for s in c.segments {
-            let speaker = s.speaker.map { (c.speakers[$0] ?? language.defaultSpeaker($0)) + l.colon } ?? ""
+            let speaker = s.speaker.map { (c.speakers[$0] ?? transcriptLanguage.defaultSpeaker($0)) + l.colon } ?? ""
             lines.append("[\(TimeFormat.string(s.start))] \(speaker)\(s.lowConfidence ? "(?) " : "")\(s.text)")
         }
         return lines.joined(separator: "\n")
     }
 
     static func revise(_ c: NotesContext, notes: MeetingNotes, answers: [ReviewAnswer]) -> String {
-        let l = Labels.of(c.meeting.meetingLanguage)
+        let l = Labels.of(c.meeting.notesOutputLanguage)
         var text = summarize(c)
         text += "\n\n\(l.currentNotes)\(l.colon)\n" + notes.jsonString()
         text += "\n\n\(l.answers)\(l.colon)\n"

@@ -25899,6 +25899,125 @@
           }
         }
       }
+    },
+    "%@・%@ → %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ → %3$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@・%@ → %@"
+          }
+        }
+      }
+    },
+    "會議紀錄的語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes language"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议记录的语言"
+          }
+        }
+      }
+    },
+    "會議紀錄的語言改成 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes language changed to %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议记录的语言改成 %@"
+          }
+        }
+      }
+    },
+    "會議紀錄的語言改成 %@，要換成新的語言請從「更多 → 重新處理」重新整理會議紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes language changed to %@. To rewrite the existing notes in it, regenerate them from More → Reprocess"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议记录的语言改成 %@，要换成新的语言请从“更多 → 重新处理”重新整理会议记录"
+          }
+        }
+      }
+    },
+    "會議紀錄（摘要、決議、待辦、心智圖）用這個語言寫；逐字稿仍然照會議語言。每場會議也可以在會議頁的範本選單另外選。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting notes (summary, decisions, action items, mind map) are written in this language; the transcript stays in the meeting language. You can also pick a different one per meeting from the template menu on the meeting page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议记录（摘要、决议、待办、心智图）用这个语言写；逐字稿仍然照会议语言。每场会议也可以在会议页的模板菜单另外选。"
+          }
+        }
+      }
+    },
+    "跟著會議語言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as meeting language"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟着会议语言"
+          }
+        }
+      }
+    },
+    "跟著預設（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use default (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟着默认（%@）"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

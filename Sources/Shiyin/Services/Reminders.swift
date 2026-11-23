@@ -54,7 +54,7 @@ enum Reminders {
     /// 這場會議的待辦變成提醒事項（design §52.1）。備註依會議語言寫
     static func items(meeting: Meeting, notes: MeetingNotes) -> [ReminderItem] {
         guard let id = meeting.id else { return [] }
-        let language = meeting.meetingLanguage
+        let language = meeting.notesOutputLanguage
         var seen = Set<String>()
         return notes.actionItems.compactMap { item in
             let task = item.task.trimmingCharacters(in: .whitespacesAndNewlines)

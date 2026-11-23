@@ -1036,6 +1036,16 @@ final class AppModel {
         noticeMessage = String(localized: "會議語言改成 \(language.name)，要重新轉錄或整理的話，從「更多 → 重新處理」選")
     }
 
+    /// 改會議紀錄的語言（nil = 跟著預設）：只影響之後的整理；已經有紀錄時提示怎麼重新整理
+    func setNotesLanguage(_ language: MeetingLanguage?) {
+        guard let meeting = detail?.meeting, let id = meeting.id, meeting.notesLanguage != language?.rawValue else { return }
+        perform { try db.setNotesLanguage(id, language) }
+        let name = (language ?? detail?.meeting.notesOutputLanguage ?? meeting.meetingLanguage).name
+        noticeMessage = meeting.notes == nil
+            ? String(localized: "會議紀錄的語言改成 \(name)")
+            : String(localized: "會議紀錄的語言改成 \(name)，要換成新的語言請從「更多 → 重新處理」重新整理會議紀錄")
+    }
+
     /// 錄音中選「大約幾個人」（design §26.2）：錄完轉錄時用
     func setMinSpeakers(_ count: Int?) {
         guard let id = selection else { return }
@@ -1377,7 +1387,7 @@ final class AppModel {
     @discardableResult
     func submitReview(answers: [Int: String], dismissed: Set<Int>) -> Bool {
         guard let id = selection, let detail, let notes = detail.notes, readyForAction(id) else { return false }
-        let language = detail.meeting.meetingLanguage
+        let language = detail.meeting.notesOutputLanguage
         // 回答分三類（design §31.3）：確認（是非題回答「是」、沒填答案）和略過直接從紀錄移除，不送整理工具（R41.4、D103）；
         // 只有要改內容的回答（打字的、「不是」）才送整理工具依回答修正
         var confirmed: Set<Int> = []
@@ -1905,7 +1915,7 @@ final class AppModel {
         case .mindMap:
             // 心智圖（design §42.4）：段落名稱跟著會議語言，同其他匯出
             guard let layout = MindMapExport.layout(b) else { throw ExportError.noNotes }
-            let language = b.meeting.meetingLanguage
+            let language = b.meeting.notesOutputLanguage
             switch format {
             case "svg": try MindMap.svg(layout, language: language).write(to: url, atomically: true, encoding: .utf8)
             case "pdf": try MindMapExport.pdf(layout, language: language, to: url)
@@ -1974,7 +1984,7 @@ final class AppModel {
     /// 複製心智圖（design §42.4）：PNG 放進剪貼簿，貼到聊天軟體、簡報
     func copyMindMap() {
         guard let b = exportBundle() else { return }
-        guard let layout = MindMapExport.layout(b), let png = MindMapExport.png(layout, language: b.meeting.meetingLanguage) else {
+        guard let layout = MindMapExport.layout(b), let png = MindMapExport.png(layout, language: b.meeting.notesOutputLanguage) else {
             noticeMessage = String(localized: "還沒有會議紀錄可以畫成心智圖")
             return
         }

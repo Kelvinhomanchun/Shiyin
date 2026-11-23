@@ -234,6 +234,23 @@ struct MeetingHeader: View {
                     }
                 }
             }
+            // 會議紀錄的語言：可以跟會議語言不同（粵語會議、英文紀錄）
+            Section("會議紀錄的語言") {
+                Button {
+                    model.setNotesLanguage(nil)
+                } label: {
+                    let follow = String(localized: "跟著預設（\((AppSettings.defaultNotesLanguage ?? meeting.meetingLanguage).name)）")
+                    if meeting.notesLanguage == nil { Label(follow, systemImage: "checkmark") } else { Text(follow) }
+                }
+                ForEach(MeetingLanguage.allCases) { language in
+                    Button {
+                        model.setNotesLanguage(language)
+                    } label: {
+                        if meeting.notesLanguage == language.rawValue { Label(language.name, systemImage: "checkmark") }
+                        else { Text(language.name) }
+                    }
+                }
+            }
             // 錄音中先填人數（design §26.2）：錄完轉錄時用
             if recordingThis {
                 Section("大約幾個人") {
@@ -254,7 +271,9 @@ struct MeetingHeader: View {
         } label: {
             Label(recordingThis && meeting.minSpeakers != nil
                   ? String(localized: "\(template)・\(meeting.meetingLanguage.name)・大約 \(meeting.minSpeakers ?? 0) 人")
-                  : String(localized: "\(template)・\(meeting.meetingLanguage.name)"),
+                  : meeting.notesOutputLanguage != meeting.meetingLanguage
+                    ? String(localized: "\(template)・\(meeting.meetingLanguage.name) → \(meeting.notesOutputLanguage.name)")
+                    : String(localized: "\(template)・\(meeting.meetingLanguage.name)"),
                   systemImage: "slider.horizontal.3")
         }
         // 沒有框：跟資訊列同一層，不比標題搶眼（design §59）

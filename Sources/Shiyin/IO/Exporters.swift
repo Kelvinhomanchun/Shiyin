@@ -17,6 +17,8 @@ struct ExportBundle {
 
     /// 匯出內容的標題、欄位名稱：跟著會議語言，不是介面語言（design §16.6）
     var text: ExportText { ExportText(meeting.meetingLanguage) }
+    /// 會議紀錄、心智圖的標題和欄位名稱：跟著會議紀錄的語言（可以跟會議語言不同）
+    var notesText: ExportText { ExportText(meeting.notesOutputLanguage) }
 }
 
 /// 匯出檔裡的固定文字（design §16.6）
@@ -129,7 +131,7 @@ enum TranscriptExporter {
 enum NotesExporter {
     static func markdown(_ b: ExportBundle) -> String {
         let m = b.meeting
-        let x = b.text
+        let x = b.notesText
         var out = ["# \(m.displayTitle)", ""]
         out.append("- \(x.date)\(x.colon)\(x.dateLine(m.meetingDate))")
         if !m.participantList.isEmpty { out.append("- \(x.participants)\(x.colon)\(m.participantList.joined(separator: x.listSeparator))") }
@@ -172,7 +174,7 @@ enum NotesExporter {
 
     static func html(_ b: ExportBundle) -> String {
         let m = b.meeting
-        let x = b.text
+        let x = b.notesText
         var body = "<h1>\(HTML.escape(m.displayTitle))</h1>\n<p class=\"meta\">\(x.dateLine(m.meetingDate))"
         if !m.participantList.isEmpty {
             body += x.language.text(zh: "　", en: " · ", ja: "　") + "\(x.participants)\(x.colon)\(HTML.escape(m.participantList.joined(separator: x.listSeparator)))"
