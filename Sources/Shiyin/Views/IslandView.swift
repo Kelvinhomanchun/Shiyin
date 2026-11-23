@@ -318,8 +318,8 @@ private struct IslandButton: View {
     private var background: Color {
         switch role {
         case .normal: return .white.opacity(0.14)
-        case .primary: return Color(nsColor: .dynamic(light: 0x2D6A5D, dark: 0x2D6A5D))
-        case .destructive: return Color(red: 0.75, green: 0.2, blue: 0.2)
+        case .primary: return Color(nsColor: .dynamic(light: 0x0F62FE, dark: 0x0F62FE))   // IBM Blue 60，白字 5.0:1
+        case .destructive: return Color(nsColor: .dynamic(light: 0xDA1E28, dark: 0xDA1E28))   // IBM Red 60
         }
     }
 }

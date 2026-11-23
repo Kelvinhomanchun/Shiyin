@@ -79,10 +79,10 @@ struct ItemList: View {
                     } else {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("•").foregroundStyle(.secondary)
-                            (Text(item.text)).meetingText()
+                            Text(NotesSearch.highlight(item.text, model.notesQuery)).meetingText()
                                 .selectableUnlessEditable(ref != nil && detail != nil)
                                 .fixedSize(horizontal: false, vertical: true)
-                            if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
+                            if !item.time.isEmpty { TimeButton(time: item.time, quiet: true) }
                             if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }
                         }
                         .noteItemActions(ref: detail == nil ? nil : ref, text: item.text, time: item.time)
@@ -265,7 +265,7 @@ struct NotesPage: View {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                                         TimeButton(time: topic.start)
-                                        Text(topic.title).contentTitleFont(16)
+                                        Text(NotesSearch.highlight(topic.title, model.notesQuery)).contentTitleFont(16)
                                     }
                                     ItemList(items: topic.points, detail: detail) { .topicPoint(t, $0) }
                                 }
@@ -300,6 +300,7 @@ struct NotesPage: View {
             FolderSuggestionBanner(meetingId: id, suggestion: suggestion).environment(\.textScale, 1)
         }
         if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
+        AttendeeLens(detail: detail)
         EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true,
                 onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
             base = notes; editing = notes
@@ -425,7 +426,10 @@ struct PeopleNotes: View {
                 PersonAvatar(name: person.name, color: idx.map(Color.speaker) ?? Color.person(person.name),
                              size: 30, isMe: idx != nil && idx == detail.selfIdx)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(person.name).contentTitleFont(18)
+                    // 名字可以點、滑過看小卡（UX 檢查 A3）
+                    PersonLink(personId: detail.personId(named: person.name, people: model.peopleOverview)) {
+                        Text(person.name).contentTitleFont(18).foregroundStyle(Color.primary)
+                    }
                     if let idx, let seconds = spoken[idx], total > 0 {
                         Text("說了 \(TimeFormat.duration(Int(seconds.rounded())))（\(Int((seconds / total * 100).rounded()))%）")
                             .contentFont(.caption)
@@ -490,14 +494,32 @@ struct EditBar: View {
                 .labelsHidden()
                 .fixedSize()
                 .help("把會議紀錄切換成條列、心智圖或依人物整理")
+                if viewMode.wrappedValue != "mindMap" { NotesSearchField() }
             }
             Spacer()
+            // 窄的時候「復原上一版」只留圖示（加了搜尋框之後放不下，會被擠成直的一排字；UX 檢查 E4）
+            ViewThatFits(in: .horizontal) {
+                actions(compact: false)
+                actions(compact: true)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .font(.body)   // 按鈕不跟著文字大小（R59.2）
+        .padding(.bottom, -18)
+    }
+
+    private func actions(compact: Bool) -> some View {
+        HStack(spacing: 14) {
             if let onUndo {
-                Button("復原上一版", systemImage: "arrow.uturn.backward", action: onUndo)
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(disabled ? Color.secondary : Color.celadon)
-                    .disabled(disabled)
-                    .help("換回上一版會議紀錄（再按一次換回更早的）")
+                Button(action: onUndo) {
+                    if compact { Image(systemName: "arrow.uturn.backward") }
+                    else { Label("復原上一版", systemImage: "arrow.uturn.backward") }
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(disabled ? Color.secondary : Color.celadon)
+                .disabled(disabled)
+                .help("換回上一版會議紀錄（再按一次換回更早的）")
+                .accessibilityLabel(Text("復原上一版"))
             }
             Button("編輯", systemImage: "pencil", action: onEdit)
                 .buttonStyle(.borderless)
@@ -505,8 +527,8 @@ struct EditBar: View {
                 .disabled(disabled)
                 .help(disabled ? "正在處理這場會議，完成後才能編輯" : "直接修改會議紀錄，存檔時會留一個版本")
         }
-        .font(.body)   // 按鈕不跟著文字大小（R59.2）
-        .padding(.bottom, -18)
+        .lineLimit(1)
+        .fixedSize()
     }
 }
 
@@ -529,31 +551,52 @@ struct ActionItemsTable: View {
             Divider().gridCellUnsizedAxes(.horizontal)
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 let ref = ref(index)
+                let done = model.isActionDone(detail?.meeting.id, item.task)
                 GridRow {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        // 負責人是這場的說話者時放他的頭像（design §58.2、R83.2）
-                        if let idx = detail?.speakerIdx(named: item.owner) {
-                            PersonAvatar(name: item.owner, color: Color.speaker(idx), isMe: idx == detail?.selfIdx)
-                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 * scale }
+                        // 完成了打勾（UX 檢查 B1）：存在會議紀錄外面，重新整理後照樣記得
+                        if detail != nil {
+                            Button { model.toggleActionDone(detail?.meeting.id, item.task) } label: {
+                                Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(done ? Color.celadon : Color.secondary)
+                                    .contentFont(.body)
+                            }
+                            .buttonStyle(.plain)
+                            .help(done ? "標成還沒完成" : "標成完成")
+                            .accessibilityLabel(Text(done ? "已完成" : "未完成"))
                         }
-                        Text(item.owner.isEmpty ? String(localized: "未指定") : item.owner).meetingText()
-                            .foregroundStyle(item.owner.isEmpty ? Color.signal : Color.primary)
+                        // 負責人是這場的說話者時放他的頭像（design §58.2、R83.2）；對到認識的人時可以點（UX 檢查 A1）
+                        PersonLink(personId: detail?.personId(named: item.owner, people: model.peopleOverview)) {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                if let idx = detail?.speakerIdx(named: item.owner) {
+                                    PersonAvatar(name: item.owner, color: Color.speaker(idx), isMe: idx == detail?.selfIdx)
+                                        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 * scale }
+                                }
+                                if item.owner.isEmpty {
+                                    Text("未指定").meetingText().foregroundStyle(Color.signal)
+                                } else {
+                                    LinkName(name: item.owner).meetingText()
+                                }
+                            }
+                        }
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         if let ref, detail != nil, model.editingNoteItem == ref {
                             NoteItemEditor(ref: ref)
                         } else {
-                        Text(item.task).meetingText()
+                        Text(NotesSearch.highlight(item.task, model.notesQuery)).meetingText()
+                            .strikethrough(done, color: .secondary)
+                            .foregroundStyle(done ? Color.secondary : Color.primary)
                             .selectableUnlessEditable(ref != nil && detail != nil)
                             .fixedSize(horizontal: false, vertical: true)
-                        if !item.time.isEmpty { TimeButton(time: item.time).font(.caption.monospacedDigit()) }
+                        if !item.time.isEmpty { TimeButton(time: item.time, quiet: true) }
                         if let ref, let detail { ReviewMarker(ref: ref, count: detail.reviewCount(ref)) }
                         // 已經加到提醒事項的（design §52.2、R76.4）：完成了打勾
-                        if detail != nil, let done = model.reminderStatus[Reminders.key(item.task)] {
-                            Image(systemName: done ? "checkmark.circle.fill" : "checklist")
-                                .foregroundStyle(done ? Color.celadon : Color.secondary)
+                        if detail != nil, model.reminderStatus[Reminders.key(item.task)] != nil {
+                            Image(systemName: "checklist")
+                                .foregroundStyle(Color.secondary)
                                 .contentFont(.caption)
-                                .help(done ? "已在提醒事項裡完成" : "已加到提醒事項")
+                                .help("已加到提醒事項（在提醒事項打勾，這裡也會顯示完成）")
                         }
                         }
                     }
@@ -776,5 +819,67 @@ extension Binding where Value: MutableCollection & RangeReplaceableCollection, V
 
     func move(_ index: Int, to target: Int) {
         if wrappedValue.indices.contains(index) && wrappedValue.indices.contains(target) { wrappedValue.swapAt(index, target) }
+    }
+}
+
+// MARK: - 搜尋會議紀錄（使用者要的功能）
+
+/// 會議紀錄（條列、人物）的搜尋：找到的字標底色，旁邊顯示幾條找到；⌘F 在會議紀錄分頁時聚焦這裡
+enum NotesSearch {
+    static func highlight(_ text: String, _ query: String) -> AttributedString {
+        var attributed = AttributedString(text)
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return attributed }
+        var range = attributed.startIndex..<attributed.endIndex
+        while let found = attributed[range].range(of: q, options: [.caseInsensitive, .diacriticInsensitive]) {
+            attributed[found].backgroundColor = Color.highlight
+            range = found.upperBound..<attributed.endIndex
+        }
+        return attributed
+    }
+
+    /// 這份紀錄有幾條含有這個字（摘要、每個人的重點、決議、待辦、未決問題、議題、自訂段落）
+    static func count(_ notes: MeetingNotes, _ query: String) -> Int {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return 0 }
+        var texts: [String] = notes.summary.map(\.text)
+        for person in notes.people { texts.append(person.name); texts += person.points.map(\.text) }
+        texts += notes.decisions.map(\.text)
+        for item in notes.actionItems { texts.append(item.task); texts.append(item.owner) }
+        texts += notes.openQuestions.map(\.text)
+        for topic in notes.topics { texts.append(topic.title); texts += topic.points.map(\.text) }
+        for section in notes.custom { texts.append(section.title); texts += section.items.map(\.text) }
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+        return texts.filter { $0.range(of: q, options: options) != nil }.count
+    }
+}
+
+struct NotesSearchField: View {
+    @Environment(AppModel.self) private var model
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        @Bindable var model = model
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("搜尋會議紀錄", text: $model.notesQuery)
+                .textFieldStyle(.plain)
+                .focused($focused)
+                .frame(minWidth: 90, maxWidth: 200)
+            if !model.notesQuery.isEmpty {
+                let n = model.detail?.notes.map { NotesSearch.count($0, model.notesQuery) } ?? 0
+                Text(n == 0 ? String(localized: "找不到") : String(localized: "\(n) 條"))
+                    .font(.caption).monospacedDigit().foregroundStyle(.secondary).fixedSize()
+                Button { model.notesQuery = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .help("清除搜尋")
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+        // ⌘F：在會議紀錄分頁時聚焦這裡（逐字稿分頁有自己的 ⌘F）
+        .background(Button("搜尋") { focused = true }.keyboardShortcut("f").hidden())
+        .onChange(of: model.detail?.meeting.id) { _, _ in model.notesQuery = "" }
     }
 }

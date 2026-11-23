@@ -44,16 +44,16 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     /// 圖示的底色（同系統設定的彩色方塊，深淺色都用同一個）
     var color: Color {
         switch self {
-        case .provider: Color(red: 0.55, green: 0.36, blue: 0.85)
-        case .templates: Color(red: 0.95, green: 0.55, blue: 0.16)
-        case .recording: Color(red: 0.92, green: 0.26, blue: 0.26)
-        case .transcription: Color(red: 0.16, green: 0.48, blue: 0.95)
-        case .models, .general: Color(red: 0.52, green: 0.53, blue: 0.57)
-        case .speakers: Color(red: 0.11, green: 0.66, blue: 0.68)
-        case .glossary: Color(red: 0.62, green: 0.44, blue: 0.28)
-        case .ai: Color(red: 0.35, green: 0.35, blue: 0.86)
-        case .enterprise: Color(red: 0.33, green: 0.45, blue: 0.62)
-        case .status: Color(red: 0.2, green: 0.68, blue: 0.36)
+        case .provider: Color(hex: "#8A3FFC")
+        case .templates: Color(hex: "#FF832B")
+        case .recording: Color(hex: "#DA1E28")
+        case .transcription: Color(hex: "#0F62FE")
+        case .models, .general: Color(hex: "#6F6F6F")
+        case .speakers: Color(hex: "#007D79")
+        case .glossary: Color(hex: "#8E6A00")
+        case .ai: Color(hex: "#0043CE")
+        case .enterprise: Color(hex: "#00539A")
+        case .status: Color(hex: "#198038")
         }
     }
 

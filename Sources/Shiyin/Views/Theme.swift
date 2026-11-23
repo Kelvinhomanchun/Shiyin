@@ -34,20 +34,35 @@ enum TextSize {
 
 /// 視覺 token（design §9.3）
 extension Color {
-    /// 青瓷綠：主要動作、目前播放的段落
-    static let celadon = Color(nsColor: .dynamic(light: 0x2D6A5D, dark: 0x6DB2A1))
-    /// VU 琥珀：低信心、待確認、進行中
-    static let signal = Color(nsColor: .dynamic(light: 0xB97F06, dark: 0xE2AD3B))
+    /// 主題色：主要動作、連結、目前播放的段落。KelNote 用 IBM Blue 60（#0f62fe），深色模式用 Blue 40（#78a9ff），
+    /// 深底上 Blue 60 太暗看不清楚。名字沿用 celadon（原本的青瓷綠），全 app 都用這個
+    static let celadon = Color(nsColor: .dynamic(light: 0x0F62FE, dark: 0x78A9FF))
+    /// 警示（低信心、待確認、進行中）：IBM Orange 60／40（淺色在白底 5.0:1，深色 6.8:1）。
+    /// IBM 的黃在白底只有 3.3:1，文字讀不清楚，改用橘（同 Carbon 的 warning 用法）
+    static let signal = Color(nsColor: .dynamic(light: 0xBA4E00, dark: 0xFF832B))
+
+    // KelNote 的配色（IBM Design Language，https://www.ibm.com/design/language/color/）：
+    // 以 Blue 60 為主色，其他顏色只在有意義時用；淺色模式用 60、深色模式用 40（兩邊對背景都 ≥ 4.5:1）
+    /// 正面（支持、完成）：Green 60／40
+    static let positive = Color(nsColor: .dynamic(light: 0x198038, dark: 0x42BE65))
+    /// 注意（存疑、中）：Orange 60／40，同 signal
+    static let caution = signal
+    /// 負面（反對、高風險、錯誤）：Red 60／40
+    static let negative = Color(nsColor: .dynamic(light: 0xDA1E28, dark: 0xFF8389))
+    /// 次要的結構色（讓他滿意的象限等）：Purple 60／40
+    static let accent2 = Color(nsColor: .dynamic(light: 0x8A3FFC, dark: 0xBE95FF))
+    /// 搜尋找到的字：Yellow 20／Yellow 30 的底色（IBM 的黃只當底色用，上面的字照舊是一般文字色）
+    static let highlight = Color(nsColor: .dynamic(light: 0xFDDC69, dark: 0x8E6A00))
 }
 
 extension Color {
-    /// 說話者的顏色（8 色循環，深淺色模式都看得清楚），也是頭像的「釉色」（design §58.1）：
-    /// 天青、茄皮紫、茶葉末、鈞紫、霽紅、松石、醬釉、青瓷。
-    /// 青瓷綠是時間點按鈕的顏色、琥珀色代表低信心，所以這兩種排在最後，人少的會議不會用到
+    /// 說話者的顏色（8 色循環），也是頭像的顏色（design §58.1）。KelNote 用 IBM 的色系，淺色 60、深色 40
+    /// （對背景都 ≥ 4.5:1）：Cyan、Purple、Teal、Magenta、Green、Blue 80/30、Red、Gray。
+    /// 主色 Blue 60 是連結的顏色、橘是警示，所以都不放進來；紅放後面（人少的會議不會用到，不會看起來像錯誤）
     static func speaker(_ idx: Int) -> Color {
         let palette: [(UInt32, UInt32)] = [
-            (0x3F5BA9, 0x8FA8EE), (0x8E3B6B, 0xE08BBE), (0x4F7A28, 0x9BCB6E), (0x7A4FB5, 0xBFA0EE),
-            (0xA23B3B, 0xEE8E8E), (0x2F7486, 0x7CC4D6), (0x9A5B13, 0xE2A65E), (0x2D6A5D, 0x6DB2A1),
+            (0x0072C3, 0x33B1FF), (0x8A3FFC, 0xBE95FF), (0x007D79, 0x08BDBA), (0xD02670, 0xFF7EB6),
+            (0x198038, 0x42BE65), (0x002D9C, 0xA6C8FF), (0xA2191F, 0xFF8389), (0x525252, 0xC6C6C6),
         ]
         let pair = palette[(max(idx, 1) - 1) % palette.count]
         return Color(nsColor: .dynamic(light: pair.0, dark: pair.1))
@@ -148,17 +163,23 @@ struct TimeButton: View {
     let time: String
     /// 要跳到的秒數；沒給就照顯示的時間。逐字稿的段落給真正的開始時間（24.4 秒的段落顯示 00:24，跳到 24.0 高亮會落在上一段）
     var seek: Double? = nil
+    /// 會議紀錄裡的時間點小一號、淡一點，滑過才變成連結的顏色（UX 檢查 C3：原本跟內文搶眼）。
+    /// 逐字稿每段開頭的時間點照舊（那裡是欄位，不是夾在文字後面）
+    var quiet = false
+    @State private var hovering = false
 
     var body: some View {
         // 沒有錄音的會議（例如匯入逐字稿）點了也沒辦法播，顯示成一般文字
         if let seconds = seek ?? TimeFormat.seconds(time), model.player.isLoaded {
             Button(time) { model.player.seek(to: seconds) }
                 .buttonStyle(.plain)
-                .contentFont(.callout, monospacedDigit: true)   // 跟著文字大小（design §38.5）
-                .foregroundStyle(Color.celadon)
+                .contentFont(quiet ? .caption : .callout, monospacedDigit: true)   // 跟著文字大小（design §38.5）
+                .foregroundStyle(quiet && !hovering ? Color.celadon.opacity(0.65) : Color.celadon)
+                .underline(quiet && hovering)
+                .onHover { hovering = $0 }
                 .help("從 \(time) 開始播放")
         } else if !time.isEmpty {
-            Text(time).contentFont(.callout, monospacedDigit: true).foregroundStyle(.secondary)
+            Text(time).contentFont(quiet ? .caption : .callout, monospacedDigit: true).foregroundStyle(.tertiary)
         }
     }
 }
@@ -260,8 +281,9 @@ final class LevelMeterView: NSView {
         CATransaction.setDisableActions(true)
         effectiveAppearance.performAsCurrentDrawingAppearance {
             let off = NSColor.secondaryLabelColor.withAlphaComponent(0.18).cgColor
-            let green = NSColor.dynamic(light: 0x2D6A5D, dark: 0x6DB2A1).cgColor
-            let amber = NSColor.dynamic(light: 0xB97F06, dark: 0xE2AD3B).cgColor
+            // VU 表：Blue 60／40，最後三格是警示的橘
+            let green = NSColor.dynamic(light: 0x0F62FE, dark: 0x78A9FF).cgColor
+            let amber = NSColor.dynamic(light: 0xBA4E00, dark: 0xFF832B).cgColor
             for (i, bar) in bars.enumerated() {
                 bar.backgroundColor = i < count ? (i >= segments - 3 ? amber : green) : off
             }
@@ -279,6 +301,35 @@ struct ElapsedText: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             Text(TimeFormat.string(context.date.timeIntervalSince(since)))
                 .monospacedDigit()
+        }
+    }
+}
+
+/// 一排標籤放不下就換行（出處的小標籤用）
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, row: CGFloat = 0, widest: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width { y += row + spacing; x = 0; row = 0 }
+            x += size.width + spacing
+            row = max(row, size.height)
+            widest = max(widest, x - spacing)
+        }
+        return CGSize(width: min(widest, width), height: y + row)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, row: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX && x + size.width > bounds.maxX { y += row + spacing; x = bounds.minX; row = 0 }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            row = max(row, size.height)
         }
     }
 }

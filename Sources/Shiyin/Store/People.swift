@@ -166,6 +166,14 @@ extension AppModel {
         openWindowById?("stakeholders")
     }
 
+    /// 滑過名字的小卡用：每個人的分析（不在人物頁也讀得到），會議頁打開時讀一次
+    func stakeholderSummary(_ personId: Int64) -> StakeholderProfile? {
+        if let cached = stakeholderCache[personId] { return cached }
+        let profile = (try? db.stakeholderProfile(personId))??.decoded
+        stakeholderCache[personId] = profile
+        return profile
+    }
+
     func openPerson(_ personId: Int64) {
         sidebarMode = .people
         selectedPerson = personId
@@ -179,6 +187,7 @@ extension AppModel {
     }
 
     func stakeholderUpdated(_ personId: Int64) {
+        stakeholderCache[personId] = nil
         analyzingStakeholders.remove(personId)
         if stakeholderPersonId == personId { loadStakeholder(personId) }
     }
@@ -223,4 +232,49 @@ extension AppModel {
             }
         }
     }
+}
+
+// MARK: - 待辦完成了（fork，UX 檢查 B1）
+
+enum ActionDone {
+    /// 會議＋事項內容（同提醒事項的鍵）：「會議 id:鍵」
+    static func key(_ meetingId: Int64, _ task: String) -> String { "\(meetingId):\(Reminders.key(task))" }
+}
+
+extension AppDatabase {
+    /// 所有完成了的待辦（「會議 id:鍵」）
+    func doneActionItems() throws -> Set<String> {
+        try pool.read { db in
+            Set(try Row.fetchAll(db, sql: "SELECT meeting_id, task_key FROM action_done").map { row in
+                "\(row["meeting_id"] as Int64):\(row["task_key"] as String)"
+            })
+        }
+    }
+
+    func setActionDone(_ meetingId: Int64, task: String, done: Bool) throws {
+        try pool.write { db in
+            if done {
+                try db.execute(sql: "INSERT OR REPLACE INTO action_done (meeting_id, task_key, done_at) VALUES (?, ?, ?)",
+                               arguments: [meetingId, Reminders.key(task), Clock.now()])
+            } else {
+                try db.execute(sql: "DELETE FROM action_done WHERE meeting_id = ? AND task_key = ?", arguments: [meetingId, Reminders.key(task)])
+            }
+        }
+    }
+}
+
+extension AppModel {
+    func isActionDone(_ meetingId: Int64?, _ task: String) -> Bool {
+        guard let meetingId else { return false }
+        return actionDone.contains(ActionDone.key(meetingId, task)) || reminderStatus[Reminders.key(task)] == true
+    }
+
+    func toggleActionDone(_ meetingId: Int64?, _ task: String) {
+        guard let meetingId else { return }
+        let done = !isActionDone(meetingId, task)
+        do { try db.setActionDone(meetingId, task: task, done: done) } catch { errorMessage = error.localizedDescription; return }
+        reloadActionDone()
+    }
+
+    func reloadActionDone() { actionDone = (try? db.doneActionItems()) ?? [] }
 }

@@ -246,13 +246,13 @@ enum HTML {
         let bodyFont = fonts.htmlMac.body, headingFont = fonts.htmlMac.heading
         return """
         <!doctype html><html lang="\(fonts.lang)"><head><meta charset="utf-8"><title>\(escape(title))</title><style>
-        body { font-family: \(bodyFont); font-size: 12pt; line-height: 1.6; color: #1E2625; }
+        body { font-family: \(bodyFont); font-size: 12pt; line-height: 1.6; color: #161616; }
         h1, h2, h3 { font-family: \(headingFont); font-weight: 600; }
         h1 { font-size: 22pt; margin-bottom: 4pt; } h2 { font-size: 15pt; margin-top: 18pt; } h3 { font-size: 13pt; }
-        .meta { color: #68726F; font-size: 10pt; }
-        .time { color: #2D6A5D; font-size: 9.5pt; }
-        table { border-collapse: collapse; width: 100%; } th, td { border-bottom: 1px solid #DCE1DE; padding: 4pt 6pt; text-align: left; vertical-align: top; }
-        th { color: #68726F; font-weight: normal; font-size: 10pt; }
+        .meta { color: #6F6F6F; font-size: 10pt; }
+        .time { color: #0F62FE; font-size: 9.5pt; }
+        table { border-collapse: collapse; width: 100%; } th, td { border-bottom: 1px solid #E0E0E0; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+        th { color: #6F6F6F; font-weight: normal; font-size: 10pt; }
         .nowrap { white-space: nowrap; }  /* 負責人、期限不拆行，內容欄自己換行（中日文可以在任何字之間換行，表格會把短欄擠到一個字寬） */
         </style></head><body>\(body)</body></html>
         """

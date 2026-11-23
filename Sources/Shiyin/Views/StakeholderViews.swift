@@ -520,8 +520,8 @@ struct StakeholderDetails: View {
                     Text(ours ? String(localized: "我們") : String(localized: "他"))
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 5).padding(.vertical, 1)
-                        .foregroundStyle(ours ? Color.celadon : .orange)
-                        .background((ours ? Color.celadon : .orange).opacity(0.12), in: Capsule())
+                        .foregroundStyle(ours ? Color.celadon : Color.accent2)
+                        .background((ours ? Color.celadon : Color.accent2).opacity(0.12), in: Capsule())
                     VStack(alignment: .leading, spacing: 1) {
                         Text(c.text).fixedSize(horizontal: false, vertical: true)
                         if !c.time.isEmpty { CitationLink(meetingId: c.meetingId, time: c.time) }
@@ -629,8 +629,9 @@ struct LevelBadge: View {
 
     var body: some View {
         let (label, color): (String, Color) = switch level {
-        case "high": (String(localized: "高"), .red)
-        case "medium": (String(localized: "中"), .orange)
+        // 高中低是程度，不是好壞：用主色的深淺（Blue 70／Blue 60 淡／灰），不用紅橘，免得看起來像警告
+        case "high": (String(localized: "高"), Color.celadon)
+        case "medium": (String(localized: "中"), Color.accent2)
         default: (String(localized: "低"), .secondary)
         }
         Text(label)
@@ -684,9 +685,10 @@ struct QuadrantBadge: View {
 
     static func color(_ q: StakeholderProfile.Quadrant) -> Color {
         switch q {
-        case .manageClosely: return .red
-        case .keepSatisfied: return .orange
-        case .keepInformed: return Color.celadon
+        // 四個象限：Blue 60（最重要）、Purple 60、Teal 60、灰（IBM 的 4 色組：藍、紫、青綠跟灰可以放在一起）
+        case .manageClosely: return Color.celadon
+        case .keepSatisfied: return Color.accent2
+        case .keepInformed: return Color(nsColor: .dynamic(light: 0x007D79, dark: 0x08BDBA))
         case .monitor: return .secondary
         }
     }
@@ -720,9 +722,10 @@ struct AttitudeBadge: View {
 
     static func color(_ value: String) -> Color {
         switch value {
-        case "champion", "supporter": return .green
-        case "skeptic": return .orange
-        case "blocker": return .red
+        // 態度是好壞：綠、灰、橘、紅（IBM 的 Green／Orange／Red 60、深色 40）。不只靠顏色：標記上都寫著字
+        case "champion", "supporter": return Color.positive
+        case "skeptic": return Color.caution
+        case "blocker": return Color.negative
         default: return .secondary
         }
     }
@@ -918,4 +921,155 @@ extension StakeholderMapView {
 
 extension String {
     var nonEmpty: String? { isEmpty ? nil : self }
+}
+
+// MARK: - 名字：點了打開人物頁，滑過看小卡（UX 檢查 A1–A4）
+
+/// 會議裡出現的名字（待辦負責人、與會者、每個人的重點、逐字稿的說話者）：對到認識的人時可以點，
+/// 滑過出現小卡（角色、象限、態度、對你的信任、最近一次見面、還沒完成的待辦），不用離開會議就看得到這個人
+struct PersonLink<Label: View>: View {
+    @Environment(AppModel.self) private var model
+    let personId: Int64?
+    @ViewBuilder var label: () -> Label
+    @State private var hovering = false
+    @State private var showCard = false
+    @State private var task: Task<Void, Never>?
+
+    var body: some View {
+        if let personId {
+            Button { model.openPerson(personId) } label: { label() }
+                .buttonStyle(.plain)
+                .onHover { inside in
+                    hovering = inside
+                    task?.cancel()
+                    // 停一下才出小卡，滑過去不會一直跳出來
+                    task = Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(inside ? 550 : 250))
+                        guard !Task.isCancelled else { return }
+                        showCard = hovering
+                    }
+                }
+                .popover(isPresented: $showCard, arrowEdge: .bottom) {
+                    PersonHoverCard(personId: personId) { showCard = false }
+                }
+                .help(String(localized: "打開人物頁"))
+        } else {
+            label()
+        }
+    }
+}
+
+struct PersonHoverCard: View {
+    @Environment(AppModel.self) private var model
+    let personId: Int64
+    let close: () -> Void
+
+    var body: some View {
+        let person = model.peopleOverview.first { $0.id == personId }
+        let profile = model.stakeholderSummary(personId)
+        let isMe = (person?.isMe ?? false) || model.stakeholderMe.contains(personId)
+        let done = (try? model.db.doneActionItems()) ?? []
+        let open = (try? model.db.personActionItems(person?.name ?? ""))?
+            .filter { !done.contains(ActionDone.key($0.meeting.id ?? 0, $0.item.task)) }.count ?? 0
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                PersonAvatar(name: person?.name ?? "", color: Color.person(person?.name ?? ""), size: 32, isMe: isMe, scales: false)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(person?.name ?? "").font(.headline)
+                    if let role = profile?.role.nonEmpty { Text(role).font(.callout).foregroundStyle(.secondary).lineLimit(2) }
+                }
+            }
+            if let profile, !isMe {
+                HStack(spacing: 6) {
+                    QuadrantBadge(quadrant: profile.quadrant)
+                    if !profile.attitude.isEmpty { AttitudeBadge(attitude: profile.attitude, trend: profile.attitudeTrend) }
+                }
+                if !profile.workingWithMe.trust.isEmpty {
+                    HStack(spacing: 4) {
+                        Text("他對你的信任").font(.callout).foregroundStyle(.secondary)
+                        LevelBadge(level: profile.workingWithMe.trust)
+                    }
+                }
+                if !profile.nextMeeting.objective.isEmpty {
+                    Text(profile.nextMeeting.objective).font(.callout).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                }
+            } else if !isMe {
+                Text("還沒有分析").font(.callout).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 12) {
+                if let date = person?.lastMeetingDate { Text("最近：\(date)").font(.caption).foregroundStyle(.secondary) }
+                if open > 0 { Text("\(open) 項待辦還沒完成").font(.caption).foregroundStyle(.secondary) }
+            }
+            Button("打開人物頁", systemImage: "person.crop.circle") {
+                close()
+                model.openPerson(personId)
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(Color.celadon)
+            .font(.callout)
+        }
+        .padding(14)
+        .frame(width: 300, alignment: .leading)
+    }
+}
+
+// MARK: - 這場會議的與會者（UX 檢查 C2）
+
+/// 會議紀錄上方一行：這場會議認得的與會者（你自己除外），每人一個小標記：象限的顏色、態度。
+/// 用這場會議所在案子（資料夾）的評估；點了打開人物頁、滑過看小卡。沒有分析過的人不列
+struct AttendeeLens: View {
+    @Environment(AppModel.self) private var model
+    let detail: MeetingDetail
+
+    var body: some View {
+        let me = model.stakeholderMe
+        let folder = detail.meeting.folder
+        let people: [(Int64, String, StakeholderProfile)] = detail.speakerPersons.sorted { $0.key < $1.key }.compactMap { idx, personId in
+            guard !me.contains(personId), idx != detail.selfIdx, let profile = model.stakeholderSummary(personId) else { return nil }
+            return (personId, detail.speakers[idx] ?? "", profile)
+        }
+        if !people.isEmpty {
+            ViewThatFits(in: .horizontal) {
+                row(people, folder)
+                ScrollView(.horizontal, showsIndicators: false) { row(people, folder) }
+            }
+        }
+    }
+
+    private func row(_ people: [(Int64, String, StakeholderProfile)], _ folder: String) -> some View {
+        HStack(spacing: 14) {
+            Text("與會者").font(.callout).foregroundStyle(.secondary)
+            ForEach(people, id: \.0) { personId, name, profile in
+                let r = StakeholderMapView.rating(profile, folder)
+                let q = StakeholderProfile.Quadrant(power: r.power, interest: r.interest)
+                // 一個顏色只代表一件事（同關係人地圖）：點和字都是態度；象限寫成文字
+                PersonLink(personId: personId) {
+                    HStack(spacing: 5) {
+                        Circle().fill(AttitudeBadge.color(r.attitude)).frame(width: 8, height: 8)
+                        Text(name).font(.callout.weight(.medium)).foregroundStyle(Color.primary)
+                        Text(QuadrantBadge.label(q)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    .lineLimit(1)
+                    .fixedSize()
+                }
+                .help(r.attitude.isEmpty ? QuadrantBadge.label(q) : "\(AttitudeBadge.label(r.attitude))・\(QuadrantBadge.label(q))")
+            }
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .background(Color.secondary.opacity(0.06), in: Capsule())
+    }
+}
+
+/// 能打開人物頁的名字：一般文字色，滑過加底線（跟其他連結一樣的提示，但不跟青瓷綠的時間點搶）
+struct LinkName: View {
+    let name: String
+    @State private var hovering = false
+
+    var body: some View {
+        Text(name)
+            .foregroundStyle(Color.primary)
+            .underline(hovering, color: Color.celadon)
+            .onHover { hovering = $0 }
+    }
 }

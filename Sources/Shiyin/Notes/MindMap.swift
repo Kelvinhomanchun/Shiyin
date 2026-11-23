@@ -337,11 +337,13 @@ enum MindMap {
 
     // MARK: 顏色（§42.2）
 
-    static let rootColor = "#2D6A5D"
-    static let palette = ["#C0563F", "#3E6FA8", "#B7862A", "#7A5BA6", "#2F8A7E", "#B5517A"]
-    static let paletteDark = ["#E07A60", "#6E9BD6", "#D9A84A", "#A587CF", "#4FB3A4", "#D97AA0"]
-    static let textColor = "#1E2625"
-    static let secondaryColor = "#68726F"
+    // KelNote：IBM 色系。中心是 Blue 60；分支用 IBM 資料視覺化的分類色順序（Purple、Cyan、Teal、Magenta、Red、Blue 80），
+    // 淺色 60、深色 40；文字用 Gray 100／Gray 60
+    static let rootColor = "#0F62FE"
+    static let palette = ["#8A3FFC", "#0072C3", "#007D79", "#D02670", "#DA1E28", "#002D9C"]
+    static let paletteDark = ["#BE95FF", "#33B1FF", "#08BDBA", "#FF7EB6", "#FF8389", "#A6C8FF"]
+    static let textColor = "#161616"
+    static let secondaryColor = "#6F6F6F"
 
     static func color(_ branch: Int, dark: Bool = false) -> String {
         branch < 0 ? rootColor : (dark ? paletteDark : palette)[branch % palette.count]

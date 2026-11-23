@@ -411,7 +411,7 @@ struct TranscriptTab: View {
                 }
                 .buttonStyle(.plain)
                 .contentFont(.callout, weight: .medium)
-                .foregroundStyle(Color.speaker(idx))
+                .foregroundStyle(Color.primary)
                 .frame(width: 96 * scale, alignment: .leading)
                 .lineLimit(1)
                 .help("點一下幫這位說話者改名")
@@ -425,7 +425,8 @@ struct TranscriptTab: View {
                                           model.mergeSpeaker(idx, into: into)
                                       },
                                       undoLabel: detail.speakerUndoLabel,
-                                      onUndo: { renaming = nil; model.undoSpeakerEdit() }) {
+                                      onUndo: { renaming = nil; model.undoSpeakerEdit() },
+                                      onOpenPerson: detail.speakerPersons[idx].map { id in { renaming = nil; model.openPerson(id) } }) {
                         model.renameSpeaker(idx, to: renameText)
                         renaming = nil
                     }
@@ -596,7 +597,7 @@ struct TranscriptTab: View {
         guard !q.isEmpty else { return attributed }
         var searchRange = attributed.startIndex..<attributed.endIndex
         while let range = attributed[searchRange].range(of: q, options: .caseInsensitive) {
-            attributed[range].backgroundColor = Color.signal.opacity(0.35)
+            attributed[range].backgroundColor = Color.highlight
             searchRange = range.upperBound..<attributed.endIndex
         }
         return attributed
@@ -670,12 +671,23 @@ struct RenameSpeakerForm: View {
     /// 可以復原的說話者調整（R44.4）：有才顯示「復原」
     var undoLabel: String? = nil
     var onUndo: (() -> Void)? = nil
+    /// 已經對到認識的人：「打開人物頁」（UX 檢查 A2、A3）
+    var onOpenPerson: (() -> Void)? = nil
     let onSave: () -> Void
 
     var body: some View {
         // 同彈窗的元件（R106、design §80），小視窗裡小一號
         VStack(alignment: .leading, spacing: 12) {
-            Text("說話者名字").font(.title3).fontWeight(.bold)
+            HStack(alignment: .firstTextBaseline) {
+                Text("說話者名字").font(.title3).fontWeight(.bold)
+                Spacer()
+                if let onOpenPerson {
+                    Button("打開人物頁", systemImage: "person.crop.circle", action: onOpenPerson)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(Color.celadon)
+                        .font(.callout)
+                }
+            }
             SheetTextField(placeholder: String(localized: "例如：小明"), text: $name, focusOnAppear: true, onSubmit: onSave)
             if automatic {
                 Text("這個名字是拾音認出聲音後自動帶入的。不對的話直接改名，或按「不是他」。")

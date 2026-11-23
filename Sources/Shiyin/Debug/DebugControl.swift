@@ -29,7 +29,7 @@ enum DebugControl {
         guard let name = args.first else { return }
         let id = args.count > 1 ? Int64(args[1]) : nil
         switch name {
-        case "select": model.showTrash = false; model.selection = id
+        case "select": model.showTrash = false; model.sidebarMode = .meetings; model.selection = id
         // notesview list|mindmap|people：紀錄分頁切換成條列、心智圖或人物（design §42.5；寫進共用設定，測完 defaults delete com.weiwei.shiyin notesView）
         case "notesview":
             let view = args.count > 1 ? args[1].lowercased() : "list"
@@ -395,6 +395,8 @@ enum DebugControl {
         case "peopledeleteall": model.deleteAllPeople()
         case "stakeholder": if let id { model.analyzeStakeholder(id) }   // stakeholder <人物 id>：從全部會議重新分析
         case "stakeholdercontext": if let id { model.saveStakeholderContext(id, role: args[2], org: args.count > 3 ? args[3] : "", notes: args.count > 4 ? args[4] : "") }   // stakeholdercontext <人物 id> <角色> [組織] [背景]
+        case "notesquery": model.notesQuery = args.count > 1 ? args.dropFirst().joined(separator: " ") : ""   // notesquery [字]：會議紀錄的搜尋
+        case "actiondone": if let id, args.count > 2 { model.toggleActionDone(id, args.dropFirst(2).joined(separator: " ")) }   // actiondone <會議 id> <事項>
         case "stakeholdertab": if args.count > 1, let tab = StakeholderTab(rawValue: args[1]) { model.stakeholderTab = tab }   // stakeholdertab plan|read|interests|network|record
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
         case "template": model.selection = id; model.setTemplate(args[2])

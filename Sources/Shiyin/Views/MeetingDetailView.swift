@@ -152,8 +152,13 @@ struct MeetingHeader: View {
             PersonAvatar(name: name, color: Color.speaker(idx), size: 20, isMe: idx == detail.selfIdx, scales: false)
             if detail.speakerSources[idx] == "voiceprint" {
                 AutoSpeakerName(idx: idx, name: name, others: detail.speakerCandidates[idx] ?? [])
+            } else if let personId = detail.speakerPersons[idx] {
+                // 對到認識的人：點了打開人物頁、滑過看小卡；改名在右鍵（UX 檢查 A2）
+                // 一致的規則（UX 檢查 E1）：說話者的顏色只在頭像，名字用一般文字色；能打開人物頁的名字滑過有底線
+                PersonLink(personId: personId) { LinkName(name: name) }
+                    .contextMenu { speakerMenu(idx) }
             } else {
-                Button { startRenaming(idx) } label: { Text(name).foregroundStyle(Color.speaker(idx)) }
+                Button { startRenaming(idx) } label: { Text(name).foregroundStyle(Color.primary) }
                     .buttonStyle(.plain)
                     .help("重新命名「\(name)」，整場的逐字稿和會議紀錄都會跟著改")
                     .contextMenu { speakerMenu(idx) }   // 按鈕會吃掉右鍵，要掛在按鈕本身
@@ -184,6 +189,10 @@ struct MeetingHeader: View {
     /// 說話者的右鍵（R100）：重新命名、合併到別的說話者（同逐字稿）
     @ViewBuilder
     private func speakerMenu(_ idx: Int) -> some View {
+        if let personId = detail.speakerPersons[idx] {
+            Button("打開人物頁") { model.openPerson(personId) }
+            Divider()
+        }
         Button("重新命名…") { startRenaming(idx) }
         let others = detail.speakers.keys.sorted().filter { $0 != idx }
         if !others.isEmpty {
@@ -622,8 +631,12 @@ private struct AutoSpeakerName: View {
                 Button("其他人…（到逐字稿改名）") { model.tab = .transcript }
                 Divider()
                 Button("不是\(name)（不知道是誰）") { model.rejectVoiceprintMatch(idx) }
+                if let personId = model.detail?.speakerPersons[idx] {
+                    Divider()
+                    Button("打開\(name)的人物頁") { model.openPerson(personId) }
+                }
             } label: {
-                Text(name).foregroundStyle(Color.speaker(idx))
+                Text(name).foregroundStyle(Color.primary)
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -631,10 +644,13 @@ private struct AutoSpeakerName: View {
             // 選單按鈕在畫面上只畫標題的文字（標籤裡的背景會被拿掉），「自動」標記要放在選單外面
             Text("自動")
                 .font(.caption2)
+                .lineLimit(1)
+                .fixedSize()   // 標題列擠的時候不要被壓成一小條（UX 檢查 E4）
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(Color.secondary.opacity(0.15), in: Capsule())
         }
+        .fixedSize()
         .help("拾音認出這個人的聲音，自動帶入名字。不對的話點名字")
     }
 }

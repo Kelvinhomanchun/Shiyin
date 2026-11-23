@@ -95,6 +95,16 @@ struct MeetingDetail: Equatable {
     var cleanFailure: String?
     /// 「我」是哪一位說話者（design §58.2）
     var selfIdx: Int?
+    /// 說話者對到的人物（點名字打開人物頁）
+    var speakerPersons: [Int: Int64] = [:]
+
+    /// 名字對到的人物：先找這場的說話者，再找認識的人（不分大小寫）
+    func personId(named name: String, people: [PersonOverview]) -> Int64? {
+        if let idx = speakerIdx(named: name), let id = speakerPersons[idx] { return id }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return people.first { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }?.id
+    }
 
     /// 名字（不分大小寫）是這場哪一位說話者：待辦的負責人放頭像用（design §58.2）
     func speakerIdx(named name: String) -> Int? {
@@ -129,6 +139,7 @@ struct MeetingDetail: Equatable {
     mutating func loadSpeakers(_ rows: [SpeakerName]) {
         speakers = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.name) })
         speakerSources = Dictionary(uniqueKeysWithValues: rows.map { ($0.idx, $0.nameSource) })
+        speakerPersons = Dictionary(uniqueKeysWithValues: rows.compactMap { r in r.personId.map { (r.idx, $0) } })
         speakerSuggestions = Dictionary(uniqueKeysWithValues: rows.compactMap { row in
             guard row.nameSource == "default", let name = row.suggestedName else { return nil }
             return (row.idx, SpeakerNaming.Suggestion(speaker: row.idx, name: name, reason: row.suggestionReason ?? "",
@@ -486,6 +497,8 @@ final class AppModel {
         #if DEBUG
         DebugMetrics.bump("reloadList")
         #endif
+        reloadActionDone()
+        stakeholderCache = [:]
         do {
             meetings = try db.meetingRows()
             trash = try db.meetingRows(trash: true)
@@ -1741,6 +1754,12 @@ final class AppModel {
     var analyzingStakeholders: Set<Int64> = []
     /// 當成「自己」、不做分析的人
     var stakeholderMe: Set<Int64> = []
+    /// 會議紀錄的搜尋（條列、人物）：換會議時清掉
+    var notesQuery = ""
+    /// 完成了的待辦（「會議 id:鍵」）
+    var actionDone: Set<String> = []
+    /// 名字小卡用的分析（stakeholderSummary），分析更新時清掉那一個人
+    @ObservationIgnored var stakeholderCache: [Int64: StakeholderProfile?] = [:]
     /// 人物頁分析看哪個分頁（換人時保留，比較同一面向）
     var stakeholderTab: StakeholderTab = .plan
     /// 關係人地圖看哪個資料夾（空字串 = 所有會議）

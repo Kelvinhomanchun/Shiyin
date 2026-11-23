@@ -394,6 +394,17 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 待辦完成了（fork）：存在會議紀錄外面，重新整理會議紀錄後照樣認得（用會議＋事項內容的鍵，同提醒事項）
+        migrator.registerMigration("fork-action-done") { db in
+            try db.execute(sql: """
+                CREATE TABLE action_done (
+                  meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+                  task_key   TEXT NOT NULL,
+                  done_at    TEXT NOT NULL,
+                  PRIMARY KEY (meeting_id, task_key)
+                );
+                """)
+        }
         // 利害關係人分析的使用者背景（fork）：角色、組織、知道的事，重新分析時保留
         migrator.registerMigration("fork-stakeholder-context") { db in
             try db.execute(sql: """

@@ -1,4 +1,4 @@
-// 產生拾音的 app 圖示：青瓷綠圓角方塊＋一排波形條，其中一條是 VU 琥珀色（design §9.3）
+// 產生 KelNote 的 app 圖示：IBM Blue 60 圓角方塊＋一排波形條，其中一條是 VU 琥珀色（改自拾音的青瓷綠，design §9.3）
 // 用法：swift scripts/make-icon.swift Resources/AppIcon.icns
 import AppKit
 
@@ -24,7 +24,7 @@ func render(_ size: Int) -> Data {
     let radius = body.width * 0.2245
     ctx.setShadow(offset: CGSize(width: 0, height: -s * 0.01), blur: s * 0.02, color: CGColor(gray: 0, alpha: 0.3))
     ctx.addPath(CGPath(roundedRect: body, cornerWidth: radius, cornerHeight: radius, transform: nil))
-    ctx.setFillColor(color(0x2D6A5D))
+    ctx.setFillColor(color(0x0F62FE))   // KelNote：IBM Blue 60
     ctx.fillPath()
     ctx.setShadow(offset: .zero, blur: 0, color: nil)
 
@@ -38,7 +38,7 @@ func render(_ size: Int) -> Data {
         let height = body.height * h
         let bar = CGRect(x: x, y: body.midY - height / 2, width: barWidth, height: height)
         ctx.addPath(CGPath(roundedRect: bar, cornerWidth: barWidth / 2, cornerHeight: barWidth / 2, transform: nil))
-        ctx.setFillColor(i == 4 ? color(0xE2AD3B) : color(0xF5F7F6))
+        ctx.setFillColor(i == 4 ? color(0xF1C21B) : color(0xFFFFFF))   // IBM Yellow 30 的一條、其他白色
         ctx.fillPath()
         x += barWidth + gap
     }

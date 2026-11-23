@@ -119,6 +119,31 @@ struct QuestionView: View {
     var meetingTitle: ((Int64) -> String?)? = nil
     let onCitation: (String) -> Void
     var onMeetingCitation: ((Int64, String) -> Void)? = nil
+    @State private var showQuotes = false
+
+    /// 一個出處的小標籤：點了跳過去，滑過看原文
+    @ViewBuilder
+    private func chip(_ citation: AskPrompt.Citation) -> some View {
+        let label: String = {
+            if let id = citation.meetingId { return "\(meetingTitle?(id) ?? String(localized: "會議")) \(citation.time)" }
+            return citation.time.isEmpty ? String(localized: "參考文件") : citation.time
+        }()
+        Button {
+            if let id = citation.meetingId, let onMeetingCitation { onMeetingCitation(id, citation.time) }
+            else if !citation.time.isEmpty { onCitation(citation.time) }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: citation.time.isEmpty ? "paperclip" : "play.fill").font(.system(size: 8))
+                Text(label).lineLimit(1)
+            }
+            .contentFont(.caption, monospacedDigit: true)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .foregroundStyle(citation.time.isEmpty ? Color.secondary : Color.celadon)
+            .background((citation.time.isEmpty ? Color.secondary : Color.celadon).opacity(0.1), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(citation.quote)
+    }
 
     var body: some View {
         let answer = record.decoded
@@ -130,34 +155,28 @@ struct QuestionView: View {
                      ?? AttributedString(answer.answer))
                     .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(answer.found ? .primary : .secondary)
+                // 出處（UX 檢查 C4）：原本每條都是一整行原文，回答被一長串引文淹沒。改成一排小標籤
+                //（時間點，跨會議時加會議標題），滑過看原文；要看全部原文按「顯示原文」
                 if !answer.citations.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(answer.citations.enumerated()), id: \.offset) { _, citation in
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                if let id = citation.meetingId, let onMeetingCitation {
-                                    Button {
-                                        onMeetingCitation(id, citation.time)
-                                    } label: {
-                                        Text("\(meetingTitle?(id) ?? String(localized: "會議")) \(citation.time)")
-                                            .contentFont(.callout, monospacedDigit: true)
-                                            .foregroundStyle(Color.celadon)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text("出處").contentFont(.caption).foregroundStyle(.secondary)
+                            Button(showQuotes ? String(localized: "收起原文") : String(localized: "顯示原文")) { showQuotes.toggle() }
+                                .buttonStyle(.borderless).contentFont(.caption)
+                        }
+                        if showQuotes {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(Array(answer.citations.enumerated()), id: \.offset) { _, citation in
+                                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                        chip(citation)
+                                        Text(citation.quote).contentFont(.callout).foregroundStyle(.secondary).meetingText()
+                                            .fixedSize(horizontal: false, vertical: true)
                                     }
-                                    .buttonStyle(.plain)
-                                    .help("打開這場會議，從 \(citation.time) 開始")
-                                } else if citation.time.isEmpty {
-                                    // 參考文件的出處（design §39.3）：沒有錄音的時間點，quote 開頭寫了文件名稱和頁數
-                                    Image(systemName: "paperclip")
-                                        .contentFont(.callout)
-                                        .foregroundStyle(.secondary)
-                                        .help("出自這場會議的參考文件")
-                                } else {
-                                    Button(citation.time) { onCitation(citation.time) }
-                                        .buttonStyle(.plain)
-                                        .contentFont(.callout, monospacedDigit: true)
-                                        .foregroundStyle(Color.celadon)
-                                        .help("從 \(citation.time) 開始播放")
                                 }
-                                Text(citation.quote).contentFont(.callout).foregroundStyle(.secondary).lineLimit(2).meetingText()
+                            }
+                        } else {
+                            FlowLayout(spacing: 6) {
+                                ForEach(Array(answer.citations.enumerated()), id: \.offset) { _, citation in chip(citation) }
                             }
                         }
                     }
