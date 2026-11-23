@@ -292,6 +292,11 @@ enum DebugControl {
         // questions <會議 id|all> <輸出.json>；cancelask
         case "ask": model.selection = id; model.loadMeetingQuestions(id ?? 0); model.askMeeting(args[2])
         case "askall": model.loadAllQuestions(); model.askAll(args[2], scope: AskScope(rawValue: args[1]) ?? .all)
+        case "askfolder": model.askFolder = args[1]; model.loadAllQuestions(); if args.count > 2 { model.askAll(args[2], scope: .folder) }   // askfolder <資料夾> [問題]
+        case "askfolderblocks":   // askfolderblocks <資料夾> <輸出.json>：資料夾會帶哪些會議、多少字（不呼叫整理工具）
+            let blocks = model.folderBlocks(folder: args[1], hits: [:])
+            write(["meetings": blocks.map { ["id": $0.id, "title": $0.title, "summary": $0.summary.count, "lines": $0.lines.count,
+                                             "chars": ($0.summary + $0.lines).reduce(0) { $0 + $1.count }] as [String: Any] }], to: args[2])
         case "questions":
             let list = args[1] == "all" ? ((try? model.db.questions(meetingId: nil)) ?? []) : ((try? model.db.questions(meetingId: Int64(args[1]))) ?? [])
             write(["asking": model.asking != nil, "questions": list.map { ["question": $0.question, "scope": $0.scope, "provider": $0.provider,
@@ -1584,6 +1589,8 @@ enum DebugControl {
             content = AnyView(RecordingPanel(detail: detail).frame(width: 900, height: 520))
         case "replace":
             content = AnyView(ReplaceSheet(initialFind: "Lumeo"))
+        case "askall":
+            content = AnyView(AskAllView().frame(width: 680, height: 720))
         case "folders":
             // 側欄的資料夾區塊（List 畫不出來，用同樣的列重組）
             content = AnyView(VStack(alignment: .leading, spacing: 8) {

@@ -584,6 +584,7 @@ final class AppModel {
         guard !name.isEmpty, name != old else { return }
         // 先切換篩選，reload 時才不會因為舊名稱不存在而跳回所有會議
         if folderFilter == old { folderFilter = name }
+        if askFolder == old { askFolder = name }
         if sidebarExpanded.contains(Self.folderKey(old)) {
             sidebarExpanded.remove(Self.folderKey(old))
             sidebarExpanded.insert(Self.folderKey(name))
@@ -599,6 +600,7 @@ final class AppModel {
     func deleteFolder(_ name: String) {
         perform { try db.renameFolder(name, to: "") }
         if folderFilter == name { folderFilter = nil }
+        if askFolder == name { askFolder = nil; loadAllQuestions() }
         setRow(Self.folderKey(name), expanded: false)
         sidebarOrder.removeAll { $0 == Self.folderKey(name) }
     }
@@ -1710,6 +1712,8 @@ final class AppModel {
     /// 目前會議的問答紀錄、問所有會議的問答紀錄
     var meetingQuestions: [QuestionRecord] = []
     var allQuestions: [QuestionRecord] = []
+    /// 問所有會議的視窗：選了哪個資料夾（範圍是「資料夾」時用）
+    var askFolder: String?
     @ObservationIgnored var askTask: Task<Void, Never>?
     @ObservationIgnored var askProcess: Subprocess?
 

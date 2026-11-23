@@ -180,18 +180,49 @@ struct AskAllView: View {
     @State private var question = ""
     @State private var scope: AskScope = .all
 
+    /// 有資料夾的會議才列（空的資料夾問不出東西）
+    private var folders: [String] {
+        Array(Set(model.meetings.map(\.meeting.folder).filter { !$0.isEmpty })).sorted()
+    }
+
+    private var folderScope: Binding<AskScope> {
+        Binding(get: { model.askFolder != nil ? .folder : scope }, set: { value in
+            if value == .folder {
+                if model.askFolder == nil { model.askFolder = model.folderFilter ?? folders.first }
+            } else {
+                model.askFolder = nil
+                scope = value
+            }
+            model.loadAllQuestions()
+        })
+    }
+
     var body: some View {
+        let current = folderScope.wrappedValue
         VStack(spacing: 0) {
-            HStack {
-                Text("問所有會議").font(.songti(20))
+            HStack(spacing: 12) {
+                Text(current == .folder ? String(localized: "問資料夾") : String(localized: "問所有會議")).font(.songti(20))
                 Spacer()
-                Picker("範圍", selection: $scope) {
+                Picker("範圍", selection: folderScope) {
                     ForEach(AskScope.allCases) { scope in
-                        if scope != .folder || model.folderFilter != nil { Text(scope.label).tag(scope) }
+                        if scope != .folder || !folders.isEmpty {
+                            Text(scope == .folder ? String(localized: "一個資料夾") : scope.label).tag(scope)
+                        }
                     }
                 }
                 .pickerStyle(.segmented)
                 .fixedSize()
+                .labelsHidden()
+                if current == .folder {
+                    Picker("資料夾", selection: Binding(get: { model.askFolder ?? "" }, set: { name in
+                        model.askFolder = name
+                        model.loadAllQuestions()
+                    })) {
+                        ForEach(folders, id: \.self) { Text($0).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
@@ -200,7 +231,9 @@ struct AskAllView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         if model.allQuestions.isEmpty && model.asking != .all {
-                            Text("例如：「上個月跟客戶談過哪些價格？」「寄信的機制最後怎麼決定的？」拾音會先找出相關的會議片段，再請整理工具回答，回答附上是哪一場會議、哪個時間點。")
+                            Text(current == .folder
+                                 ? String(localized: "例如：「這個專案目前的進度和風險？」「有哪些還沒完成的待辦？」拾音會帶上這個資料夾每一場會議的紀錄，再加上跟問題有關的逐字稿片段，請整理工具回答。")
+                                 : String(localized: "例如：「上個月跟客戶談過哪些價格？」「寄信的機制最後怎麼決定的？」拾音會先找出相關的會議片段，再請整理工具回答，回答附上是哪一場會議、哪個時間點。"))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -227,9 +260,12 @@ struct AskAllView: View {
                 }
             }
             Divider()
-            AskInputBar(question: $question, placeholder: String(localized: "問所有會議，例如：寄信的機制最後怎麼決定的？"),
+            AskInputBar(question: $question,
+                        placeholder: current == .folder
+                            ? String(localized: "問「\(model.askFolder ?? "")」裡的會議，例如：還有哪些待辦沒完成？")
+                            : String(localized: "問所有會議，例如：寄信的機制最後怎麼決定的？"),
                         busy: model.asking != nil, onClear: model.allQuestions.isEmpty ? nil : { model.clearQuestions(meetingId: nil) }) {
-                model.askAll(question, scope: scope)
+                model.askAll(question, scope: current)
                 question = ""
             }
         }

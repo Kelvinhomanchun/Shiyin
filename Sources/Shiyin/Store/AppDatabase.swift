@@ -522,6 +522,14 @@ final class AppDatabase: @unchecked Sendable {
             } else {
                 try db.execute(sql: "UPDATE folders SET name = ? WHERE name = ?", arguments: [newName, old])
             }
+            // 問這個資料夾的紀錄跟著改名；刪除資料夾時一起刪
+            let oldScope = AskScope.folderScope(old)
+            if newName.isEmpty {
+                try db.execute(sql: "DELETE FROM questions WHERE meeting_id IS NULL AND scope = ?", arguments: [oldScope])
+            } else {
+                try db.execute(sql: "UPDATE questions SET scope = ? WHERE meeting_id IS NULL AND scope = ?",
+                               arguments: [AskScope.folderScope(newName), oldScope])
+            }
         }
     }
 

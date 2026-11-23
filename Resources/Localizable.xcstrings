@@ -26018,6 +26018,91 @@
           }
         }
       }
+    },
+    "問這個資料夾…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask About This Folder…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问这个文件夹…"
+          }
+        }
+      }
+    },
+    "問資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask a Folder"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问文件夹"
+          }
+        }
+      }
+    },
+    "例如：「這個專案目前的進度和風險？」「有哪些還沒完成的待辦？」拾音會帶上這個資料夾每一場會議的紀錄，再加上跟問題有關的逐字稿片段，請整理工具回答。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: “What’s the current status and risk on this project?” “Which action items are still open?” Shiyin sends the notes of every meeting in this folder, plus transcript excerpts related to your question, and the answer cites the meeting and time."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：“这个项目目前的进度和风险？”“有哪些还没完成的待办？”拾音会带上这个文件夹每一场会议的记录，再加上跟问题有关的逐字稿片段，请整理工具回答。"
+          }
+        }
+      }
+    },
+    "問「%@」裡的會議，例如：還有哪些待辦沒完成？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask about the meetings in “%@”, e.g. Which action items are still open?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问“%@”里的会议，例如：还有哪些待办没完成？"
+          }
+        }
+      }
+    },
+    "一個資料夾": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一个文件夹"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

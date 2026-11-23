@@ -50,7 +50,9 @@ extension AppModel {
     }
 
     func folderMenu(_ folder: String) -> [MenuEntry] {
-        [.action(String(localized: "重新命名…"), icon: "pencil") { self.renameTarget = .folder(folder) },
+        [.action(String(localized: "問這個資料夾…"), icon: "questionmark.bubble") { self.askAboutFolder(folder) },
+         .divider,
+         .action(String(localized: "重新命名…"), icon: "pencil") { self.renameTarget = .folder(folder) },
          .action(folderRule(folder) == nil ? String(localized: "自動加入的條件…") : String(localized: "編輯自動加入的條件…"), icon: "gearshape") {
              self.editingFolderRule = folder
          },

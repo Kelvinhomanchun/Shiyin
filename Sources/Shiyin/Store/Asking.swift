@@ -33,6 +33,10 @@ enum AskScope: String, CaseIterable, Identifiable {
         case .recent: return String(localized: "最近 30 天")
         }
     }
+
+    /// 資料夾的問答存成 scope = folder:<名稱>，資料夾之間的紀錄分開
+    static let folderPrefix = "folder:"
+    static func folderScope(_ folder: String) -> String { folderPrefix + folder }
 }
 
 extension AppDatabase {
@@ -50,6 +54,10 @@ extension AppDatabase {
             var record = record
             try record.insert(db)
         }
+    }
+
+    func deleteQuestion(_ id: Int64) throws {
+        try pool.write { db in try db.execute(sql: "DELETE FROM questions WHERE id = ?", arguments: [id]) }
     }
 
     func deleteQuestions(meetingId: Int64?) throws {
@@ -73,13 +81,31 @@ extension AppModel {
         meetingQuestions = (try? db.questions(meetingId: meetingId)) ?? []
     }
 
+    /// 問答紀錄：選了資料夾時只看那個資料夾問過的（scope 是 folder:<名稱>），其他範圍看沒有綁資料夾的
     func loadAllQuestions() {
-        allQuestions = (try? db.questions(meetingId: nil)) ?? []
+        let all = (try? db.questions(meetingId: nil)) ?? []
+        if let folder = askFolder {
+            allQuestions = all.filter { $0.scope == AskScope.folderScope(folder) }
+        } else {
+            allQuestions = all.filter { !$0.scope.hasPrefix(AskScope.folderPrefix) }
+        }
     }
 
     func clearQuestions(meetingId: Int64?) {
-        try? db.deleteQuestions(meetingId: meetingId)
+        if meetingId == nil {
+            // 只清掉目前看到的這一份（這個資料夾的，或沒有綁資料夾的）
+            for record in allQuestions { if let id = record.id { try? db.deleteQuestion(id) } }
+        } else {
+            try? db.deleteQuestions(meetingId: meetingId)
+        }
         if let meetingId { loadMeetingQuestions(meetingId) } else { loadAllQuestions() }
+    }
+
+    /// 從資料夾的右鍵選單打開「問這個資料夾」
+    func askAboutFolder(_ folder: String) {
+        askFolder = folder
+        loadAllQuestions()
+        openWindowById?("ask")
     }
 
     /// 不能問時的原因（還沒設定整理工具、設定為不整理、正在問別的）
@@ -134,7 +160,9 @@ extension AppModel {
         if let reason = askUnavailableReason { errorMessage = reason; return }
         let provider = AppSettings.provider, model = AppSettings.model
         let language = MeetingLanguage.interface
-        let folder = folderFilter
+        let folder = scope == .folder ? askFolder : nil
+        if scope == .folder && folder == nil { return }
+        let savedScope = folder.map(AskScope.folderScope) ?? scope.rawValue
         run(.all) {
             // 1. 抽關鍵詞
             struct Keywords: Decodable { var keywords: [String] }
@@ -148,7 +176,7 @@ extension AppModel {
             guard !blocks.isEmpty else {
                 let answer = AskPrompt.Answer(answer: String(localized: "找不到跟這個問題有關的會議。可以換個說法，或用會議裡實際講的詞再問一次。"),
                                               found: false, citations: [], keywords: keywords, meetingIds: [])
-                return QuestionRecord(meetingId: nil, scope: scope.rawValue, question: question, answer: Self.json(answer), provider: provider.rawValue)
+                return QuestionRecord(meetingId: nil, scope: savedScope, question: question, answer: Self.json(answer), provider: provider.rawValue)
             }
             // 3. 回答
             let raw = try await AskPrompt.generate(AskPrompt.Answer.self, provider: provider, model: model, system: AskPrompt.allSystem(language),
@@ -157,7 +185,7 @@ extension AppModel {
             var answer = AskPrompt.validate(raw, meetingIds: Set(blocks.map(\.id)))
             answer.keywords = keywords
             answer.meetingIds = blocks.map(\.id)
-            return QuestionRecord(meetingId: nil, scope: scope.rawValue, question: question, answer: Self.json(answer), provider: provider.rawValue)
+            return QuestionRecord(meetingId: nil, scope: savedScope, question: question, answer: Self.json(answer), provider: provider.rawValue)
         }
     }
 
@@ -166,6 +194,10 @@ extension AppModel {
         var hits: [Int64: [SearchHit]] = [:]
         for keyword in keywords {
             for hit in (try? db.search(keyword, limit: 300)) ?? [] { hits[hit.meetingId, default: []].append(hit) }
+        }
+        // 資料夾：每場會議都帶（沒有命中關鍵詞的也帶紀錄），才能回答「整個資料夾」的問題
+        if scope == .folder, let folder {
+            return folderBlocks(folder: folder, hits: hits)
         }
         let cutoff = DateText.string(Date().addingTimeInterval(-30 * 86_400))
         let candidates: [(meeting: Meeting, hits: [SearchHit])] = hits.compactMap { id, list in
@@ -210,6 +242,76 @@ extension AppModel {
             blocks.append(block)
         }
         return blocks
+    }
+
+    /// 資料夾裡的會議最多帶幾場（每場至少帶會議紀錄）
+    static let askFolderMeetingLimit = 20
+
+    /// 問資料夾：資料夾裡每一場都帶（命中多的、新的先），先放每場的會議紀錄（摘要、決議、待辦、未決問題），
+    /// 剩下的字數再依序補議題的重點、命中的逐字稿片段。總長一樣在 askCharacterLimit 以內
+    func folderBlocks(folder: String, hits: [Int64: [SearchHit]]) -> [AskPrompt.MeetingBlock] {
+        let meetings = meetings.map(\.meeting).filter { $0.folder == folder && $0.deletedAt == nil }
+            .sorted { a, b in
+                let ha = hits[a.id ?? -1]?.count ?? 0, hb = hits[b.id ?? -1]?.count ?? 0
+                return ha != hb ? ha > hb : a.meetingDate > b.meetingDate
+            }
+            .prefix(Self.askFolderMeetingLimit)
+        func item(_ text: String, _ time: String) -> String { time.isEmpty ? text : "[\(time)] \(text)" }
+        var blocks: [AskPrompt.MeetingBlock] = []
+        var extras: [[String]] = []     // 每場之後再補的：議題重點、逐字稿片段
+        for meeting in meetings {
+            guard let id = meeting.id else { continue }
+            let language = meeting.meetingLanguage
+            let notes = meeting.decodedNotes
+            let l = MeetingLanguage.interface   // 欄位名稱用提問的語言（同 allPrompt）
+            var summary = (notes?.summary ?? []).map { item($0.text, $0.time) }
+            summary += (notes?.decisions ?? []).map { l.prompt(zh: "決議", en: "Decision", ja: "決定事項") + ": " + item($0.text, $0.time) }
+            summary += (notes?.actionItems ?? []).map { a in
+                l.prompt(zh: "待辦", en: "Action", ja: "ToDo") + ": " + item(a.task, a.time) + (a.owner.isEmpty ? "" : " — \(a.owner)") + (a.due.isEmpty ? "" : " (\(a.due))")
+            }
+            summary += (notes?.openQuestions ?? []).map { l.prompt(zh: "未決", en: "Open question", ja: "未決事項") + ": " + item($0.text, $0.time) }
+            var extra = (notes?.topics ?? []).flatMap { topic in topic.points.map { "\(topic.title): " + item($0.text, $0.time) } }
+            // 命中的逐字稿片段（前後各一段）
+            let list = hits[id] ?? []
+            if !list.isEmpty {
+                let segments = (try? db.segments(id)) ?? []
+                let names = Dictionary(uniqueKeysWithValues: ((try? db.speakers(id)) ?? []).map { ($0.idx, $0.name) })
+                let index = Dictionary(segments.enumerated().compactMap { i, s in s.id.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
+                var wanted = Set<Int>()
+                for hit in list where hit.kind == .segment {
+                    if let i = index[hit.ref] { wanted.formUnion([i - 1, i, i + 1].filter { segments.indices.contains($0) }) }
+                }
+                extra += wanted.sorted().map { i in
+                    let s = segments[i]
+                    let speaker = s.speaker.map { (names[$0] ?? language.defaultSpeaker($0)) + language.text(zh: "：", en: ": ", ja: "：") } ?? ""
+                    return "[\(TimeFormat.string(s.start))] \(speaker)\(s.text)"
+                }
+            }
+            blocks.append(AskPrompt.MeetingBlock(id: id, title: meeting.displayTitle, date: meeting.meetingDate, summary: summary, lines: []))
+            extras.append(extra)
+        }
+        // 先保證每場的紀錄放得下（放不下的從後面截短），再輪流補每場的議題、片段
+        var total = 0
+        for i in blocks.indices {
+            let room = Self.askCharacterLimit - total
+            var used = 0
+            blocks[i].summary = blocks[i].summary.prefix { used += $0.count; return used <= room }.map { $0 }
+            total += blocks[i].summary.reduce(0) { $0 + $1.count }
+        }
+        var cursor = Array(repeating: 0, count: blocks.count)
+        var added = true
+        while added {
+            added = false
+            for i in blocks.indices where cursor[i] < extras[i].count {
+                let line = extras[i][cursor[i]]
+                guard total + line.count <= Self.askCharacterLimit else { continue }
+                blocks[i].lines.append(line)
+                total += line.count
+                cursor[i] += 1
+                added = true
+            }
+        }
+        return blocks.filter { !$0.summary.isEmpty || !$0.lines.isEmpty }
     }
 
     /// 共用的流程：標記正在問、可以取消、存問答、更新畫面
