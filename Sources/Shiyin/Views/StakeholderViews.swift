@@ -54,68 +54,83 @@ struct StakeholderCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("利害關係人分析").contentTitleFont(18)
                 Spacer()
-                if analyzing { ProgressView().controlSize(.small) }
+                if analyzing {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("分析中…").foregroundStyle(.secondary)
+                    }
+                }
                 Button(editing ? String(localized: "完成") : String(localized: "補充背景"), systemImage: "person.text.rectangle") {
                     editing.toggle()
                 }
                 .help("填他的實際角色、組織和你知道的背景；分析會以這些為準")
-                Button(profile == nil ? String(localized: "分析") : String(localized: "重新分析"), systemImage: "sparkles") {
-                    model.analyzeStakeholder(person.id)
+                if !analyzing {
+                    Button(profile == nil ? String(localized: "分析") : String(localized: "重新分析"), systemImage: "sparkles") {
+                        model.analyzeStakeholder(person.id)
+                    }
+                    .disabled(model.askUnavailableReason != nil)
+                    .help("用 \(AppSettings.provider.shortLabel) 從他出現過的每一場會議重新分析。每場會議整理完也會自動更新")
                 }
-                .disabled(analyzing || model.askUnavailableReason != nil)
-                .help("用 \(AppSettings.provider.shortLabel) 從他出現過的每一場會議重新分析。每場會議整理完也會自動更新")
             }
             .buttonStyle(.borderless)
             .font(.callout)
 
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
-                    identity
-                    if let profile {
-                        HStack(spacing: 8) {
-                            QuadrantBadge(quadrant: profile.quadrant)
-                            if !profile.attitude.isEmpty { AttitudeBadge(attitude: profile.attitude, trend: profile.attitudeTrend) }
-                            if !profile.decisionRole.isEmpty { Tag(text: Self.decisionRoleLabel(profile.decisionRole)) }
-                        }
-                        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 4) {
-                            GridRow {
-                                Text("影響力").foregroundStyle(.secondary)
-                                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                    LevelBadge(level: profile.power)
-                                    Text(profile.powerReason).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
-                            GridRow {
-                                Text("關心程度").foregroundStyle(.secondary)
-                                LevelBadge(level: profile.interest)
-                            }
-                        }
-                        .font(.callout)
+            // 一欄由上往下排：身分 → 標記 → 影響力、關心程度 → 總結。不用 Grid、不跟小圖並排：
+            // 長的理由在窄欄裡會換很多行，算高度時壓到下面的總結（2026-11-23 使用者截圖）
+            identity
+            if let profile {
+                HStack(spacing: 8) {
+                    QuadrantBadge(quadrant: profile.quadrant)
+                    if !profile.attitude.isEmpty { AttitudeBadge(attitude: profile.attitude, trend: profile.attitudeTrend) }
+                    if !profile.decisionRole.isEmpty { Tag(text: Self.decisionRoleLabel(profile.decisionRole)) }
+                    Spacer(minLength: 0)
+                    Button(String(localized: "看關係人地圖"), systemImage: "square.grid.2x2") {
+                        model.openStakeholderMap(folder: profile.projects.count == 1 ? profile.projects[0].folder : model.folderFilter)
                     }
+                    .buttonStyle(.borderless)
+                    .font(.callout)
+                    .help("在影響力 × 關心程度的四象限上看他和其他人")
                 }
-                Spacer(minLength: 0)
-                if let profile {
-                    PowerInterestGrid(points: [.init(id: person.id, initials: Self.initials(person.name), quadrantX: profile.interest,
-                                                     quadrantY: profile.power, attitude: profile.attitude)], size: 120)
+                HStack(alignment: .firstTextBaseline, spacing: 18) {
+                    HStack(spacing: 6) { Text("影響力").foregroundStyle(.secondary); LevelBadge(level: profile.power) }
+                    HStack(spacing: 6) { Text("關心程度").foregroundStyle(.secondary); LevelBadge(level: profile.interest) }
+                }
+                .font(.callout)
+                if !profile.powerReason.isEmpty {
+                    Text(profile.powerReason)
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
                 }
             }
             if let profile, !profile.summary.isEmpty {
-                Text(profile.summary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                Text(profile.summary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.top, 2)
             }
             // 每個案子各自的份量（關係人地圖照這個放）
-            if let profile, profile.projects.count >= 1 {
+            if let profile, !profile.projects.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("在各個案子").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
                     ForEach(profile.projects, id: \.folder) { p in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Button { model.openStakeholderMap(folder: p.folder) } label: {
-                                Label(p.folder, systemImage: "folder").foregroundStyle(Color.celadon)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 8) {
+                                Button { model.openStakeholderMap(folder: p.folder) } label: {
+                                    Label(p.folder, systemImage: "folder").foregroundStyle(Color.celadon)
+                                }
+                                .buttonStyle(.plain)
+                                .help("打開這個案子的關係人地圖")
+                                QuadrantBadge(quadrant: StakeholderProfile.Quadrant(power: p.power, interest: p.interest))
+                                if !p.attitude.isEmpty { AttitudeBadge(attitude: p.attitude, trend: "") }
                             }
-                            .buttonStyle(.plain)
-                            .help("打開這個案子的關係人地圖")
-                            QuadrantBadge(quadrant: StakeholderProfile.Quadrant(power: p.power, interest: p.interest))
-                            if !p.attitude.isEmpty { AttitudeBadge(attitude: p.attitude, trend: "") }
-                            Text(p.note).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            if !p.note.isEmpty {
+                                Text(p.note).foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                         .font(.callout)
                     }
@@ -146,7 +161,9 @@ struct StakeholderCard: View {
         let date = String(record.updatedAt.prefix(10))
         let confidence = Self.confidenceLabel(profile.confidence)
         return VStack(alignment: .leading, spacing: 2) {
-            Text("把握：\(confidence)・根據 \(count) 場會議・\(date) 更新").font(.caption).foregroundStyle(.secondary)
+            Text(profile.confidence.isEmpty ? String(localized: "根據 \(count) 場會議・\(date) 更新")
+                                            : String(localized: "把握：\(confidence)・根據 \(count) 場會議・\(date) 更新"))
+                .font(.caption).foregroundStyle(.secondary)
             if profile.confidence == "low" && !record.hasUserContext {
                 Text("他說的話還不多。按「補充背景」填他的角色和你知道的事，分析會準一些。").font(.caption).foregroundStyle(.secondary)
             }
@@ -262,10 +279,13 @@ struct StakeholderDetails: View {
                 block(String(localized: "關心的議題和立場")) {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(Array(profile.topics.enumerated()), id: \.offset) { _, topic in
+                            // 議題一行、立場在下一行：並排時長的議題名稱把立場擠成很窄的一欄（UX 檢查）
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     LevelBadge(level: topic.interest)
-                                    Text(topic.topic).fontWeight(.medium)
+                                    Text(topic.topic).fontWeight(.medium).fixedSize(horizontal: false, vertical: true)
+                                }
+                                if !topic.stance.isEmpty {
                                     Text(topic.stance).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                                 }
                                 EvidenceList(evidence: topic.evidence)
@@ -286,10 +306,14 @@ struct StakeholderDetails: View {
                 block(String(localized: "人際關係")) {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(Array(profile.relationships.enumerated()), id: \.offset) { _, r in
-                            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                Text(r.person).fontWeight(.medium)
-                                Text(r.relation).foregroundStyle(Color.celadon)
-                                Text(r.note).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: 1) {
+                                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                    Text(r.person).fontWeight(.medium)
+                                    Text(r.relation).foregroundStyle(Color.celadon)
+                                }
+                                if !r.note.isEmpty {
+                                    Text(r.note).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                         }
                     }

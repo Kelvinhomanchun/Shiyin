@@ -27664,9 +27664,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld sources"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld sources"
+                }
+              }
+            }
           }
         },
         "zh-Hans": {
@@ -28166,6 +28178,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "放的是他在这个案子的影响力、关心程度和态度；同一个人在别的案子可能不一样。点一个人打开他的人物页。"
+          }
+        }
+      }
+    },
+    "分析中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyzing…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析中…"
+          }
+        }
+      }
+    },
+    "看關係人地圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View on map"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看关系人地图"
+          }
+        }
+      }
+    },
+    "在影響力 × 關心程度的四象限上看他和其他人": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See them alongside others on the power × interest grid"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在影响力 × 关心程度的四象限上看他和其他人"
+          }
+        }
+      }
+    },
+    "根據 %lld 場會議・%@ 更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld meetings · updated %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根据 %lld 场会议・%@ 更新"
           }
         }
       }

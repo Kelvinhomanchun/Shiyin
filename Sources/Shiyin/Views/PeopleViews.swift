@@ -64,10 +64,6 @@ struct PersonPage: View {
         .navigationTitle(person.name)
         // 改名、合併、刪除放在工具列右上角的「更多」，跟會議頁同一個位置
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { model.openStakeholderMap(folder: model.folderFilter) } label: { Label("關係人地圖", systemImage: "square.grid.2x2") }
-                    .help("所有分析過的人在同一張影響力 × 關心程度的圖上")
-            }
             ToolbarItem(placement: .primaryAction) { moreMenu }
             SettingsToolbarItem()
         }
@@ -117,8 +113,7 @@ struct PersonPage: View {
                 .fixedSize()
                 .help("同一個人被記成兩個名字時，合併成一個")
             }
-            Button("移除這個人…", systemImage: "person.badge.minus", role: .destructive) { model.confirmRemovePerson = person.id }
-                .foregroundStyle(.red)
+            // 移除這個人：破壞性的動作只放在右上角「更多」，不在標題下面跟分析搶眼（UX 檢查，2026-11-23）
         }
         .buttonStyle(.borderless)
         .font(.callout)
@@ -196,6 +191,8 @@ struct PersonMenuItems: View {
     var body: some View {
         Group {
             let others = model.peopleOverview.filter { $0.id != person.id }
+            Button("關係人地圖", systemImage: "square.grid.2x2") { model.openStakeholderMap(folder: model.folderFilter) }
+            Divider()
             Button("重新命名…", systemImage: "pencil") {
                 model.selectedPerson = person.id
                 model.renameTarget = .person(person.id)
