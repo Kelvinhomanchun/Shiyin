@@ -13,7 +13,7 @@ struct SidebarHoverModifier: ViewModifier {
         content
             .background {
                 RoundedRectangle(cornerRadius: SidebarHoverModifier.radius, style: .continuous)
-                    .fill(Color.primary.opacity(selected ? 0.11 : hovering ? 0.06 : 0))
+                    .fill(selected ? Color.sidebarSelected : hovering ? Color.sidebarSelected.opacity(0.5) : .clear)
                     .padding(.horizontal, -SidebarHoverModifier.inset.width)
                     .padding(.vertical, -SidebarHoverModifier.inset.height)
             }

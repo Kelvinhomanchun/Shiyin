@@ -431,7 +431,9 @@ enum StakeholderPrompt {
         }
         for m in meetings {
             out.append("")
-            out.append("[Meeting \(m.id)] \(m.title) (\(m.date))" + (m.folder.isEmpty ? "" : " — project/folder: \(m.folder)"))
+            // 子資料夾是「客戶/案子」：projects 用完整的路徑當 folder，分析時看得出是哪個客戶的哪個案子
+            out.append("[Meeting \(m.id)] \(m.title) (\(m.date))" + (m.folder.isEmpty ? "" :
+                FolderPath.isSub(m.folder) ? " — account: \(FolderPath.account(m.folder)), project/folder: \(m.folder)" : " — project/folder: \(m.folder)"))
             if !m.context.isEmpty {
                 out.append("Meeting notes (context):")
                 out += m.context.map { "- " + $0 }

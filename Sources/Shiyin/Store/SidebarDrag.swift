@@ -8,6 +8,8 @@ extension UTType {
     static let shiyinMeetingIDs = UTType(exportedAs: "com.weiwei.shiyin.meeting-ids")
     /// 拖的資料夾（鍵：folder:名稱）
     static let shiyinSidebarItem = UTType(exportedAs: "com.weiwei.shiyin.sidebar-item")
+    /// 拖人物到人物群組（fork）
+    static let shiyinPersonIDs = UTType(exportedAs: "com.weiwei.shiyin.person-ids")
 }
 
 /// 側欄「資料夾」那一段的一列
@@ -22,7 +24,8 @@ struct SidebarFolderItem: Identifiable {
 extension AppModel {
     /// 「資料夾」那一段的順序：拖曳排過的照 sidebarOrder，沒排過的（新的）在後面，照名稱
     var sidebarFolderItems: [SidebarFolderItem] {
-        let defaults = folders.map { SidebarFolderItem(name: $0.name, count: $0.count) }
+        // 側欄的上層只有客戶（上層資料夾）；場數含子資料夾。子資料夾列在展開的上層底下
+        let defaults = folderTree.map { SidebarFolderItem(name: $0.name, count: $0.count) }
         let rank = Dictionary(sidebarOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
         return defaults.enumerated().sorted { a, b in
             switch (rank[a.element.key], rank[b.element.key]) {

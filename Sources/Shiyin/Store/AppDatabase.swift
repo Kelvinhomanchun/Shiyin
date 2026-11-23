@@ -413,6 +413,17 @@ final class AppDatabase: @unchecked Sendable {
                 ALTER TABLE stakeholder_profiles ADD COLUMN user_notes TEXT NOT NULL DEFAULT '';
                 """)
         }
+        // 人物群組（fork）：使用者自己建的群組，例如「HKJC 客戶」「IBM 團隊」；一個人最多在一個群組
+        migrator.registerMigration("fork-people-groups") { db in
+            try db.execute(sql: """
+                CREATE TABLE person_groups (
+                  name       TEXT PRIMARY KEY COLLATE NOCASE,
+                  position   INTEGER NOT NULL DEFAULT 0,
+                  created_at TEXT NOT NULL
+                );
+                ALTER TABLE people ADD COLUMN group_name TEXT;
+                """)
+        }
         return migrator
     }
 

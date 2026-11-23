@@ -51,6 +51,11 @@ extension Color {
     static let negative = Color(nsColor: .dynamic(light: 0xDA1E28, dark: 0xFF8389))
     /// 次要的結構色（讓他滿意的象限等）：Purple 60／40
     static let accent2 = Color(nsColor: .dynamic(light: 0x8A3FFC, dark: 0xBE95FF))
+    /// 側欄的底色（使用者要淺藍）：IBM Blue 10 #EDF5FF（深色 Blue 100 #001141）。
+    /// 選到的列 Blue 20 #D0E2FF（深色 Blue 90 #001D6C）、滑過 Blue 20 的一半，同 Carbon 的 selected／hover 用法。
+    /// 整個側欄用 Blue 20 太重，灰字對比也會掉到 4.5:1 以下，所以 Blue 20 只給選到的列
+    static let sidebarSurface = Color(nsColor: .dynamic(light: 0xEDF5FF, dark: 0x001141))
+    static let sidebarSelected = Color(nsColor: .dynamic(light: 0xD0E2FF, dark: 0x001D6C))
     /// 搜尋找到的字：Yellow 20／Yellow 30 的底色（IBM 的黃只當底色用，上面的字照舊是一般文字色）
     static let highlight = Color(nsColor: .dynamic(light: 0xFDDC69, dark: 0x8E6A00))
 }

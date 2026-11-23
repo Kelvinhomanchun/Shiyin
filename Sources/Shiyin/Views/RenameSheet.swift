@@ -35,8 +35,12 @@ struct RenameSheet: View {
         }
     }
 
-    private var isNewFolder: Bool { if case .newFolder = target { true } else { false } }
-    private var isEmptyNewFolder: Bool { if case .newFolder(let ids) = target { ids.isEmpty } else { false } }
+    private var isNewFolder: Bool {
+        switch target { case .newFolder, .newSubfolder, .newPersonGroup: true; default: false }
+    }
+    private var isEmptyNewFolder: Bool {
+        switch target { case .newFolder(let ids): ids.isEmpty; case .newSubfolder: true; case .newPersonGroup(let ids): ids.isEmpty; default: false }
+    }
 
     private func save() {
         model.commitRename(target, to: name)
@@ -48,14 +52,19 @@ struct RenameSheet: View {
         case .meeting: String(localized: "重新命名會議")
         case .folder: String(localized: "重新命名資料夾")
         case .newFolder: String(localized: "新資料夾")
+        case .newSubfolder(let parent): String(localized: "在「\(parent)」裡新增子資料夾")
         case .person: String(localized: "重新命名這個人")
         case .bookmark: String(localized: "重新命名標記")
+        case .newPersonGroup: String(localized: "新人物群組")
+        case .personGroup: String(localized: "重新命名群組")
         }
     }
 
     private var placeholder: String {
         switch target {
         case .folder, .newFolder: String(localized: "資料夾名稱")
+        case .newSubfolder: String(localized: "子資料夾名稱（例如案子名稱）")
+        case .newPersonGroup, .personGroup: String(localized: "群組名稱")
         case .person: String(localized: "名字")
         default: String(localized: "名稱")
         }
@@ -66,6 +75,9 @@ struct RenameSheet: View {
         if let other = model.renameConflict(for: target, name: name) {
             switch target {
             case .newFolder(let ids) where ids.isEmpty: return String(localized: "已經有「\(other)」。")
+            case .newSubfolder: return String(localized: "已經有「\(other)」。")
+            case .newPersonGroup(let ids) where ids.isEmpty: return String(localized: "已經有「\(other)」。")
+            case .newPersonGroup: return String(localized: "已經有「\(other)」，會放進那個群組。")
             case .newFolder: return String(localized: "已經有「\(other)」，會議會移進那個資料夾。")
             default: return String(localized: "已經有「\(other)」，儲存後會合併成一個。")
             }
@@ -73,11 +85,15 @@ struct RenameSheet: View {
         switch target {
         case .meeting: return String(localized: "保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。")
         case .folder: return String(localized: "資料夾裡的會議都會跟著改。")
-        case .newFolder(let ids) where ids.isEmpty: return String(localized: "例如專案名稱或客戶名稱。")
+        case .newFolder(let ids) where ids.isEmpty: return String(localized: "例如客戶名稱；之後可以在裡面建案子的子資料夾。")
+        case .newSubfolder(let parent): return String(localized: "例如案子名稱。在「\(parent)」看得到所有子資料夾的會議。")
         case .newFolder(let ids):
             return ids.count > 1 ? String(localized: "例如專案名稱或客戶名稱。這 \(ids.count) 場會議會移進新資料夾。")
                                  : String(localized: "例如專案名稱或客戶名稱。這場會議會移進新資料夾。")
         case .person: return String(localized: "所有會議裡的這個人都會跟著改。")
+        case .newPersonGroup(let ids) where ids.isEmpty: return String(localized: "例如「HKJC 客戶」「IBM 團隊」「面試者」。把人拖進群組，或在人的選單選「移到群組」。")
+        case .newPersonGroup: return String(localized: "例如「HKJC 客戶」「IBM 團隊」「面試者」。這個人會放進新群組。")
+        case .personGroup: return String(localized: "群組裡的人都會跟著移過去。")
         case .bookmark(let id):
             let time = model.detail?.bookmarks.first { $0.id == id }?.time ?? 0
             return String(localized: "\(TimeFormat.string(time)) 的標記")

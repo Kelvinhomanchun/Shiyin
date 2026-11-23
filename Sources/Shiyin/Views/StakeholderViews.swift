@@ -435,7 +435,7 @@ struct StakeholderDetails: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 8) {
                                     Button { model.openStakeholderMap(folder: p.folder) } label: {
-                                        Label(p.folder, systemImage: "folder").foregroundStyle(Color.celadon)
+                                        Label(FolderPath.display(p.folder), systemImage: "folder").foregroundStyle(Color.celadon)
                                     }
                                     .buttonStyle(.plain)
                                     .help("打開這個案子的關係人地圖")
@@ -833,24 +833,42 @@ struct StakeholderMapView: View {
 
     var body: some View {
         @Bindable var model = model
-        let folders = Array(Set(model.meetings.map(\.meeting.folder).filter { !$0.isEmpty })).sorted()
+        let folders = model.folders.map(\.name).filter { name in model.meetings.contains { $0.meeting.isIn(folder: name) } }
         let folder = model.stakeholderMapFolder
-        let items = model.stakeholderMap(folder: folder.isEmpty ? nil : folder)
+        let group = model.stakeholderMapGroup
+        let items = model.stakeholderMap(folder: folder.isEmpty ? nil : folder, group: group.isEmpty ? nil : group)
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(folder.isEmpty ? String(localized: "關係人地圖") : String(localized: "關係人地圖：\(folder)")).font(.songti(20))
+                Text(folder.isEmpty ? String(localized: "關係人地圖") : String(localized: "關係人地圖：\(FolderPath.display(folder))")).font(.songti(20))
                 Spacer()
                 Picker("一個資料夾", selection: $model.stakeholderMapFolder) {
                     Text("所有會議").tag("")
-                    ForEach(folders, id: \.self) { Text($0).tag($0) }
+                    ForEach(folders, id: \.self) { Text(FolderPath.display($0)).tag($0) }
                 }
                 .fixedSize()
+                if !model.personGroups.isEmpty {
+                    Picker("一個群組", selection: $model.stakeholderMapGroup) {
+                        Text("所有人").tag("")
+                        ForEach(model.personGroups, id: \.self) { Text($0).tag($0) }
+                    }
+                    .fixedSize()
+                }
+                Button {
+                    model.confirmReanalyzeAll = true
+                    model.openMainWindow?()   // 確認彈窗在主視窗
+                } label: {
+                    Label(model.analyzingStakeholders.isEmpty ? String(localized: "重新分析所有人") : String(localized: "分析中…"),
+                          systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(!model.analyzingStakeholders.isEmpty || model.askUnavailableReason != nil)
+                .help("每個人都從他出現過的所有會議重新分析")
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
             Divider()
             if items.isEmpty {
-                Text(folder.isEmpty ? String(localized: "還沒有分析過的人。到側欄「人物」打開一個人，按「分析」。")
+                Text(!group.isEmpty ? String(localized: "這個群組裡還沒有分析過的人（或不在這個資料夾的會議裡）。")
+                     : folder.isEmpty ? String(localized: "還沒有分析過的人。到側欄「人物」打開一個人，按「分析」。")
                                     : String(localized: "這個資料夾的會議裡還沒有分析過的人。"))
                     .foregroundStyle(.secondary).padding(24)
                 Spacer()
@@ -902,6 +920,7 @@ struct StakeholderMapView: View {
         .frame(minWidth: 820, minHeight: 560)
         .onAppear {
             model.reloadPeopleOverview()
+            model.reloadPersonGroups()
             // 第一次打開：有資料夾時先看第一個（地圖是看一個案子的人，跨案子的影響力意義不大）
             if !model.stakeholderMapChosen, model.stakeholderMapFolder.isEmpty, let first = folders.first {
                 model.stakeholderMapFolder = model.folderFilter ?? first
@@ -915,6 +934,15 @@ extension StakeholderMapView {
     /// 這個案子的評估；沒有（舊的分析、沒有對到資料夾）就用整體的
     static func rating(_ p: StakeholderProfile, _ folder: String) -> (power: String, interest: String, attitude: String, note: String) {
         if let x = p.project(folder) { return (x.power, x.interest, x.attitude, x.note) }
+        // 上層資料夾（客戶）：用他在這個客戶底下各案子裡最高的影響力、關心程度（同一個客戶的人通常跨案子）
+        if !folder.isEmpty, !FolderPath.isSub(folder) {
+            let inside = p.projects.filter { FolderPath.contains(folder, $0.folder) }
+            if !inside.isEmpty {
+                func rank(_ v: String) -> Int { v == "high" ? 2 : v == "medium" ? 1 : 0 }
+                let top = inside.max { rank($0.power) * 3 + rank($0.interest) < rank($1.power) * 3 + rank($1.interest) }!
+                return (top.power, top.interest, top.attitude, inside.map { "\(FolderPath.project($0.folder) ?? $0.folder)：\($0.note)" }.joined(separator: "；"))
+            }
+        }
         return (p.power, p.interest, p.attitude, "")
     }
 }

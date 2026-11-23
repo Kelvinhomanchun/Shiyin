@@ -936,6 +936,14 @@ enum DebugControl {
         case "folder": if let id { model.moveToFolder(id, folder: args[2] == "-" ? "" : args[2]) }
         case "folderfilter": model.folderFilter = args.count > 1 && args[1] != "-" ? args[1] : nil
         case "renamefolder": model.renameFolder(args[1], to: args[2])
+        case "mapgroup": model.stakeholderMapGroup = args.count > 1 ? args[1] : ""
+        case "persongroup": model.createPersonGroup(args[1])   // persongroup <名稱>
+        case "setpersongroup": model.setPersonGroup([Int64(args[1]) ?? 0], group: args.count > 2 && !args[2].isEmpty ? args[2] : nil)
+        case "renamepersongroup": model.renamePersonGroup(args[1], to: args[2])
+        case "deletepersongroup": model.deletePersonGroup(args[1])
+        case "peoplemode": model.sidebarMode = .people; model.reloadPeopleOverview()
+        case "subfolder": model.createSubfolder(args[2], in: args[1])   // subfolder <上層> <子資料夾>
+        case "sidebarexpandfolder": model.setRow(AppModel.folderKey(args[1]), expanded: true)
         case "deletefolder": model.deleteFolder(args[1])
         // 更新（R10.6）
         case "setupdateurl": UserDefaults.standard.set(args.count > 1 && args[1] != "-" ? args[1] : nil, forKey: Updater.urlKey)
@@ -1597,6 +1605,20 @@ enum DebugControl {
             content = AnyView(ReplaceSheet(initialFind: "Lumeo"))
         case "askall":
             content = AnyView(AskAllView().frame(width: 680, height: 720))
+        case "sidebar2":   // 側欄的資料夾樹（樹狀，含子資料夾；List 畫不出來，用同樣的列重組）
+            content = AnyView(VStack(alignment: .leading, spacing: 6) {
+                SidebarFolderRows()
+            }.padding(16).frame(width: 280).background(Color.sidebarSurface))
+        case "peoplegroups":   // 側欄的人物群組（List 畫不出來，用同樣的列重組；不含拖曳把手）
+            content = AnyView(VStack(alignment: .leading, spacing: 8) {
+                ForEach(model.peopleSections.filter { $0.group != nil }, id: \.group) { section in
+                    HStack { Label(section.group ?? "", systemImage: "person.3").labelStyle(SidebarLabelStyle()); Spacer() }
+                    ForEach(section.people) { PersonRow(person: $0).padding(.leading, 18) }
+                    if section.people.isEmpty { Text("把人拖到這裡").font(.callout).foregroundStyle(.secondary).padding(.leading, 18) }
+                }
+                Text("未分組").font(.callout).foregroundStyle(.secondary).padding(.top, 4)
+                ForEach(model.peopleSections.last?.people.prefix(5) ?? []) { PersonRow(person: $0) }
+            }.padding(16).frame(width: 280).background(Color.sidebarSurface))
         case "stakeholdermap":   // snapshot … stakeholdermap：看 folderfilter 選的資料夾（沒選是所有會議）
             model.stakeholderMapFolder = model.folderFilter ?? ""
             model.stakeholderMapChosen = true

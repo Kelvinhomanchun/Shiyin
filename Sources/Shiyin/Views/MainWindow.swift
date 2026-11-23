@@ -147,6 +147,9 @@ struct MainView: View {
         @Bindable var model = model
         NavigationSplitView {
             SidebarView()
+                .scrollContentBackground(.hidden)
+                .background(Color.sidebarSurface)
+                .tint(Color.celadon)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 380)
         } detail: {
             detailContent
@@ -391,12 +394,34 @@ struct SidebarView: View {
             scopeSections
             Section {
                 if model.isSectionExpanded("people") {
-                    ForEach(model.peopleOverview) { person in
-                        PersonRow(person: person)
-                            .floatingRowMenu(selected: model.selectedPerson == person.id) { model.personMenu(person) }
-                            .sidebarSelectableRow(selected: model.selectedPerson == person.id)
-                            .tag(person.id)
+                    // 人物群組（fork）：使用者建的群組在上面，點了展開；沒有群組時跟原本一樣一整串
+                    let sections = model.peopleSections
+                    ForEach(sections.filter { $0.group != nil }, id: \.group) { section in
+                        let name = section.group ?? ""
+                        let key = AppModel.personGroupKey(name)
+                        let expanded = model.isSectionExpanded(key)
+                        FolderRow(name: name, count: section.people.count, symbol: "person.3", selected: false,
+                                  folder: .init(expanded: expanded, badge: nil),
+                                  drop: SidebarRowDrop(people: { model.setPersonGroup($0, group: name) }),
+                                  menu: { model.personGroupHeaderMenu(name) }) {
+                            withAnimation(.easeInOut(duration: 0.18)) { model.setSection(key, expanded: !expanded) }
+                        }
+                        .help(String(localized: "\(section.people.count) 個人"))
+                        if expanded {
+                            ForEach(section.people) { person in
+                                personRow(person).padding(.leading, 18)
+                            }
+                            if section.people.isEmpty {
+                                Text("把人拖到這裡").font(.callout).foregroundStyle(.secondary)
+                                    .padding(.leading, 18).selectionDisabled()
+                            }
+                        }
                     }
+                    let ungrouped = sections.last?.people ?? []
+                    if !model.personGroups.isEmpty, !ungrouped.isEmpty {
+                        Text("未分組").font(.callout).foregroundStyle(.secondary).padding(.top, 4).selectionDisabled()
+                    }
+                    ForEach(ungrouped) { person in personRow(person) }
                     if model.peopleOverview.isEmpty {
                         Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
                             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -404,12 +429,54 @@ struct SidebarView: View {
                     }
                 }
             } header: {
-                SidebarSectionHeader(title: String(localized: "人物"), key: "people")
+                HStack(spacing: 6) {
+                    SidebarSectionHeader(title: String(localized: "人物"), key: "people", besideMenu: true)
+                    Spacer(minLength: 4)
+                    // 重新分析所有人（使用者要的）：放在「人物」標題旁，跟「資料夾」的「+」同一種按鈕；按了先確認（要花整理工具的額度）
+                    SidebarHeaderIcon(systemName: model.analyzingStakeholders.isEmpty ? "arrow.triangle.2.circlepath" : "hourglass")
+                        .sidebarClick { model.confirmReanalyzeAll = true }
+                        .padding(.trailing, SidebarHeaderIcon.trailing)
+                        .help(model.analyzingStakeholders.isEmpty ? String(localized: "重新分析所有人")
+                                                                  : String(localized: "正在分析 \(model.analyzingStakeholders.count) 個人"))
+                        .accessibilityElement()
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityLabel(Text("重新分析所有人"))
+                        .accessibilityAction { model.confirmReanalyzeAll = true }
+                    SidebarHeaderIcon(systemName: "person.3")
+                        .sidebarClick { model.renameTarget = .newPersonGroup([]) }
+                        .padding(.trailing, SidebarHeaderIcon.trailing)
+                        .help("新人物群組")
+                        .accessibilityElement()
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityLabel(Text("新人物群組"))
+                        .accessibilityAction { model.renameTarget = .newPersonGroup([]) }
+                    SidebarHeaderIcon(systemName: "square.grid.2x2")
+                        .sidebarClick { model.openStakeholderMap(folder: model.folderFilter) }
+                        .padding(.trailing, SidebarHeaderIcon.trailing)
+                        .help("關係人地圖")
+                        .accessibilityElement()
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityLabel(Text("關係人地圖"))
+                        .accessibilityAction { model.openStakeholderMap(folder: model.folderFilter) }
+                }
             }
         }
         // 選到一個人時按 Return 重新命名、Delete 移除（R85.7、R100）
         .onKeyPress(.return) { model.sidebarReturn() ? .handled : .ignored }
         .onDeleteCommand { model.sidebarDelete() }
+    }
+
+    /// 人物的一列：可以拖到人物群組（fork），點一下選取
+    private func personRow(_ person: PersonOverview) -> some View {
+        PersonRow(person: person)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .sidebarDragHandle(type: .shiyinPersonIDs, label: person.name, data: { Data(String(person.id).utf8) }) { _ in
+                model.selectedPerson = person.id
+            }
+            .floatingRowMenu(selected: model.selectedPerson == person.id) { model.personMenu(person) }
+            .sidebarSelectableRow(selected: model.selectedPerson == person.id)
+            .tag(person.id)
     }
 
     private var meetingList: some View {
@@ -600,7 +667,7 @@ private struct FolderRowDragModifier: ViewModifier {
     func body(content: Content) -> some View {
         if let drop {
             let types = [drop.meetings != nil ? UTType.shiyinMeetingIDs : nil, drop.item != nil ? .shiyinSidebarItem : nil,
-                         drop.files != nil ? .fileURL : nil].compactMap { $0 }
+                         drop.files != nil ? .fileURL : nil, drop.people != nil ? .shiyinPersonIDs : nil].compactMap { $0 }
             content.onDrop(of: types, delegate: SidebarRowDropDelegate(drop: drop, height: height, state: $state))
         } else {
             content

@@ -204,7 +204,7 @@ extension AppModel {
             guard let meeting = try? db.meeting(id), meeting.deletedAt == nil else { return nil }
             switch scope {
             case .all: break
-            case .folder: guard let folder, meeting.folder == folder else { return nil }
+            case .folder: guard let folder, meeting.isIn(folder: folder) else { return nil }
             case .recent: guard meeting.meetingDate >= cutoff else { return nil }
             }
             return (meeting, list)
@@ -250,7 +250,8 @@ extension AppModel {
     /// 問資料夾：資料夾裡每一場都帶（命中多的、新的先），先放每場的會議紀錄（摘要、決議、待辦、未決問題），
     /// 剩下的字數再依序補議題的重點、命中的逐字稿片段。總長一樣在 askCharacterLimit 以內
     func folderBlocks(folder: String, hits: [Int64: [SearchHit]]) -> [AskPrompt.MeetingBlock] {
-        let meetings = meetings.map(\.meeting).filter { $0.folder == folder && $0.deletedAt == nil }
+        // 上層資料夾（客戶）：連子資料夾（案子）的會議一起帶
+        let meetings = meetings.map(\.meeting).filter { $0.isIn(folder: folder) && $0.deletedAt == nil }
             .sorted { a, b in
                 let ha = hits[a.id ?? -1]?.count ?? 0, hb = hits[b.id ?? -1]?.count ?? 0
                 return ha != hb ? ha > hb : a.meetingDate > b.meetingDate

@@ -33,6 +33,7 @@ extension AppModel {
     }
 
     /// 資料夾裡的會議（不含垃圾桶），日期新到舊（資料庫讀出來的順序）
+    /// 只放直接在這個資料夾的會議（子資料夾的會議在子資料夾那一列底下）
     func peekRows(folder: String) -> [MeetingRow] { meetings.filter { $0.meeting.folder == folder } }
 
     /// 點了展開的那一場：人物模式換回會議、選那場；下面的列表不換
@@ -58,6 +59,8 @@ extension AppModel {
         } else if let meeting = meetings.first(where: { $0.id == id })?.meeting {
             setSection("folders", expanded: true)
             if !meeting.folder.isEmpty {
+                // 子資料夾的會議：上層也要展開，才看得到子資料夾
+                if FolderPath.isSub(meeting.folder) { setRow(Self.folderKey(FolderPath.account(meeting.folder)), expanded: true) }
                 setRow(Self.folderKey(meeting.folder), expanded: true)
             }
         }

@@ -3,9 +3,16 @@ import Foundation
 /// 要確認的事（R106、design §80）：原本各自的狀態（confirmDeleteFolder 這些）照舊，主視窗依目前設了哪一個顯示同一種確認彈窗
 extension AppModel {
     var activeConfirmation: ConfirmRequest? {
+        if confirmReanalyzeAll {
+            let me = (try? db.myPersonIds()) ?? []
+            let n = peopleOverview.filter { !me.contains($0.id) && !$0.isMe && $0.meetingCount > 0 }.count
+            return ConfirmRequest(id: "reanalyzeAll", title: String(localized: "重新分析所有人（\(n) 位）？"),
+                                  message: String(localized: "每個人都從他出現過的所有會議重新分析，用 \(AppSettings.provider.shortLabel) 每人呼叫一次，大約半分鐘一位，在背景進行。你填的背景會保留。"),
+                                  confirmTitle: String(localized: "重新分析"), destructive: false) { self.reanalyzeAllStakeholders() }
+        }
         if let folder = confirmDeleteFolder {
-            let count = meetings.filter { $0.meeting.folder == folder }.count
-            return ConfirmRequest(id: "folder:" + folder, title: String(localized: "刪除資料夾「\(folder)」？"),
+            let count = meetings.filter { $0.meeting.isIn(folder: folder) }.count
+            return ConfirmRequest(id: "folder:" + folder, title: String(localized: "刪除資料夾「\(FolderPath.display(folder))」？"),
                                   message: count > 0 ? String(localized: "裡面的 \(count) 場會議會留著，移到「不在資料夾」。自動加入的條件也會刪掉。")
                                                      : String(localized: "自動加入的條件也會刪掉。"),
                                   confirmTitle: String(localized: "刪除資料夾")) { self.deleteFolder(folder) }
@@ -52,6 +59,7 @@ extension AppModel {
 
     /// 確認彈窗關掉（取消或做完）
     func clearConfirmations() {
+        if confirmReanalyzeAll { confirmReanalyzeAll = false }
         if confirmDeleteFolder != nil { confirmDeleteFolder = nil }
         if confirmRemovePerson != nil { confirmRemovePerson = nil }
         if confirmPurge != nil { confirmPurge = nil }

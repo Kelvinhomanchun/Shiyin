@@ -148,6 +148,16 @@
 			<key>UTTypeIdentifier</key>
 			<string>com.weiwei.shiyin.sidebar-item</string>
 		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>KelNote People (drag)</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.weiwei.shiyin.person-ids</string>
+		</dict>
 	</array>
 </dict>
 </plist>

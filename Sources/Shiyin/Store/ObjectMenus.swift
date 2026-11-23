@@ -52,8 +52,9 @@ extension AppModel {
     func folderMenu(_ folder: String) -> [MenuEntry] {
         [.action(String(localized: "問這個資料夾…"), icon: "questionmark.bubble") { self.askAboutFolder(folder) },
          .action(String(localized: "關係人地圖"), icon: "square.grid.2x2") { self.openStakeholderMap(folder: folder) },
-         .divider,
-         .action(String(localized: "重新命名…"), icon: "pencil") { self.renameTarget = .folder(folder) },
+         .divider]
+        + (FolderPath.isSub(folder) ? [] : [.action(String(localized: "新增子資料夾…"), icon: "folder.badge.plus") { self.renameTarget = .newSubfolder(folder) }])
+        + [.action(String(localized: "重新命名…"), icon: "pencil") { self.renameTarget = .folder(folder) },
          .action(folderRule(folder) == nil ? String(localized: "自動加入的條件…") : String(localized: "編輯自動加入的條件…"), icon: "gearshape") {
              self.editingFolderRule = folder
          },
@@ -75,6 +76,7 @@ extension AppModel {
                 }
             }))
         }
+        entries.append(personGroupMenu(person))
         entries += [.divider,
                     .action(String(localized: "移除這個人…"), icon: "person.crop.circle.badge.minus", destructive: true) { self.confirmRemovePerson = person.id }]
         return entries

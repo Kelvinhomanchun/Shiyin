@@ -9,6 +9,8 @@ struct PersonOverview: Identifiable, Hashable {
     var lastMeetingDate: String?
     /// 錄過「我的聲音」的人（R80）
     var isMe: Bool
+    /// 使用者放進的人物群組（fork）；nil：未分組
+    var group: String? = nil
 }
 
 /// 人物頁的一場會議：他說了多久（秒）
@@ -36,11 +38,12 @@ extension AppDatabase {
                      WHERE s.person_id = p.id AND m.deleted_at IS NULL) AS meetings,
                   (SELECT max(m.meeting_date) FROM speakers s JOIN meetings m ON m.id = s.meeting_id
                      WHERE s.person_id = p.id AND m.deleted_at IS NULL) AS last_date,
-                  EXISTS (SELECT 1 FROM voiceprints v WHERE v.person_id = p.id AND v.audio_source = 'enroll') AS me
+                  EXISTS (SELECT 1 FROM voiceprints v WHERE v.person_id = p.id AND v.audio_source = 'enroll') AS me,
+                  p.group_name
                 FROM people p
                 """).map { row in
                     PersonOverview(id: row["id"], name: row["name"], meetingCount: row["meetings"],
-                                   lastMeetingDate: row["last_date"], isMe: row["me"])
+                                   lastMeetingDate: row["last_date"], isMe: row["me"], group: row["group_name"])
                 }
         }
         .sorted { a, b in
@@ -107,6 +110,7 @@ enum SidebarMode: String {
 extension AppModel {
     func reloadPeopleOverview() {
         peopleOverview = (try? db.peopleOverview()) ?? []
+        personGroups = (try? db.personGroups()) ?? []
         meetingPeople = (try? db.meetingPeople()) ?? [:]
         if let filtered = meetingFilter.personId, !peopleOverview.contains(where: { $0.id == filtered }) { meetingFilter.personId = nil }
         if let selected = selectedPerson, !peopleOverview.contains(where: { $0.id == selected }) { selectedPerson = nil }
@@ -146,17 +150,25 @@ extension AppModel {
     }
 
     /// 關係人地圖：每個分析過的人，可以只看一個資料夾裡的會議出現過的人
-    func stakeholderMap(folder: String?) -> [(person: PersonOverview, record: StakeholderRecord, profile: StakeholderProfile)] {
+    func stakeholderMap(folder: String?, group: String? = nil) -> [(person: PersonOverview, record: StakeholderRecord, profile: StakeholderProfile)] {
         let records = (try? db.allStakeholderProfiles()) ?? []
         let allowed: Set<Int64>? = folder.map { f in
-            let ids = Set(meetings.filter { $0.meeting.folder == f }.map(\.id))
+            let ids = Set(meetings.filter { $0.meeting.isIn(folder: f) }.map(\.id))
             return Set(meetingPeople.filter { ids.contains($0.key) }.flatMap(\.value))
         }
         return records.compactMap { r in
             guard let person = peopleOverview.first(where: { $0.id == r.personId }), let profile = r.decoded,
-                  allowed?.contains(r.personId) ?? true else { return nil }
+                  allowed?.contains(r.personId) ?? true,
+                  group.map({ g in person.group?.caseInsensitiveCompare(g) == .orderedSame }) ?? true else { return nil }
             return (person, r, profile)
         }
+    }
+
+    /// 人物群組標題的選單：只看這個群組的人（資料夾維持原本選的）
+    func openStakeholderMap(group: String) {
+        stakeholderMapGroup = group
+        stakeholderMapChosen = true
+        openWindowById?("stakeholders")
     }
 
     /// 資料夾的右鍵選單：打開這個資料夾的關係人地圖
@@ -184,6 +196,16 @@ extension AppModel {
         guard let personId = payload?.personId else { return }
         analyzingStakeholders.remove(personId)
         if let error, stakeholderPersonId == personId { errorMessage = String(localized: "分析失敗：\(error.localizedDescription)") }
+    }
+
+    /// 重新分析所有認得名字的人（你自己除外），每人從他所有的會議重做；已經在分析的跳過
+    func reanalyzeAllStakeholders() {
+        if let reason = askUnavailableReason { errorMessage = reason; return }
+        let me = (try? db.myPersonIds()) ?? []
+        let people = peopleOverview.filter { !me.contains($0.id) && !$0.isMe && $0.meetingCount > 0 && !analyzingStakeholders.contains($0.id) }
+        for person in people { analyzeStakeholder(person.id) }
+        noticeMessage = people.isEmpty ? String(localized: "沒有要分析的人")
+            : String(localized: "開始重新分析 \(people.count) 個人，每人大約半分鐘，在背景進行")
     }
 
     func stakeholderUpdated(_ personId: Int64) {
@@ -277,4 +299,138 @@ extension AppModel {
     }
 
     func reloadActionDone() { actionDone = (try? db.doneActionItems()) ?? [] }
+}
+
+
+// MARK: - 人物群組（fork）：使用者自己建、自己把人放進去，像資料夾
+
+extension AppDatabase {
+    func personGroups() throws -> [String] {
+        try pool.read { db in try String.fetchAll(db, sql: "SELECT name FROM person_groups ORDER BY position, name COLLATE NOCASE") }
+    }
+
+    func createPersonGroup(_ name: String) throws {
+        try pool.write { db in
+            let next = try Int.fetchOne(db, sql: "SELECT coalesce(max(position), 0) + 1 FROM person_groups") ?? 1
+            try db.execute(sql: "INSERT OR IGNORE INTO person_groups (name, position, created_at) VALUES (?, ?, ?)",
+                           arguments: [name, next, Clock.now()])
+        }
+    }
+
+    /// 改名（同名已經有時併過去）
+    func renamePersonGroup(_ old: String, to new: String) throws {
+        try pool.write { db in
+            let exists = try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM person_groups WHERE name = ? AND name <> ?)", arguments: [new, old]) ?? false
+            if exists {
+                try db.execute(sql: "DELETE FROM person_groups WHERE name = ?", arguments: [old])
+            } else {
+                try db.execute(sql: "UPDATE person_groups SET name = ? WHERE name = ?", arguments: [new, old])
+            }
+            try db.execute(sql: "UPDATE people SET group_name = ? WHERE group_name = ? COLLATE NOCASE", arguments: [new, old])
+        }
+    }
+
+    /// 刪群組：裡面的人回到未分組，人不會被刪
+    func deletePersonGroup(_ name: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "DELETE FROM person_groups WHERE name = ?", arguments: [name])
+            try db.execute(sql: "UPDATE people SET group_name = NULL WHERE group_name = ? COLLATE NOCASE", arguments: [name])
+        }
+    }
+
+    func movePersonGroup(_ name: String, before other: String?) throws {
+        try pool.write { db in
+            var names = try String.fetchAll(db, sql: "SELECT name FROM person_groups ORDER BY position, name COLLATE NOCASE")
+            names.removeAll { $0.caseInsensitiveCompare(name) == .orderedSame }
+            let index = other.flatMap { o in names.firstIndex { $0.caseInsensitiveCompare(o) == .orderedSame } } ?? names.count
+            names.insert(name, at: index)
+            for (position, n) in names.enumerated() {
+                try db.execute(sql: "UPDATE person_groups SET position = ? WHERE name = ?", arguments: [position, n])
+            }
+        }
+    }
+
+    /// nil：移出群組
+    func setPersonGroup(_ ids: [Int64], group: String?) throws {
+        try pool.write { db in
+            if let group {
+                try db.execute(sql: "INSERT OR IGNORE INTO person_groups (name, position, created_at) VALUES (?, (SELECT coalesce(max(position), 0) + 1 FROM person_groups), ?)",
+                               arguments: [group, Clock.now()])
+            }
+            for id in ids {
+                try db.execute(sql: "UPDATE people SET group_name = ? WHERE id = ?", arguments: [group, id])
+            }
+        }
+    }
+}
+
+extension AppModel {
+    /// 側欄人物的分段：使用者的群組（照順序，空的也顯示），最後是未分組
+    var peopleSections: [(group: String?, people: [PersonOverview])] {
+        var result: [(group: String?, people: [PersonOverview])] = personGroups.map { name in
+            (name, peopleOverview.filter { $0.group?.caseInsensitiveCompare(name) == .orderedSame })
+        }
+        let known = Set(personGroups.map { $0.lowercased() })
+        result.append((nil, peopleOverview.filter { $0.group.map { !known.contains($0.lowercased()) } ?? true }))
+        return result
+    }
+
+    static func personGroupKey(_ name: String?) -> String { name.map { "pgroup:\($0.lowercased())" } ?? "pgroup:" }
+
+    func reloadPersonGroups() { personGroups = (try? db.personGroups()) ?? [] }
+
+    func createPersonGroup(_ name: String, adding ids: [Int64] = []) {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        perform {
+            try db.createPersonGroup(name)
+            if !ids.isEmpty { try db.setPersonGroup(ids, group: name) }
+        }
+        reloadPersonGroups(); reloadPeopleOverview()
+    }
+
+    func renamePersonGroup(_ old: String, to new: String) {
+        let new = new.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !new.isEmpty, new != old else { return }
+        perform { try db.renamePersonGroup(old, to: new) }
+        reloadPersonGroups(); reloadPeopleOverview()
+    }
+
+    func deletePersonGroup(_ name: String) {
+        perform { try db.deletePersonGroup(name) }
+        reloadPersonGroups(); reloadPeopleOverview()
+    }
+
+    func movePersonGroup(_ name: String, before other: String?) {
+        perform { try db.movePersonGroup(name, before: other) }
+        reloadPersonGroups()
+    }
+
+    func setPersonGroup(_ ids: [Int64], group: String?) {
+        guard !ids.isEmpty else { return }
+        perform { try db.setPersonGroup(ids, group: group) }
+        reloadPersonGroups(); reloadPeopleOverview()
+    }
+
+    /// 人物右鍵選單的「移到群組」
+    func personGroupMenu(_ person: PersonOverview) -> MenuEntry {
+        var items: [MenuEntry] = personGroups.map { name in
+            .action(name, icon: person.group?.caseInsensitiveCompare(name) == .orderedSame ? "checkmark" : "person.3",
+                    enabled: person.group?.caseInsensitiveCompare(name) != .orderedSame) { self.setPersonGroup([person.id], group: name) }
+        }
+        if !items.isEmpty { items.append(.divider) }
+        items.append(.action(String(localized: "新群組…"), icon: "plus") { self.renameTarget = .newPersonGroup([person.id]) })
+        if person.group != nil {
+            items.append(.action(String(localized: "移出群組"), icon: "minus.circle") { self.setPersonGroup([person.id], group: nil) })
+        }
+        return .submenu(String(localized: "移到群組"), icon: "person.3", items)
+    }
+
+    /// 群組標題的選單
+    func personGroupHeaderMenu(_ name: String) -> [MenuEntry] {
+        [.action(String(localized: "重新命名群組…"), icon: "pencil") { self.renameTarget = .personGroup(name) },
+         .action(String(localized: "這個群組的關係人地圖"), icon: "square.grid.2x2") { self.openStakeholderMap(group: name) },
+         .divider,
+         .action(String(localized: "刪除群組"), icon: "trash", destructive: true) { self.deletePersonGroup(name) }]
+    }
 }

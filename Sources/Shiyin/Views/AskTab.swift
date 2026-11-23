@@ -201,7 +201,8 @@ struct AskAllView: View {
 
     /// 有資料夾的會議才列（空的資料夾問不出東西）
     private var folders: [String] {
-        Array(Set(model.meetings.map(\.meeting.folder).filter { !$0.isEmpty })).sorted()
+        // 上層和子資料夾都可以問；問上層時連子資料夾的會議一起帶
+        model.folders.map(\.name).filter { name in model.meetings.contains { $0.meeting.isIn(folder: name) } }
     }
 
     private var folderScope: Binding<AskScope> {
@@ -237,7 +238,7 @@ struct AskAllView: View {
                         model.askFolder = name
                         model.loadAllQuestions()
                     })) {
-                        ForEach(folders, id: \.self) { Text($0).tag($0) }
+                        ForEach(folders, id: \.self) { Text(FolderPath.display($0)).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -281,7 +282,7 @@ struct AskAllView: View {
             Divider()
             AskInputBar(question: $question,
                         placeholder: current == .folder
-                            ? String(localized: "問「\(model.askFolder ?? "")」裡的會議，例如：還有哪些待辦沒完成？")
+                            ? String(localized: "問「\(FolderPath.display(model.askFolder ?? ""))」裡的會議，例如：還有哪些待辦沒完成？")
                             : String(localized: "問所有會議，例如：寄信的機制最後怎麼決定的？"),
                         busy: model.asking != nil, onClear: model.allQuestions.isEmpty ? nil : { model.clearQuestions(meetingId: nil) }) {
                 model.askAll(question, scope: current)

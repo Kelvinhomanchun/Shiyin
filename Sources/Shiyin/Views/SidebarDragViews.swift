@@ -12,6 +12,8 @@ struct SidebarRowDrop {
     /// 拖過來的鍵、放在前面（true）或後面
     var item: ((String, Bool) -> Void)? = nil
     var files: (([URL]) -> Void)? = nil
+    /// 拖過來的人物（fork：放進人物群組）
+    var people: (([Int64]) -> Void)? = nil
 }
 
 struct SidebarRowDropDelegate: DropDelegate {
@@ -22,6 +24,7 @@ struct SidebarRowDropDelegate: DropDelegate {
     private func kind(_ info: DropInfo) -> SidebarDropState? {
         if drop.item != nil, info.hasItemsConforming(to: [.shiyinSidebarItem]) { return info.location.y < height / 2 ? .before : .after }
         if drop.meetings != nil, info.hasItemsConforming(to: [.shiyinMeetingIDs]) { return .into }
+        if drop.people != nil, info.hasItemsConforming(to: [.shiyinPersonIDs]) { return .into }
         if drop.files != nil, info.hasItemsConforming(to: [.fileURL]) { return .into }
         return nil
     }
@@ -53,6 +56,13 @@ struct SidebarRowDropDelegate: DropDelegate {
             }
             return true
         case .into?:
+            if let people = drop.people, let provider = info.itemProviders(for: [.shiyinPersonIDs]).first {
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.shiyinPersonIDs.identifier) { data, _ in
+                    let ids = data.flatMap { String(data: $0, encoding: .utf8) }?.split(separator: ",").compactMap { Int64($0) } ?? []
+                    DispatchQueue.main.async { if !ids.isEmpty { people(ids) } }
+                }
+                return true
+            }
             if let meetings = drop.meetings, let provider = info.itemProviders(for: [.shiyinMeetingIDs]).first {
                 provider.loadDataRepresentation(forTypeIdentifier: UTType.shiyinMeetingIDs.identifier) { data, _ in
                     let ids = data.flatMap { String(data: $0, encoding: .utf8) }?.split(separator: ",").compactMap { Int64($0) } ?? []
@@ -142,8 +152,40 @@ struct SidebarFolderRows: View {
                       menu: { model.folderMenu(name) }, action: toggle)
             .help(rule.map { model.folderRuleSummary($0) } ?? "")
             if expanded {
+                // 子資料夾（案子）：縮排列在上層底下，可以點、拖會議進去、有自己的選單
+                ForEach(model.folderTree.first { $0.name == name }?.children ?? [], id: \.name) { child in
+                    SubfolderRow(path: child.name, count: child.count)
+                }
                 SidebarPeek(rows: model.peekRows(folder: name)) { model.showFolder(name) }
             }
+        }
+    }
+}
+
+/// 子資料夾的一列：縮排，點了展開看裡面的會議（同上層資料夾）
+struct SubfolderRow: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let path: String
+    let count: Int
+
+    var body: some View {
+        let key = AppModel.folderKey(path)
+        let expanded = model.isRowExpanded(key)
+        let rule = model.folderRule(path)
+        FolderRow(name: FolderPath.project(path) ?? path, count: count, symbol: "folder",
+                  selected: model.sidebarMode != .people && model.folderFilter == path,
+                  folder: .init(expanded: expanded, badge: rule == nil ? nil : "gearshape.fill"),
+                  drop: SidebarRowDrop(meetings: { model.moveToFolder($0, folder: path) },
+                                       files: { model.importDropped($0, into: path) }),
+                  menu: { model.folderMenu(path) }) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { model.toggleRow(key) }
+        }
+        .padding(.leading, 18)
+        .help(rule.map { model.folderRuleSummary($0) } ?? FolderPath.display(path))
+        if expanded {
+            SidebarPeek(rows: model.peekRows(folder: path)) { model.showFolder(path) }
+                .padding(.leading, 18)
         }
     }
 }

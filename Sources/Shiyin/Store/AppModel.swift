@@ -518,7 +518,8 @@ final class AppModel {
         }
         // 資料夾裡最後一場會議移走後，資料夾就不存在了，回到所有會議
         // 有自動加入條件的資料夾沒有會議也留著（design §72）
-        if let folderFilter, !meetings.contains(where: { $0.meeting.folder == folderFilter }),
+        if let folderFilter, !meetings.contains(where: { $0.meeting.isIn(folder: folderFilter) }),
+           !folderNames.contains(folderFilter),
            !folderRules.contains(where: { $0.folder == folderFilter }) { self.folderFilter = nil }
         reloadDetail()
     }
@@ -552,7 +553,19 @@ final class AppModel {
         // 有自動加入條件的資料夾、資料夾表裡的（R104：自己建的空資料夾）沒有會議也列出來（design §72、§78）
         for rule in folderRules where counts[rule.folder] == nil { counts[rule.folder] = 0 }
         for name in folderNames where counts[name] == nil { counts[name] = 0 }
+        // 子資料夾的上層一定列出來（只有子資料夾有會議時也是）
+        for name in counts.keys where FolderPath.isSub(name) && counts[FolderPath.account(name)] == nil { counts[FolderPath.account(name)] = 0 }
         return counts.map { (name: $0.key, count: $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// 上層資料夾和它的子資料夾（側欄的樹）；場數是含子資料夾的總數
+    var folderTree: [(name: String, count: Int, children: [(name: String, count: Int)])] {
+        let all = folders
+        let direct = Dictionary(uniqueKeysWithValues: all.map { ($0.name, $0.count) })
+        return all.filter { !FolderPath.isSub($0.name) }.map { parent in
+            let children = all.filter { FolderPath.isSub($0.name) && FolderPath.account($0.name) == parent.name }
+            return (parent.name, (direct[parent.name] ?? 0) + children.reduce(0) { $0 + $1.count }, children.map { ($0.name, $0.count) })
+        }
     }
 
     /// 新會議要放進的資料夾：正在看某個資料夾時就放那裡
@@ -565,7 +578,18 @@ final class AppModel {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !folders.contains(where: { $0.name == name }) else { return }
         perform { try db.createFolder(name) }
-        noticeMessage = String(localized: "已建立資料夾「\(name)」")
+        noticeMessage = String(localized: "已建立資料夾「\(FolderPath.display(name))」")
+    }
+
+    /// 在上層資料夾裡建子資料夾（案子）
+    func createSubfolder(_ name: String, in parent: String) {
+        let project = FolderPath.clean(name)
+        guard !project.isEmpty, !FolderPath.isSub(parent) else { return }
+        let path = FolderPath.join(parent, project)
+        guard !folders.contains(where: { $0.name == path }) else { return }
+        perform { try db.createFolder(path) }
+        setRow(Self.folderKey(parent), expanded: true)
+        noticeMessage = String(localized: "已在「\(parent)」建立子資料夾「\(project)」")
     }
 
     /// 移到資料夾（R9.2）；多選時一起移（R88），已經在那裡的跳過
@@ -595,8 +619,15 @@ final class AppModel {
     }
 
     func renameFolder(_ old: String, to newName: String) {
-        let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, name != old else { return }
+        // 子資料夾改名只改案子的名字，留在同一個客戶底下；上層改名時子資料夾跟著搬
+        let cleaned = FolderPath.clean(newName)
+        let name = FolderPath.isSub(old) ? FolderPath.join(FolderPath.account(old), cleaned) : cleaned
+        guard !cleaned.isEmpty, name != old else { return }
+        if !FolderPath.isSub(old) {
+            for child in folders.map(\.name) where FolderPath.isSub(child) && FolderPath.account(child) == old {
+                renameFolder(child, to: FolderPath.project(child) ?? "", account: name)
+            }
+        }
         // 先切換篩選，reload 時才不會因為舊名稱不存在而跳回所有會議
         if folderFilter == old { folderFilter = name }
         if askFolder == old { askFolder = name }
@@ -611,8 +642,19 @@ final class AppModel {
         perform { try db.renameFolder(old, to: name) }
     }
 
-    /// 刪除資料夾：會議留著，移回「不在資料夾」
+    /// 子資料夾換到另一個上層（上層改名時用）
+    private func renameFolder(_ old: String, to project: String, account: String) {
+        let name = FolderPath.join(account, project)
+        if folderFilter == old { folderFilter = name }
+        if askFolder == old { askFolder = name }
+        perform { try db.renameFolder(old, to: name) }
+    }
+
+    /// 刪除資料夾：會議留著，移回「不在資料夾」。刪上層資料夾時子資料夾的會議也移出來
     func deleteFolder(_ name: String) {
+        if !FolderPath.isSub(name) {
+            for child in folders.map(\.name) where FolderPath.isSub(child) && FolderPath.account(child) == name { deleteFolder(child) }
+        }
         perform { try db.renameFolder(name, to: "") }
         if folderFilter == name { folderFilter = nil }
         if askFolder == name { askFolder = nil; loadAllQuestions() }
@@ -664,7 +706,7 @@ final class AppModel {
     var filteredMeetings: [MeetingRow] {
         var source = showTrash ? trash : meetings
         if listShowsOthersOnly { source = source.filter { $0.meeting.folder.isEmpty } }
-        if !showTrash, let folderFilter { source = source.filter { $0.meeting.folder == folderFilter } }
+        if !showTrash, let folderFilter { source = source.filter { $0.meeting.isIn(folder: folderFilter) } }
         if !showTrash, meetingFilter.isActive { source = source.filter { matches($0, meetingFilter) } }
         let keyword = filter.trimmingCharacters(in: .whitespaces)
         if !keyword.isEmpty { source = source.filter { $0.meeting.displayTitle.localizedCaseInsensitiveContains(keyword) } }
@@ -1752,6 +1794,8 @@ final class AppModel {
     var stakeholderPersonId: Int64?
     /// 按了「重新分析」、還沒好的人
     var analyzingStakeholders: Set<Int64> = []
+    /// 「重新分析所有人」的確認
+    var confirmReanalyzeAll = false
     /// 當成「自己」、不做分析的人
     var stakeholderMe: Set<Int64> = []
     /// 會議紀錄的搜尋（條列、人物）：換會議時清掉
@@ -1765,6 +1809,8 @@ final class AppModel {
     /// 關係人地圖看哪個資料夾（空字串 = 所有會議）
     var stakeholderMapFolder = ""
     var stakeholderMapChosen = false
+    /// 關係人地圖只看一個人物群組（fork）；空字串：所有人
+    var stakeholderMapGroup = ""
 
     // MARK: 認識的人（設定頁，design §21.4）
 
@@ -1773,6 +1819,8 @@ final class AppModel {
     var sidebarMode: SidebarMode = .meetings
     var selectedPerson: Int64?
     var peopleOverview: [PersonOverview] = []
+    /// 人物群組（fork），照使用者排的順序
+    var personGroups: [String] = []
     /// 移除一個人的確認（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
     /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾的確認、正在就地改的那一條紀錄
