@@ -114,6 +114,9 @@ final class MeetingDetector {
     }
 
     /// 正在用麥克風的已知會議 app（拾音自己、系統程序不算）
+    /// 現在就有會議 app（Teams、Zoom、Meet…）在用麥克風（fork：開始錄音時自動改成「麥克風＋電腦聲音」）
+    var meetingAppUsingMic: Bool { !currentMeetingApps().isEmpty }
+
     private func currentMeetingApps() -> Set<String> {
         var result = Set<String>()
         for object in Self.processObjects() {

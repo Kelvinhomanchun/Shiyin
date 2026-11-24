@@ -103,11 +103,13 @@ struct OpenAICompatibleAPI: LLMBackend {
 
     private func complete(_ base: URL, provider: String, system: String, prompt: String,
                           responseFormat: [String: Any]) async throws -> APIRequest.Response {
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": model,
             "messages": [["role": "system", "content": system], ["role": "user", "content": prompt]],
             "response_format": responseFormat,
         ]
+        // Claude 經過 OpenAI 相容的閘道（IBM ICA）時預設的輸出長度很短，長的 JSON 會在中途少掉後面的欄位（fork，2026-11-24）
+        if model.lowercased().contains("claude") { body["max_tokens"] = 32_000 }
         var request = URLRequest(url: base.appendingPathComponent("chat/completions"), timeoutInterval: LLMClient.timeout)
         request.httpMethod = "POST"
         if let key = try await currentKey(), !key.isEmpty {

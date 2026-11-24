@@ -135,12 +135,15 @@ struct StakeholderCard: View {
 
     private func footnote(_ record: StakeholderRecord, _ profile: StakeholderProfile) -> some View {
         let count = record.analyzedMeetings.count
-        let date = String(record.updatedAt.prefix(10))
+        let date = record.updatedLocal
         let confidence = Self.confidenceLabel(profile.confidence)
         return VStack(alignment: .leading, spacing: 2) {
             Text(profile.confidence.isEmpty ? String(localized: "根據 \(count) 場會議・\(date) 更新")
                                             : String(localized: "把握：\(confidence)・根據 \(count) 場會議・\(date) 更新"))
                 .font(.caption).foregroundStyle(.secondary)
+            if !record.model.isEmpty {
+                Text("分析模型：\(record.model)").font(.caption).foregroundStyle(.secondary)
+            }
             if profile.confidence == "low" && !record.hasUserContext {
                 Text("他說的話還不多。按「補充背景」填他的角色和你知道的事，分析會準一些。").font(.caption).foregroundStyle(.secondary)
             }

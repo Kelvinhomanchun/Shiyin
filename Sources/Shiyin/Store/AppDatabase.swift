@@ -424,6 +424,10 @@ final class AppDatabase: @unchecked Sendable {
                 ALTER TABLE people ADD COLUMN group_name TEXT;
                 """)
         }
+        // 分析用的模型（fork）：人物頁寫「用哪個模型、什麼時候分析的」
+        migrator.registerMigration("fork-stakeholder-model") { db in
+            try db.execute(sql: "ALTER TABLE stakeholder_profiles ADD COLUMN model TEXT NOT NULL DEFAULT ''")
+        }
         return migrator
     }
 
@@ -688,6 +692,13 @@ final class AppDatabase: @unchecked Sendable {
     func setTemplate(_ id: Int64, templateId: String) throws {
         try pool.write { db in
             try db.execute(sql: "UPDATE meetings SET template_id = ?, updated_at = ? WHERE id = ?", arguments: [templateId, Clock.now(), id])
+        }
+    }
+
+    /// 錄音中加上電腦聲音後（fork）：這場會議變成雙聲道
+    func setChannels(_ id: Int64, _ channels: String) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE meetings SET channels = ?, updated_at = ? WHERE id = ?", arguments: [channels, Clock.now(), id])
         }
     }
 

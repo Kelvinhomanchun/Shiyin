@@ -936,6 +936,8 @@ enum DebugControl {
         case "folder": if let id { model.moveToFolder(id, folder: args[2] == "-" ? "" : args[2]) }
         case "folderfilter": model.folderFilter = args.count > 1 && args[1] != "-" ? args[1] : nil
         case "renamefolder": model.renameFolder(args[1], to: args[2])
+        case "stallmic": model.recorder.debugStallMic()
+        case "addsystem": model.addComputerAudio()
         case "showfolder": model.showFolder(args[1])
         case "openperson": if let id { model.openPerson(id) }
         case "mapgroup": model.stakeholderMapGroup = args.count > 1 ? args[1] : ""
@@ -1230,6 +1232,7 @@ enum DebugControl {
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? "",
+                         "micUID": model.recorder.debugMicUID,
                          "restarts": model.recorder.restartInfo,   // 重新連接的節奏（design §50.4）
                          // 麥克風（design §38.7）
                          "micDevice": model.recorder.micDevice.map { ["name": $0.name, "uid": $0.uid, "bluetooth": $0.isBluetooth] } as Any,

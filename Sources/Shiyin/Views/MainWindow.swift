@@ -260,9 +260,8 @@ struct SidebarView: View {
             let searching = !model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
             if searching {
                 SearchResultsList()
-            } else if model.sidebarMode == .people && !model.showTrash {
-                peopleList
             } else {
+                // 一個側欄（fork，UX 檢查）：資料夾、人物、會議都在同一排，點人物時會議還看得到
                 meetingList
             }
             Divider()
@@ -331,16 +330,11 @@ struct SidebarView: View {
     /// 點了換下面那一段的內容（macOS 的側欄是導覽清單，不放分段控制）
     @ViewBuilder
     private var scopeSections: some View {
-        let people = model.sidebarMode == .people
         Section {
             // 所有會議是回到預設的畫面，不畫選到的樣子；人物模式時人物亮
             FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: false) {
                 model.sidebarMode = .meetings
                 model.folderFilter = nil
-            }
-            FolderRow(name: String(localized: "人物"), count: model.peopleOverview.count, symbol: "person.2", selected: people) {
-                model.sidebarMode = .people
-                model.reloadPeopleOverview()
             }
         }
         // 段落可以收起；每個資料夾可以在原地展開最近的會議（R101、design §75）。一直顯示，標題右邊「+」建空的資料夾（R104、design §78）
@@ -371,7 +365,7 @@ struct SidebarView: View {
 
     /// 一場會議的列：右邊的「⋯」跟右鍵同一份（R100）；選到的是多選裡的一場時，選單對整個多選
     private func meetingRow(_ row: MeetingRow) -> some View {
-        let selected = model.listSelection.contains(row.id)
+        let selected = (model.sidebarMode == .meetings || model.showTrash) && model.listSelection.contains(row.id)
         return MeetingRowView(row: row, status: model.status(row))
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -387,96 +381,90 @@ struct SidebarView: View {
             .tag(row.id)
     }
 
-    /// 人物模式：上面同樣是所有會議、人物、資料夾，下面是認識的人（design §60.2）
-    private var peopleList: some View {
-        @Bindable var model = model
-        return List(selection: $model.selectedPerson) {
-            scopeSections
-            Section {
-                if model.isSectionExpanded("people") {
-                    // 人物群組（fork）：使用者建的群組在上面，點了展開；沒有群組時跟原本一樣一整串
-                    let sections = model.peopleSections
-                    ForEach(sections.filter { $0.group != nil }, id: \.group) { section in
-                        let name = section.group ?? ""
-                        let key = AppModel.personGroupKey(name)
-                        let expanded = model.isSectionExpanded(key)
-                        FolderRow(name: name, count: section.people.count, symbol: "person.3", selected: false,
-                                  folder: .init(expanded: expanded, badge: nil),
-                                  drop: SidebarRowDrop(people: { model.setPersonGroup($0, group: name) }),
-                                  menu: { model.personGroupHeaderMenu(name) }) {
-                            withAnimation(.easeInOut(duration: 0.18)) { model.setSection(key, expanded: !expanded) }
-                        }
-                        .help(String(localized: "\(section.people.count) 個人"))
-                        if expanded {
-                            ForEach(section.people) { person in
-                                personRow(person).padding(.leading, 18)
-                            }
-                            if section.people.isEmpty {
-                                Text("把人拖到這裡").font(.callout).foregroundStyle(.secondary)
-                                    .padding(.leading, 18).selectionDisabled()
-                            }
-                        }
+    /// 人物（fork）：側欄裡的一段，可以收起；點一個人右邊換成他的人物頁，下面的會議照樣在
+    @ViewBuilder
+    private var peopleSection: some View {
+        Section {
+            if model.isSectionExpanded("people") {
+                // 人物群組（fork）：使用者建的群組在上面，點了展開；沒有群組時跟原本一樣一整串
+                let sections = model.peopleSections
+                ForEach(sections.filter { $0.group != nil }, id: \.group) { section in
+                    let name = section.group ?? ""
+                    let key = AppModel.personGroupKey(name)
+                    let expanded = model.isSectionExpanded(key)
+                    FolderRow(name: name, count: section.people.count, symbol: "person.3", selected: false,
+                              folder: .init(expanded: expanded, badge: nil),
+                              drop: SidebarRowDrop(people: { model.setPersonGroup($0, group: name) }),
+                              menu: { model.personGroupHeaderMenu(name) }) {
+                        withAnimation(.easeInOut(duration: 0.18)) { model.setSection(key, expanded: !expanded) }
                     }
-                    let ungrouped = sections.last?.people ?? []
-                    if !model.personGroups.isEmpty, !ungrouped.isEmpty {
-                        Text("未分組").font(.callout).foregroundStyle(.secondary).padding(.top, 4).selectionDisabled()
-                    }
-                    ForEach(ungrouped) { person in personRow(person) }
-                    if model.peopleOverview.isEmpty {
-                        Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
-                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            .selectionDisabled()
+                    .help(String(localized: "\(section.people.count) 個人"))
+                    if expanded {
+                        ForEach(section.people) { person in
+                            personRow(person).padding(.leading, 18)
+                        }
+                        if section.people.isEmpty {
+                            Text("把人拖到這裡").font(.callout).foregroundStyle(.secondary)
+                                .padding(.leading, 18).selectionDisabled()
+                        }
                     }
                 }
-            } header: {
-                HStack(spacing: 6) {
-                    SidebarSectionHeader(title: String(localized: "人物"), key: "people", besideMenu: true)
-                    Spacer(minLength: 4)
-                    // 重新分析所有人（使用者要的）：放在「人物」標題旁，跟「資料夾」的「+」同一種按鈕；按了先確認（要花整理工具的額度）
-                    SidebarHeaderIcon(systemName: model.analyzingStakeholders.isEmpty ? "arrow.triangle.2.circlepath" : "hourglass")
-                        .sidebarClick { model.confirmReanalyzeAll = true }
-                        .padding(.trailing, SidebarHeaderIcon.trailing)
-                        .help(model.analyzingStakeholders.isEmpty ? String(localized: "重新分析所有人")
-                                                                  : String(localized: "正在分析 \(model.analyzingStakeholders.count) 個人"))
-                        .accessibilityElement()
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityLabel(Text("重新分析所有人"))
-                        .accessibilityAction { model.confirmReanalyzeAll = true }
-                    SidebarHeaderIcon(systemName: "person.3")
-                        .sidebarClick { model.renameTarget = .newPersonGroup([]) }
-                        .padding(.trailing, SidebarHeaderIcon.trailing)
-                        .help("新人物群組")
-                        .accessibilityElement()
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityLabel(Text("新人物群組"))
-                        .accessibilityAction { model.renameTarget = .newPersonGroup([]) }
-                    SidebarHeaderIcon(systemName: "square.grid.2x2")
-                        .sidebarClick { model.openStakeholderMap(folder: model.folderFilter) }
-                        .padding(.trailing, SidebarHeaderIcon.trailing)
-                        .help("關係人地圖")
-                        .accessibilityElement()
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityLabel(Text("關係人地圖"))
-                        .accessibilityAction { model.openStakeholderMap(folder: model.folderFilter) }
+                let ungrouped = sections.last?.people ?? []
+                if !model.personGroups.isEmpty, !ungrouped.isEmpty {
+                    Text("未分組").font(.callout).foregroundStyle(.secondary).padding(.top, 4).selectionDisabled()
+                }
+                ForEach(ungrouped) { person in personRow(person) }
+                if model.peopleOverview.isEmpty {
+                    Text("在逐字稿點「說話者 1」改成名字，或到設定錄一段你自己的聲音，拾音就會記住這個人。")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        .selectionDisabled()
                 }
             }
+        } header: {
+            HStack(spacing: 6) {
+                SidebarSectionHeader(title: String(localized: "人物"), key: "people", besideMenu: true)
+                Spacer(minLength: 4)
+                // 重新分析所有人（使用者要的）：放在「人物」標題旁，跟「資料夾」的「+」同一種按鈕；按了先確認（要花整理工具的額度）
+                SidebarHeaderIcon(systemName: model.analyzingStakeholders.isEmpty ? "arrow.triangle.2.circlepath" : "hourglass")
+                    .sidebarClick { model.confirmReanalyzeAll = true }
+                    .padding(.trailing, SidebarHeaderIcon.trailing)
+                    .help(model.analyzingStakeholders.isEmpty ? String(localized: "重新分析所有人")
+                                                              : String(localized: "正在分析 \(model.analyzingStakeholders.count) 個人"))
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(Text("重新分析所有人"))
+                    .accessibilityAction { model.confirmReanalyzeAll = true }
+                SidebarHeaderIcon(systemName: "person.3")
+                    .sidebarClick { model.renameTarget = .newPersonGroup([]) }
+                    .padding(.trailing, SidebarHeaderIcon.trailing)
+                    .help("新人物群組")
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(Text("新人物群組"))
+                    .accessibilityAction { model.renameTarget = .newPersonGroup([]) }
+                SidebarHeaderIcon(systemName: "square.grid.2x2")
+                    .sidebarClick { model.openStakeholderMap(folder: model.folderFilter) }
+                    .padding(.trailing, SidebarHeaderIcon.trailing)
+                    .help("關係人地圖")
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(Text("關係人地圖"))
+                    .accessibilityAction { model.openStakeholderMap(folder: model.folderFilter) }
+            }
         }
-        // 選到一個人時按 Return 重新命名、Delete 移除（R85.7、R100）
-        .onKeyPress(.return) { model.sidebarReturn() ? .handled : .ignored }
-        .onDeleteCommand { model.sidebarDelete() }
     }
 
     /// 人物的一列：可以拖到人物群組（fork），點一下選取
     private func personRow(_ person: PersonOverview) -> some View {
-        PersonRow(person: person)
+        let selected = model.sidebarMode == .people && !model.showTrash && model.selectedPerson == person.id
+        return PersonRow(person: person)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .sidebarDragHandle(type: .shiyinPersonIDs, label: person.name, data: { Data(String(person.id).utf8) }) { _ in
-                model.selectedPerson = person.id
+                model.openPerson(person.id)
             }
-            .floatingRowMenu(selected: model.selectedPerson == person.id) { model.personMenu(person) }
-            .sidebarSelectableRow(selected: model.selectedPerson == person.id)
-            .tag(person.id)
+            .floatingRowMenu(selected: selected) { model.personMenu(person) }
+            .sidebarSelectableRow(selected: selected)
     }
 
     private var meetingList: some View {
@@ -487,6 +475,7 @@ struct SidebarView: View {
                 Text("垃圾桶裡的會議 30 天後會永久刪除").font(.caption).foregroundStyle(.secondary)
             } else {
                 scopeSections
+                peopleSection
             }
             if model.showTrash {
                 Section {

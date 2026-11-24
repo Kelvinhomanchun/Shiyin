@@ -252,6 +252,17 @@ struct StakeholderRecord: SnakeCaseRecord, Hashable {
     var userRole: String = ""
     var userOrg: String = ""
     var userNotes: String = ""
+    /// 分析用的模型（fork），例如 claude-opus-5-5；舊的分析是空的
+    var model: String = ""
+
+    /// 更新的時間，本機時區（例如 2026-11-24 11:32）
+    var updatedLocal: String {
+        let parser = ISO8601DateFormatter()
+        guard let date = parser.date(from: updatedAt) else { return String(updatedAt.prefix(16)).replacingOccurrences(of: "T", with: " ") }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f.string(from: date)
+    }
 
     var hasUserContext: Bool { !userRole.isEmpty || !userOrg.isEmpty || !userNotes.isEmpty }
 

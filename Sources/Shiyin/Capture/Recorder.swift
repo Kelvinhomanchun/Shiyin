@@ -166,10 +166,15 @@ final class Recorder {
     @ObservationIgnored var onLanguageChange: ((Int64, MeetingLanguage) -> Void)?
     @ObservationIgnored private let tap = MixTap()
     @ObservationIgnored private var writer: RecordingWriter?
+    /// 錄音中加上電腦聲音之前的那一段（fork）：只有麥克風的單聲道檔，停止時接在雙聲道檔前面
+    @ObservationIgnored private var earlierPart: (url: URL, seconds: Double)?
     @ObservationIgnored private var sources: [Int: AudioSource] = [:]   // 聲道 → 音源
     /// 看門狗：沒送資料的聲道 → 上次試著重新連接的時間；重新連接失敗的原因
     @ObservationIgnored private var reconnecting: [Int: Date] = [:]
     @ObservationIgnored private var reconnectErrors: [Int: String] = [:]
+    /// 藍牙麥克風一直開不起來（Teams 開了 AirPods 的通話模式，AVAudioEngine 回 -10868）：這場錄音改用內建麥克風（fork）
+    @ObservationIgnored private var micFailures = 0
+    @ObservationIgnored private(set) var fellBackFrom: String?
     @ObservationIgnored private var pendingRestarts: [Int: DispatchWorkItem] = [:]
     /// 重新連接的節奏（design §50.1）：每個聲道 60 秒內重新連接的時間、上次重新連接完的時間
     @ObservationIgnored private var restarts: [Int: [Date]] = [:]
@@ -381,8 +386,16 @@ final class Recorder {
         let stopping = Array(sources.values)
         deviceQueue.sync { stopping.forEach { $0.stop() } }
         sources = [:]
-        let duration = writer?.finish() ?? 0
-        let file = writer?.url
+        var duration = writer?.finish() ?? 0
+        var file = writer?.url
+        if let earlier = earlierPart, let current = file {
+            // 前面只錄麥克風、後面加上電腦聲音：接成一個雙聲道檔（前段的電腦聲音是靜音）
+            if let joined = try? Self.joinMonoThenStereo(earlier.url, current) {
+                file = joined
+                duration += earlier.seconds
+            }
+        }
+        earlierPart = nil
         if writer?.writeFailed == true {
             // 寫不進去時關檔可能也沒更新 WAV 標頭的大小，照實際的檔案大小補上（復原流程也是這樣修）
             if let file { try? WAVRepair.repair(file) }
@@ -396,6 +409,61 @@ final class Recorder {
         cleanup()
         log.info("recording stopped, \(Int(duration))s")
         onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil, idleSince: idleSince))
+    }
+
+    /// 錄音中加上電腦聲音（fork）：使用者開始時忘了選「麥克風＋電腦聲音」。麥克風那一聲道接著錄（同一個音源），
+    /// 從這裡開始另寫一個雙聲道檔；停止時跟前面的單聲道檔接起來。時間點（筆記、標記）照算，沒有中斷
+    func addComputerAudio() {
+        guard isRecording, source == "mic", let writer, let mic = sources[0] else { return }
+        do {
+            let url = writer.url.deletingLastPathComponent().appendingPathComponent(writer.url.deletingPathExtension().lastPathComponent + "-2.wav")
+            let next = try RecordingWriter(url: url, channels: 2, offset: writer.recordedSeconds)
+            let system = SystemAudioSource()
+            system.onSamples = { [weak next] samples in next?.append(channel: 1, samples) }
+            system.onInterruption = { [weak self] in Task { @MainActor in self?.scheduleRestart(1) } }
+            try system.start()
+            mic.onSamples = { [weak next] samples in next?.append(channel: 0, samples) }
+            next.onMix = tap.handler
+            next.start()
+            let seconds = writer.finish()
+            earlierPart = (writer.url, seconds)
+            self.writer = next
+            sources[1] = system
+            source = "both"
+            onSourceChanged?("both")
+            log.info("added computer audio during recording")
+        } catch {
+            failureMessage = String(localized: "沒辦法加上電腦聲音：\(error.localizedDescription)")
+        }
+    }
+    @ObservationIgnored var onSourceChanged: ((String) -> Void)?
+
+    /// 單聲道（麥克風）接雙聲道（麥克風、電腦聲音）：前段放左聲道、右聲道補靜音。成功時刪掉兩個原檔，回傳新檔
+    nonisolated static func joinMonoThenStereo(_ mono: URL, _ stereo: URL) throws -> URL {
+        let first = try AVAudioFile(forReading: mono)
+        let second = try AVAudioFile(forReading: stereo)
+        let out = stereo.deletingLastPathComponent().appendingPathComponent(mono.deletingPathExtension().lastPathComponent + "-joined.wav")
+        let output = try AVAudioFile(forWriting: out, settings: second.fileFormat.settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+        let chunk: AVAudioFrameCount = 16_000 * 10
+        guard let monoBuf = AVAudioPCMBuffer(pcmFormat: first.processingFormat, frameCapacity: chunk),
+              let stereoBuf = AVAudioPCMBuffer(pcmFormat: output.processingFormat, frameCapacity: chunk) else { throw CaptureError.unsupportedFormat }
+        while first.framePosition < first.length {
+            try first.read(into: monoBuf, frameCount: chunk)
+            let n = Int(monoBuf.frameLength)
+            guard n > 0 else { break }
+            stereoBuf.frameLength = AVAudioFrameCount(n)
+            stereoBuf.floatChannelData![0].update(from: monoBuf.floatChannelData![0], count: n)
+            stereoBuf.floatChannelData![1].update(repeating: 0, count: n)
+            try output.write(from: stereoBuf)
+        }
+        while second.framePosition < second.length {
+            try second.read(into: stereoBuf, frameCount: chunk)
+            guard stereoBuf.frameLength > 0 else { break }
+            try output.write(from: stereoBuf)
+        }
+        try? FileManager.default.removeItem(at: mono)
+        try? FileManager.default.removeItem(at: stereo)
+        return out
     }
 
     static func openPrivacySettings(_ pane: String = "Privacy_Microphone") {
@@ -423,6 +491,8 @@ final class Recorder {
             let writer = try RecordingWriter(url: url, channels: channels)
             var started: [Int: AudioSource] = [:]
             var warnings: [String] = []
+            fellBackFrom = nil
+            micFailures = 0
             for (channel, audioSource) in makeSources() {
                 audioSource.onSamples = { [weak writer] samples in writer?.append(channel: channel, samples) }
                 audioSource.onInterruption = { [weak self] in
@@ -432,7 +502,14 @@ final class Recorder {
                     try audioSource.start()
                     started[channel] = audioSource
                 } catch {
-                    warnings.append(error.localizedDescription)
+                    // 選的麥克風開不起來（例如「Microsoft Teams Audio」這種虛擬裝置、被通話佔住的藍牙耳機）：
+                    // 這場改用系統預設、再不行用內建麥克風，設定不改（fork）
+                    if let mic = audioSource as? MicrophoneInput, let used = Self.startFallback(mic) {
+                        fellBackFrom = used
+                        started[channel] = audioSource
+                    } else {
+                        warnings.append(error.localizedDescription)
+                    }
                 }
             }
             guard !started.isEmpty else {
@@ -478,6 +555,7 @@ final class Recorder {
             RunLoop.main.add(timer, forMode: .common)
             meterTimer = timer
             updateMicDevice()
+            updateDeviceWarning()
             if AppSettings.liveTranscription { startLive(writer: writer, meetingId: meetingId) }
             startLanguageDetection(meetingId: meetingId)
             log.info("recording started (\(self.source, privacy: .public))")
@@ -786,13 +864,66 @@ final class Recorder {
             // 錄音不停：另一個音源照常錄，雙聲道時這段會補靜音；看門狗再試
             reconnectErrors[channel] = failure.localizedDescription
             log.error("audio source \(channel) restart failed: \(failure.localizedDescription, privacy: .public)")
+            if channel == 0 { fallBackToBuiltInIfStuck() }
         } else {
             reconnectErrors[channel] = nil
+            if channel == 0 { micFailures = 0 }
             log.info("audio source \(channel) restarted")
         }
         if channel == 0 { updateMicDevice() }
         updateDeviceWarning()
         if restartAgain.remove(channel) != nil { restartSource(channel, counted: false) }
+    }
+
+    #if DEBUG
+    /// 驗證用：當成麥克風斷了，立刻重新連接（看重新連接失敗時怎麼處理）
+    func debugStallMic() { restartSource(0) }
+    var debugMicUID: String { (sources[0] as? MicrophoneInput)?.deviceUID ?? "-" }
+    #endif
+
+    /// 選的麥克風開不起來時依序試：系統預設、內建麥克風。成功回傳原本那支的名稱（提示用），都不行回傳 nil 並還原設定
+    nonisolated static func startFallback(_ mic: MicrophoneInput) -> String? {
+        let original = mic.deviceUID
+        let name = AudioDevices.inputDevices().first { $0.uid == original }?.name ?? AudioDevices.defaultInput()?.name ?? ""
+        var candidates: [String] = []
+        if !original.isEmpty, AudioDevices.defaultInput().map({ $0.uid != original && !$0.isEngineAggregate }) ?? false { candidates.append("") }
+        if let builtIn = AudioDevices.inputDevices().first(where: \.isBuiltIn), builtIn.uid != original { candidates.append(builtIn.uid) }
+        for uid in candidates {
+            mic.deviceUID = uid
+            if (try? mic.start()) != nil {
+                log.info("microphone fallback used")
+                return name
+            }
+        }
+        mic.deviceUID = original
+        return nil
+    }
+
+    /// 麥克風連續兩次重新連接失敗：這場錄音改用系統預設或內建麥克風（fork：Teams 通話用 AirPods 時，拾音開同一支會一直失敗）
+    private func fallBackToBuiltInIfStuck() {
+        micFailures += 1
+        guard micFailures >= 2, fellBackFrom == nil, let mic = sources[0] as? MicrophoneInput else { return }
+        let box = SourceBox(source: mic)
+        restarting.insert(0)
+        deviceQueue.async { [weak self] in
+            box.source.stop()
+            let used = Self.startFallback(box.source as! MicrophoneInput)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.restarting.remove(0)
+                    guard self.isRecording, self.sources[0] === box.source else { return }
+                    if let used {
+                        self.fellBackFrom = used
+                        self.reconnectErrors[0] = nil
+                        self.restartedAt[0] = Date()
+                    }
+                    self.micFailures = 0
+                    self.updateMicDevice()
+                    self.updateDeviceWarning()
+                }
+            }
+        }
     }
 
     /// 音源超過 3 秒沒送資料：提示並重新連接；重新連接完 5 秒內、正在重新連接時不再重開（R74.1），
@@ -830,7 +961,11 @@ final class Recorder {
         let stalled = reconnecting.keys.sorted().first
         let flapping = sources.keys.sorted().first { recentRestarts($0) >= 3 }
         var warning: String?
-        if let channel = stalled, let reason = reconnectErrors[channel] {
+        if let from = fellBackFrom, stalled == nil || stalled == 0 && reconnectErrors[0] == nil {
+            let now = micDevice?.name ?? String(localized: "其他麥克風")
+            warning = from.isEmpty ? String(localized: "原本的麥克風開不起來，這場錄音改用「\(now)」。")
+                : String(localized: "「\(from)」開不起來（虛擬裝置或被別的 app 佔住），這場錄音改用「\(now)」。可以在設定 → 錄音換掉。")
+        } else if let channel = stalled, let reason = reconnectErrors[channel] {
             warning = isMic(channel) ? String(localized: "麥克風沒有送出聲音，重新連接失敗：\(reason)。會繼續重試，錄音沒有停")
                 : String(localized: "電腦聲音的擷取中斷了，重新連接失敗：\(reason)。會繼續重試，錄音沒有停")
         } else if let channel = flapping {
@@ -859,6 +994,8 @@ final class Recorder {
         restartAgain = []
         reconnecting = [:]
         reconnectErrors = [:]
+        micFailures = 0
+        fellBackFrom = nil
         deviceWarning = nil
         if let activity { ProcessInfo.processInfo.endActivity(activity) }
         activity = nil

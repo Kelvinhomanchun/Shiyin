@@ -55,6 +55,7 @@ extension AppModel {
 
     /// 點下面列表的會議（design §77）：一般是只選這場；⌘ 加入或拿掉；⇧ 從上一次點的那場選到這場（照列表看到的順序）
     func clickMeetingRow(_ id: Int64, modifiers: NSEvent.ModifierFlags) {
+        sidebarMode = .meetings   // 從人物頁點一場會議：右邊換回會議頁（fork，一個側欄）
         if modifiers.contains(.command) {
             var ids = listSelection
             if ids.contains(id) { ids.remove(id) } else { ids.insert(id) }

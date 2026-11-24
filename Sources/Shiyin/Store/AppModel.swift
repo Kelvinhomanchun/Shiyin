@@ -416,6 +416,10 @@ final class AppModel {
             if time > 0 || playing { self.player.seek(to: time, play: playing) }
         }
         recorder.onFinished = { [weak self] result in self?.recordingFinished(result) }
+        recorder.onSourceChanged = { [weak self] channels in
+            guard let self, let id = self.recorder.meetingId else { return }
+            self.perform { try self.db.setChannels(id, channels) }
+        }
         recorder.onLiveFinal = { [weak self] id, start, end, text in
             try? self?.db.appendLiveSegment(id, start: start, end: end, text: text)
         }
@@ -900,13 +904,19 @@ final class AppModel {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         let now = Date()
+        // 設成「只錄麥克風」但 Teams、Zoom 這類會議 app 正在用麥克風：這場改錄「麥克風＋電腦聲音」，不然錄不到對方（fork）
+        var source = AppSettings.recordSource
+        if source == "mic" && meetingDetector.meetingAppUsingMic {
+            source = "both"
+            noticeMessage = String(localized: "偵測到線上會議，這場也錄電腦的聲音（對方的聲音）")
+        }
         do {
             let meeting = try db.insertMeeting(Meeting(
                 meetingDate: DateText.string(now), sourceFilename: String(localized: "錄音 \(formatter.string(from: now))"),
-                templateId: AppSettings.defaultTemplate, source: "recording", channels: AppSettings.recordSource,
+                templateId: AppSettings.defaultTemplate, source: "recording", channels: source,
                 folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
                 audioExtension: nil)
-            recorder.start(meetingId: meeting.id!, language: meeting.meetingLanguage)
+            recorder.start(meetingId: meeting.id!, source: source, language: meeting.meetingLanguage)
             reload()
             showTrash = false
             selection = meeting.id
@@ -930,6 +940,12 @@ final class AppModel {
     #endif
 
     /// 錄音結束：把錄音檔接到會議上並排轉錄（R2.5）
+    /// 錄音中加上電腦聲音（fork）
+    func addComputerAudio() {
+        recorder.addComputerAudio()
+        if recorder.source == "both" { noticeMessage = String(localized: "從現在起也錄電腦的聲音") }
+    }
+
     private func recordingFinished(_ result: Recorder.Result) {
         MeetingPromptPanel.shared.close()   // 還開著的「要停止錄音嗎？」不用了
         GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B

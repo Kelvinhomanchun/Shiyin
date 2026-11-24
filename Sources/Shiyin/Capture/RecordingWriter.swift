@@ -25,7 +25,11 @@ final class RecordingWriter: @unchecked Sendable {
     private var frameSamples: [Int]
     private var recent: [[Float]]
 
-    init(url: URL, channels: Int) throws {
+    /// 接在前一段後面時，前一段的秒數（fork：錄音中加上電腦聲音）：計時、時間點從這裡接著算
+    private let offset: Double
+
+    init(url: URL, channels: Int, offset: Double = 0) throws {
+        self.offset = offset
         self.url = url
         self.channels = channels
         pending = Array(repeating: [], count: channels)
@@ -90,7 +94,7 @@ final class RecordingWriter: @unchecked Sendable {
 
     /// 目前錄到的秒數（不含暫停），給計時、筆記和重點標記的時間點用
     var recordedSeconds: Double {
-        lock.withLock { Double(acceptedFrames.max() ?? 0) / CaptureFormat.sampleRate }
+        offset + lock.withLock { Double(acceptedFrames.max() ?? 0) / CaptureFormat.sampleRate }
     }
 
     /// 0～1 的音量（RMS 換成 dB 再正規化）

@@ -828,15 +828,29 @@ final class JobRunner {
             try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: prompt,
                                              format: StakeholderProfile.format, onStart: onStart)
         }
-        let decoded: StakeholderProfile
+        var decoded: StakeholderProfile
         do { decoded = try JSONDecoder().decode(StakeholderProfile.self, from: data) }
         catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+        // 有些模型（經過閘道的 Claude）只回前面幾個欄位：下次見面、怎麼合作、話中的意思都缺時再要一次，
+        // 明講每個欄位都要有（fork：使用者看到人物頁的分頁都是空的）
+        let keys = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]).map { Set($0.keys) } ?? []
+        if !keys.contains("nextMeeting") || !keys.contains("workingWithMe") || !keys.contains("readings") {
+            log.info("stakeholder \(personId) answer missing sections, asking again")
+            let retry = prompt + "\n\nIMPORTANT: Return the COMPLETE JSON object with EVERY field in the schema, including nextMeeting, workingWithMe, readings, topics, relationships, commitments, projects and openQuestions. Do not stop after the first fields."  // l10n-skip
+            if let again = try? await callLLM(lane, { onStart in
+                try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: retry,
+                                                 format: StakeholderProfile.format, onStart: onStart)
+            }), let better = try? JSONDecoder().decode(StakeholderProfile.self, from: again) {
+                decoded = better
+            }
+        }
         // 出處可以指向之前分析過的會議（累積更新時保留舊的依據）
         let known = done.union(materials.map(\.id))
         let profile = decoded.validated(meetingIds: known)
         try db.saveStakeholderProfile(StakeholderRecord(personId: personId, profile: profile.jsonString(),
                                                         meetingIds: Self.idsJSON(done.union(fresh.compactMap(\.id))),
-                                                        language: language.rawValue, provider: provider.rawValue))
+                                                        language: language.rawValue, provider: provider.rawValue,
+                                                        model: AppSettings.stakeholderModel))
         onStakeholderUpdated?(personId)
         log.info("stakeholder \(personId) updated from \(materials.count) meetings")
     }

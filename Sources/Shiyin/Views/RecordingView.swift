@@ -119,6 +119,12 @@ struct RecordingPanel: View {
                 Label { RecorderMeter(recorder: recorder, system: true) } icon: { Image(systemName: "speaker.wave.2") }
                     .help("電腦播放的聲音（線上會議的對方）")
             }
+            // 開始時忘了選「麥克風＋電腦聲音」（fork）：錄音中加上，不用停
+            if recorder.hasMic && !recorder.hasSystem && !recorder.isPaused {
+                Button { model.addComputerAudio() } label: { Label("加上電腦聲音", systemImage: "speaker.wave.2") }
+                    .buttonStyle(.borderless)
+                    .help("線上會議（Teams、Zoom）要錄到對方的聲音：從現在起也錄電腦播放的聲音，錄音不中斷")
+            }
             Spacer(minLength: 0)
             // 視窗窄的時候（側邊欄打開、視窗寬 960）按鈕只留圖示，說明放在滑鼠提示。
             // 英文的字比較長，中間多一層：暫停、標記只留圖示，「停止並轉錄」保留文字

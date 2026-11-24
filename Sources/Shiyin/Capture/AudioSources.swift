@@ -157,18 +157,82 @@ final class MicrophoneSource: MicrophoneInput {
                 failure = error
             }
         }
-        if let exception {
-            log.error("microphone engine exception: \(exception, privacy: .public)")
+        if exception != nil || failure != nil {
+            if let exception { log.error("microphone engine exception: \(exception, privacy: .public)") }
             stop()
-            throw CaptureError.engine(exception)
-        }
-        if let failure {
-            stop()
-            throw failure
+            // AVAudioEngine 開不起來（Teams 通話讓 AirPods 變成 24 kHz 的通話模式時，engine 開別的麥克風會回 -10868）：
+            // 改用 Core Audio 直接讀這支麥克風（fork，2026-11-24 在 Teams 通話中驗證內建麥克風、AirPods 都讀得到聲音）
+            do {
+                try startHAL(uid: uid)
+                log.info("microphone using HAL capture")
+                return
+            } catch {
+                log.error("microphone HAL capture failed: \(error.localizedDescription, privacy: .public)")
+            }
+            if let exception { throw CaptureError.engine(exception) }
+            if let failure { throw failure }
         }
     }
 
+    // MARK: Core Audio 直接讀（AVAudioEngine 的備用，fork）
+
+    private var halDevice = AudioObjectID(kAudioObjectUnknown)
+    private var halProc: AudioDeviceIOProcID?
+    private var halListener: AudioObjectPropertyListenerBlock?
+    private let halQueue = DispatchQueue(label: "com.weiwei.shiyin.mic-hal", qos: .userInitiated)
+    private static var halFormatAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyStreamFormat, mScope: kAudioDevicePropertyScopeInput, mElement: kAudioObjectPropertyElementMain)
+
+    private func startHAL(uid: String) throws {
+        let id: AudioDeviceID
+        if !uid.isEmpty, let found = AudioDevices.deviceID(forUID: uid) { id = found }
+        else if let found = AudioDevices.defaultInput().flatMap({ AudioDevices.deviceID(forUID: $0.uid) }) { id = found }
+        else { throw CaptureError.noInput }
+        var asbd = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        var address = Self.halFormatAddress
+        let status = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &asbd)
+        guard status == noErr else { throw CaptureError.coreAudio(String(localized: "讀取麥克風格式"), status) }
+        guard asbd.mSampleRate > 0, let format = AVAudioFormat(streamDescription: &asbd), let converter = StreamConverter(from: format) else {
+            throw CaptureError.unsupportedFormat
+        }
+        var proc: AudioDeviceIOProcID?
+        let created = AudioDeviceCreateIOProcIDWithBlock(&proc, id, halQueue) { [weak self] _, input, _, _, _ in
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: input, deallocator: nil), buffer.frameLength > 0 else { return }
+            let samples = converter.convert(buffer)
+            if !samples.isEmpty { self?.onSamples?(samples) }
+        }
+        guard created == noErr, let proc else { throw CaptureError.coreAudio(String(localized: "建立麥克風的 IO"), created) }
+        let started = AudioDeviceStart(id, proc)
+        guard started == noErr else {
+            AudioDeviceDestroyIOProcID(id, proc)
+            throw CaptureError.coreAudio(String(localized: "開始收音"), started)
+        }
+        halDevice = id
+        halProc = proc
+        // 格式變了（通話結束、AirPods 換回高音質）：重新開始，Recorder 會再走一次 AVAudioEngine
+        let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            self?.onInterruption?()
+        }
+        if AudioObjectAddPropertyListenerBlock(id, &Self.halFormatAddress, halQueue, listener) == noErr { halListener = listener }
+        let device = AudioDevices.device(id: id)
+        current = device
+    }
+
+    private func stopHAL() {
+        guard halDevice != kAudioObjectUnknown else { return }
+        if let halListener { AudioObjectRemovePropertyListenerBlock(halDevice, &Self.halFormatAddress, halQueue, halListener) }
+        halListener = nil
+        if let halProc {
+            AudioDeviceStop(halDevice, halProc)
+            AudioDeviceDestroyIOProcID(halDevice, halProc)
+        }
+        halProc = nil
+        halDevice = AudioObjectID(kAudioObjectUnknown)
+    }
+
     func stop() {
+        stopHAL()
         if let observer { NotificationCenter.default.removeObserver(observer) }
         observer = nil
         let engine = engine

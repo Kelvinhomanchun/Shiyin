@@ -29310,6 +29310,210 @@
           }
         }
       }
+    },
+    "分析模型：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis model: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析模型：%@"
+          }
+        }
+      }
+    },
+    "加上電腦聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Computer Audio"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加上电脑声音"
+          }
+        }
+      }
+    },
+    "線上會議（Teams、Zoom）要錄到對方的聲音：從現在起也錄電腦播放的聲音，錄音不中斷": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For online meetings (Teams, Zoom), record the other side too: from now on also capture computer audio, without stopping the recording"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "线上会议（Teams、Zoom）要录到对方的声音：从现在起也录电脑播放的声音，录音不中断"
+          }
+        }
+      }
+    },
+    "從現在起也錄電腦的聲音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now also recording computer audio"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从现在起也录电脑的声音"
+          }
+        }
+      }
+    },
+    "偵測到線上會議，這場也錄電腦的聲音（對方的聲音）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online meeting detected: this recording also captures computer audio (the other side)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测到线上会议，这场也录电脑的声音（对方的声音）"
+          }
+        }
+      }
+    },
+    "沒辦法加上電腦聲音：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't add computer audio: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没办法加上电脑声音：%@"
+          }
+        }
+      }
+    },
+    "原本的麥克風開不起來，這場錄音改用「%@」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected microphone couldn't start, so this recording uses “%@”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原本的麦克风开不起来，这场录音改用“%@”。"
+          }
+        }
+      }
+    },
+    "「%@」開不起來（虛擬裝置或被別的 app 佔住），這場錄音改用「%@」。可以在設定 → 錄音換掉。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@” couldn't start (a virtual device, or in use by another app), so this recording uses “%2$@”. You can change it in Settings → Recording."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”开不起来（虚拟装置或被别的 app 占住），这场录音改用“%@”。可以在设置 → 录音换掉。"
+          }
+        }
+      }
+    },
+    "其他麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "another microphone"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他麦克风"
+          }
+        }
+      }
+    },
+    "讀取麥克風格式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading microphone format"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读取麦克风格式"
+          }
+        }
+      }
+    },
+    "建立麥克風的 IO": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating microphone IO"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建立麦克风的 IO"
+          }
+        }
+      }
+    },
+    "開始收音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting capture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始收音"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
