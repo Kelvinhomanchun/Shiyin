@@ -35,6 +35,8 @@ struct ExportText {
     var details: String { language.text(zh: "詳細", en: "Details", ja: "詳細") }
     var review: String { language.text(zh: "待確認", en: "To confirm", ja: "要確認") }
     /// 本地 MCP 的會議紀錄接在後面的「我的筆記」（design §44.2）
+    /// 議題：同畫面上的段落名稱
+    var topics: String { language.text(zh: "議題", en: "Topics", ja: "議題") }
     var meetingNotes: String { language.text(zh: "會議紀錄", en: "Meeting notes", ja: "議事録") }
     var footer: String { language.text(zh: "由 KelNote 根據會議錄音整理 · AI 產生的內容，請再確認", en: "Prepared with KelNote from the meeting recording · AI-generated, please verify", ja: "KelNote が会議の録音から作成 · AI 生成のため内容をご確認ください") }
     var userNotes: String { language.text(zh: "我的筆記", en: "My notes", ja: "メモ") }
@@ -147,7 +149,8 @@ enum NotesExporter {
         return x.meetingNotes + folder
     }
 
-    /// 有內容的段落，照會議紀錄的順序（Markdown、PDF、Word 共用）
+    /// 有內容的段落，照畫面上「條列」的順序和內容（Markdown、PDF、Word 共用）：摘要、決議、待辦、未決問題、議題、自訂段落、待確認。
+    /// 每個人的重點是畫面上另外的「人物」頁，不放進匯出（跟畫面、原本的匯出一樣）
     enum Block {
         case list(String, [MeetingNotes.Item], style: String)
         case people(String, [MeetingNotes.Person])
@@ -159,12 +162,11 @@ enum NotesExporter {
     static func blocks(_ notes: MeetingNotes, _ x: ExportText) -> [Block] {
         var out: [Block] = []
         if !notes.summary.isEmpty { out.append(.list(x.section("summary"), notes.summary, style: "summary")) }
-        if !notes.people.isEmpty { out.append(.people(x.section("people"), notes.people)) }
         if !notes.decisions.isEmpty { out.append(.list(x.section("decisions"), notes.decisions, style: "dec")) }
         if !notes.actionItems.isEmpty { out.append(.actions(x.section("actionItems"), notes.actionItems)) }
         if !notes.openQuestions.isEmpty { out.append(.list(x.section("openQuestions"), notes.openQuestions, style: "q")) }
+        if !notes.topics.isEmpty { out.append(.topics(x.topics, notes.topics)) }
         for custom in notes.custom where !custom.items.isEmpty { out.append(.list(custom.title, custom.items, style: "")) }
-        if !notes.topics.isEmpty { out.append(.topics(x.section("topics"), notes.topics)) }
         if !notes.reviewItems.isEmpty { out.append(.review(x.review, notes.reviewItems)) }
         return out
     }
@@ -296,7 +298,7 @@ enum NotesExporter {
             return HTML.report(title: m.displayTitle, body: body + "<p class=\"empty\">\(x.noNotes)</p>", footer: x.footer, language: x.language)
         }
         let figures = [(x.section("decisions"), notes.decisions.count), (x.section("actionItems"), notes.actionItems.count),
-                       (x.section("openQuestions"), notes.openQuestions.count), (x.section("topics"), notes.topics.count)].filter { $0.1 > 0 }
+                       (x.section("openQuestions"), notes.openQuestions.count), (x.topics, notes.topics.count)].filter { $0.1 > 0 }
         if figures.count >= 2 {
             body += "<div class=\"figs\">" + figures.map { "<div class=\"fig\"><div class=\"n\">\($0.1)</div><div class=\"l\">\(HTML.escape($0.0))</div></div>" }.joined() + "</div>\n"
         }
