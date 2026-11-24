@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        HTML.registerFonts()   // fork：匯出用的 IBM Plex Sans
         AppModel.shared.start()
         installSpaceKey()
         WindowSharing.install()

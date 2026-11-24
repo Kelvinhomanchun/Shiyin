@@ -48,6 +48,8 @@ ditto "$BIN_DIR/llama.framework" "$APP/Contents/Frameworks/llama.framework"
 ditto Resources/opencc "$APP/Contents/Resources/opencc"
 # 會議語言的語言檔（design §41.1），Windows 內嵌同一份
 cp Resources/languages.json "$APP/Contents/Resources/languages.json"
+# fork：匯出的會議紀錄用 IBM Plex Sans（SIL OFL 1.1，授權檔一起放）
+ditto Resources/Fonts "$APP/Contents/Resources/Fonts"
 # 簡體介面的用語表（design §48.2）：執行時轉不查表的中文
 mkdir -p "$APP/Contents/Resources/l10n"
 cp Resources/l10n/zh-Hans-terms.tsv "$APP/Contents/Resources/l10n/zh-Hans-terms.tsv"

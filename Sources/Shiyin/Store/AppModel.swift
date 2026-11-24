@@ -2039,7 +2039,7 @@ final class AppModel {
         switch item {
         case .notes:
             switch format {
-            case "pdf": try await HTML.pdf(ExportScript.html(NotesExporter.html(b), b), to: url)
+            case "pdf": try await HTML.reportPDF(ExportScript.html(NotesExporter.report(b), b), title: b.meeting.displayTitle, to: url)
             case "docx": try await HTML.docx(ExportScript.html(NotesExporter.html(b), b)).write(to: url)
             default: try ExportScript.text(NotesExporter.markdown(b), b).write(to: url, atomically: true, encoding: .utf8)
             }
