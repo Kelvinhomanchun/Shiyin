@@ -1070,6 +1070,7 @@ final class AppModel {
 
     func reveal(_ id: Int64) {
         reload()
+        sidebarMode = .meetings   // 從人物頁、通知、連結打開會議：右邊一定換成會議頁（fork）
         showTrash = trash.contains { $0.id == id }
         selection = id
         expandToShow(id)
@@ -2131,6 +2132,7 @@ final class AppModel {
 
     func openSearchHit(_ hit: SearchHit) {
         showTrash = false
+        sidebarMode = .meetings   // 剛才在看人物頁時也換回會議頁（fork）
         selection = hit.meetingId
         switch hit.kind {
         case .segment:

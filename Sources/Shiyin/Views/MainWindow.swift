@@ -120,7 +120,7 @@ struct MainView: View {
     /// 右邊那一欄：人物頁、多選、會議頁或空白頁
     @ViewBuilder
     private var detailContent: some View {
-        if model.sidebarMode == .people && !model.showTrash && model.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+        if model.sidebarMode == .people && !model.showTrash {
             // 人物頁（design §60.2）
             if let person = model.peopleOverview.first(where: { $0.id == model.selectedPerson }) {
                 PersonPage(person: person).id(person.id)
@@ -706,6 +706,7 @@ struct SearchResultsList: View {
             if !people.isEmpty {
                 Section("人物") {
                     ForEach(people) { person in
+                        let selected = model.sidebarMode == .people && model.selectedPerson == person.id
                         Button { model.openPerson(person.id) } label: {
                             HStack(spacing: 8) {
                                 PersonAvatar(name: person.name, color: Color.person(person.name), size: 22, isMe: person.isMe, scales: false)
@@ -720,6 +721,8 @@ struct SearchResultsList: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .listRowBackground(selected ? Color.sidebarSelected : Color.clear)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
                     }
                 }
             }

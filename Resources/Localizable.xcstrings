@@ -29599,6 +29599,23 @@
           }
         }
       }
+    },
+    "找不到這個人，可能已經合併或移除了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't find this person. They may have been merged or removed."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到这个人，可能已经合并或移除了"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

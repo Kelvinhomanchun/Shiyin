@@ -210,9 +210,20 @@ extension AppModel {
         return line.isEmpty ? nil : line
     }
 
+    /// 打開人物頁（從搜尋、會議裡的名字、待辦的負責人、地圖、小卡）：離開垃圾桶、展開「人物」和他的群組，
+    /// 主視窗在後面時拉到前面（fork：使用者點了搜尋結果沒反應）
     func openPerson(_ personId: Int64) {
+        if peopleOverview.first(where: { $0.id == personId }) == nil { reloadPeopleOverview() }
+        guard let person = peopleOverview.first(where: { $0.id == personId }) else {
+            noticeMessage = String(localized: "找不到這個人，可能已經合併或移除了")
+            return
+        }
+        showTrash = false
         sidebarMode = .people
         selectedPerson = personId
+        setSection("people", expanded: true)
+        if let group = person.group { setSection(Self.personGroupKey(group), expanded: true) }
+        openMainWindow?()
     }
 
     func stakeholdersFinished(_ job: Job, error: Error?) {
@@ -241,7 +252,7 @@ extension AppModel {
 
     /// 從人物頁打開一場會議（切回「會議」）；有時間點時從那裡播放
     func openFromPersonPage(_ meetingId: Int64, seconds: Double? = nil) {
-        sidebarMode = .meetings
+        sidebarMode = .meetings   // reveal 也會設，這裡先設讓右邊馬上換
         if let seconds {
             openMeetingLink(meetingId, seconds: seconds, activate: false)
         } else {
