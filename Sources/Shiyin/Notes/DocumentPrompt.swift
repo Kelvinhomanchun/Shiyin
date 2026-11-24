@@ -95,7 +95,12 @@ enum DocumentPrompt {
     }
 
     static func marker(_ page: Int, _ kind: DocumentKind, _ language: MeetingLanguage) -> String {
-        kind == .pptx
+        if kind == .email {
+            // 電子郵件（fork）：第 1 頁是信，後面是附件（附件的名字寫在那一頁的開頭）
+            return page == 1 ? language.prompt(zh: "[信件內容]", en: "[Email]", ja: "[メール本文]")
+                : language.prompt(zh: "[附件 \(page - 1)]", en: "[Attachment \(page - 1)]", ja: "[添付 \(page - 1)]")
+        }
+        return kind == .pptx
             ? language.prompt(zh: "[第 \(page) 張投影片]", en: "[Slide \(page)]", ja: "[スライド \(page)]")
             : language.prompt(zh: "[第 \(page) 頁]", en: "[Page \(page)]", ja: "[\(page) ページ]")
     }
@@ -107,6 +112,10 @@ enum DocumentPrompt {
             return language.prompt(zh: "（文件太長，只附上前 \(n) 頁，共 \(m) 頁）",
                                  en: " (too long; only the first \(n) of \(m) pages are included)",
                                  ja: "（長すぎるため、全 \(m) ページのうち最初の \(n) ページのみ）")  // l10n-skip
+        case .email:
+            return language.prompt(zh: "（太長，只附上信件和前 \(n - 1) 個附件，共 \(m - 1) 個）",
+                                 en: " (too long; only the email and the first \(n - 1) of \(m - 1) attachments are included)",
+                                 ja: "（長すぎるため、メールと全 \(m - 1) 件のうち最初の \(n - 1) 件の添付のみ）")  // l10n-skip
         case .pptx:
             return language.prompt(zh: "（文件太長，只附上前 \(n) 張投影片，共 \(m) 張）",
                                  en: " (too long; only the first \(n) of \(m) slides are included)",

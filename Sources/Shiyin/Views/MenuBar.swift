@@ -143,7 +143,7 @@ struct MenuBarContent: View {
                 if let l = model.runner.running[lane] {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text(llmStatus(l.job.kind, title(l.job.meetingId))).lineLimit(1)
+                        Text(llmStatus(l.job, title(l.job.meetingId))).lineLimit(1)
                     }
                 }
             }
@@ -158,8 +158,9 @@ struct MenuBarContent: View {
     }
 
     /// 整理那條線正在做什麼：整理、依回答修正、檢查可能聽錯的字
-    private func llmStatus(_ kind: JobKind, _ title: String) -> String {
-        switch kind {
+    private func llmStatus(_ job: Job, _ title: String) -> String {
+        switch job.kind {
+        case .revise where job.payload?.contains("\"instruction\"") == true: return String(localized: "依指示修正中：\(title)")
         case .revise: return String(localized: "依回答修正中：\(title)")
         case .correct: return String(localized: "檢查可能聽錯的字：\(title)")
         case .nameSpeakers: return String(localized: "猜說話者：\(title)")

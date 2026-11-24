@@ -345,6 +345,11 @@ final class AppModel {
     var showExportSheet = false
     /// 重新辨識說話者的小視窗（design §23.4）和它要處理的會議
     var showRediarizeSheet = false
+    /// fork：「用 AI 修正」的彈窗；focus 是右鍵「修正這一條…」那一條
+    var refineRequest: RefineRequest?
+    /// 修正失敗時留著使用者打的字，重開彈窗時填回去（不讓打的字不見）
+    /// 用 RefineRequest.id 當鍵：條目的指示只填回同一條，不會跑到整份的彈窗
+    var refineDraft: [String: String] = [:]
     var rediarizeMeetingId: Int64?
     /// 匯出對話框要匯出的會議：打開時記下，對話框開著時選取的會議換了也不變（design §20.9、R18.9）
     var exportMeetingId: Int64?
@@ -2266,6 +2271,14 @@ final class AppModel {
     private func jobFinished(_ job: Job, error: Error?) {
         guard let meeting = try? db.meeting(job.meetingId) else { return }
         notifier.jobFinished(job, meeting: meeting, error: error)
+        // fork：用 AI 修正完成：成功時清掉留著的字、在畫面上說改好了、可以復原；失敗時字留著，重開彈窗會填回去
+        if job.kind == .revise, job.payload?.contains("\"instruction\"") == true {
+            if error == nil {
+                refineDraft = refineDraft.filter { !$0.key.hasPrefix("\(job.meetingId)-") }
+                if selection == job.meetingId { noticeMessage = String(localized: "已依你的指示修正。不滿意可以按「復原上一版」換回來") }
+            }
+            // 失敗時不另外跳警告：會議頁上方的提示條說「修正失敗、紀錄沒改」，有「重試」（同一段指示再送一次）
+        }
     }
 }
 

@@ -234,4 +234,41 @@ enum NotesPrompt {
         text += l.reviseInstructions
         return text
     }
+
+    /// fork：照使用者打的指示修正會議紀錄（補細節、改不正確的地方）。逐字稿、文件、目前的紀錄都給，只改被要求的部分
+    static func refine(_ c: NotesContext, notes: MeetingNotes, instruction: String, focus: String?) -> String {
+        let l = c.meeting.notesOutputLanguage
+        var text = summarize(c)
+        text += "\n\n" + l.prompt(zh: "目前的會議紀錄（JSON）", en: "Current meeting notes (JSON)", ja: "現在の議事録（JSON）") + ":\n" + notes.jsonString()
+        if let focus, !focus.isEmpty {
+            text += "\n\n" + l.prompt(zh: "使用者指的是這一條", en: "The user is referring to this item", ja: "ユーザーが指している項目") + ":\n" + focus
+        }
+        text += "\n\n" + l.prompt(zh: "使用者的修改指示", en: "The user's instruction", ja: "ユーザーの修正指示") + ":\n" + instruction
+        text += "\n\n" + l.prompt(zh: """
+        請依使用者的指示修改會議紀錄，回傳完整的會議紀錄（同樣的 JSON 格式）：
+        - 只改指示要求的部分；其他段落、條目、時間點、順序維持原樣，不要重寫或重新整理整份紀錄。
+        - 補充細節或更正內容時，以逐字稿和參考資料為準，時間點填逐字稿裡講到的地方。逐字稿裡找不到依據的內容不要寫，改成列進 reviewItems 請使用者確認。
+        - 使用者明確告訴你的事實（例如正確的名字、數字、決定）照使用者說的寫，即使逐字稿聽錯了。
+        - 指示是要刪除、合併、換段落或改負責人、期限時照做。
+        - 指示跟會議紀錄無關或做不到時，紀錄維持原樣，並在 reviewItems 加一題說明原因。
+        - 原本的 reviewItems 保留；被這次修改解決的題目移除。
+        """, en: """
+        Revise the meeting notes according to the user's instruction and return the complete notes (same JSON format):
+        - Change only what the instruction asks for; keep every other section, item, time and order as it is. Do not rewrite or re-summarize the whole notes.
+        - When adding detail or correcting content, base it on the transcript and reference documents, and set time to where it was said in the transcript. Do not write anything the transcript does not support; add it to reviewItems for the user to confirm instead.
+        - Facts the user states explicitly (for example a correct name, number or decision) are written as the user says, even if the transcript misheard them.
+        - If the instruction asks to delete, merge or move items, or change an owner or due date, do it.
+        - If the instruction is unrelated to the notes or cannot be done, keep the notes unchanged and add one reviewItems question explaining why.
+        - Keep the existing reviewItems; remove those this change resolves.
+        """, ja: """
+        ユーザーの指示にもとづいて議事録を修正し、議事録全体を同じ JSON 形式で返してください：
+        - 指示された部分だけを変更し、ほかのセクション・項目・時刻・順序はそのまま残す。議事録全体を書き直さない。
+        - 詳細の追加や訂正は文字起こしと参考資料にもとづき、時刻は文字起こしで話された位置にする。文字起こしに根拠がない内容は書かず、reviewItems に入れて確認してもらう。
+        - ユーザーがはっきり述べた事実（正しい名前・数字・決定など）は、文字起こしが聞き間違えていてもユーザーの言うとおりに書く。
+        - 削除・統合・移動、担当者や期限の変更を求められたらそのとおりにする。
+        - 指示が議事録と無関係、または実行できない場合は議事録を変えず、理由を説明する質問を reviewItems に 1 つ加える。
+        - 既存の reviewItems は残し、今回の修正で解決したものは削除する。
+        """)
+        return text
+    }
 }

@@ -165,6 +165,21 @@ enum AppSettings {
 
 struct RevisePayload: Codable {
     var answers: [ReviewAnswer]
+    /// fork：使用者打的修改指示（「用提示修正」）；有這個時 answers 是空的
+    var instruction: String? = nil
+    /// 指示針對的那一條（右鍵「修正這一條…」）：條目的文字和時間點
+    var focus: String? = nil
+
+    init(answers: [ReviewAnswer], instruction: String? = nil, focus: String? = nil) {
+        (self.answers, self.instruction, self.focus) = (answers, instruction, focus)
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        answers = (try? c.decode([ReviewAnswer].self, forKey: .answers)) ?? []
+        instruction = try? c.decode(String.self, forKey: .instruction)
+        focus = try? c.decode(String.self, forKey: .focus)
+    }
 }
 
 /// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）；people 是只補上每個人的重點，其他段落不動（design §66）
@@ -329,7 +344,7 @@ final class JobRunner {
                 notify = try await summarize(job, lane: lane, answers: nil, draft: payload.draft, peopleOnly: payload.people)
             case .revise:
                 let payload = try JSONDecoder().decode(RevisePayload.self, from: Data((job.payload ?? "{}").utf8))
-                notify = try await summarize(job, lane: lane, answers: payload.answers)
+                notify = try await summarize(job, lane: lane, answers: payload.answers, refine: payload.instruction.map { ($0, payload.focus) })
             case .compress: try await compress(job)
             case .correct: await correct(job, lane: lane)
             case .clean: try await clean(job, lane: lane)
@@ -877,7 +892,8 @@ final class JobRunner {
     // MARK: 整理（design §8）
 
     /// 回傳要不要發通知：草稿沒做（正式逐字稿已經好了）、正式版取代了草稿時不發
-    private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?, draft: Bool = false, peopleOnly: Bool = false) async throws -> Bool {
+    private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?, draft: Bool = false, peopleOnly: Bool = false,
+                           refine: (instruction: String, focus: String?)? = nil) async throws -> Bool {
         guard let meeting = try db.meeting(job.meetingId) else { return false }
         // 草稿（design §21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
         if try draft && !db.segments(job.meetingId).isEmpty { return false }
@@ -907,7 +923,10 @@ final class JobRunner {
             template: definition,
             documents: try db.documents(job.meetingId).map(DocumentText.init))
         let prompt: String
-        if let answers {
+        if let refine {
+            guard let notes = meeting.decodedNotes else { return false }
+            prompt = NotesPrompt.refine(context, notes: notes, instruction: refine.instruction, focus: refine.focus)
+        } else if let answers {
             guard let notes = meeting.decodedNotes else { return false }
             prompt = NotesPrompt.revise(context, notes: notes, answers: answers)
         } else {
@@ -935,7 +954,7 @@ final class JobRunner {
         }
         let hadDraft = try db.meeting(job.meetingId)?.notesDraft ?? 0
         let replacedEdited = try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue,
-                                              reason: answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
+                                              reason: refine != nil ? String(localized: "依提示修正") : answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
                                               source: answers == nil ? .generated : .revised)
         if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
         // 正式的會議紀錄好了（整理、重新整理、校稿都算）：更新這場會議裡每個人的利害關係人分析

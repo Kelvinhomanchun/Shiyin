@@ -38,6 +38,7 @@ enum DocumentReader {
                 case "key": return String(localized: "拾音讀不了 Keynote 檔。請先在 Keynote 匯出成 PDF 再加入。")
                 case "pages": return String(localized: "拾音讀不了 Pages 檔。請先在 Pages 匯出成 PDF 再加入。")
                 case "numbers": return String(localized: "拾音讀不了 Numbers 檔。請先在 Numbers 匯出成 PDF 再加入。")
+                case "msg": return String(localized: "拾音讀不了 Outlook 的 .msg 檔。請在 Outlook 把信另存成 .eml（或拖到桌面），或列印成 PDF 再加入。")
                 case "doc": return String(localized: "拾音讀不了舊版的 Word 檔（.doc）。請另存成 docx 或 PDF 再加入。")
                 case "": return String(localized: "拾音讀不了沒有副檔名的檔案。請先匯出成 PDF 再加入。")
                 default: return String(localized: "拾音讀不了 .\(ext) 檔。請先匯出成 PDF 再加入。")
@@ -65,20 +66,21 @@ enum DocumentReader {
         case "pptx": return .pptx
         case "txt", "md", "markdown": return .text
         case "png", "jpg", "jpeg", "heic": return .image
+        case "eml": return .email
         default: return nil
         }
     }
 
     /// 拖進主視窗時當成文件的（R61.3）：讀得了的，加上看得出是文件、要說明怎麼辦的。txt、md 照舊是逐字稿、筆記
     static func isDroppedDocument(_ url: URL) -> Bool {
-        ["pdf", "docx", "pptx", "png", "jpg", "jpeg", "heic",
+        ["pdf", "docx", "pptx", "png", "jpg", "jpeg", "heic", "eml", "msg",
          "key", "pages", "numbers", "doc", "rtf", "ppt", "xls", "xlsx"].contains(url.pathExtension.lowercased())
     }
 
     /// 「加入文件…」的選檔類型
     static var openPanelTypes: [UTType] {
         [.pdf, .plainText, .png, .jpeg, .heic]
-            + ["docx", "pptx", "md", "markdown"].compactMap { UTType(filenameExtension: $0) }
+            + ["docx", "pptx", "md", "markdown", "eml"].compactMap { UTType(filenameExtension: $0) }
     }
 
     /// 在背景執行：文字辨識一頁約 0.5～1 秒
@@ -98,6 +100,13 @@ enum DocumentReader {
             let (image, orientation) = try loadImage(url, name: name)
             raw = [try recognize(image, orientation: orientation, language: language)]
             ocr = true
+        case .email:
+            // 附件照文件的讀法（附件裡的附件、信不再展開）
+            guard let data = try? Data(contentsOf: url) else { throw DocumentError.unreadable(name) }
+            raw = try EmailReader.read(data, name: name) { file in
+                guard let k = DocumentReader.kind(of: file), k != .email, let result = try? DocumentReader.read(file, language: language) else { return nil }
+                return result.pages
+            }
         }
         let pages = raw.map(normalize)
         guard pages.contains(where: { !$0.isEmpty }) else { throw DocumentError.empty(name) }

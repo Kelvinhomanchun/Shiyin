@@ -99,6 +99,7 @@ extension AppModel {
         }
         entries += [.divider,
                     .action(String(localized: "編輯這一條"), icon: "pencil", enabled: canEditNotes) { self.editingNoteItem = ref },
+                    .action(String(localized: "用 AI 修正這一條…"), icon: "sparkles", enabled: canEditNotes) { self.requestRefine(ref, text: text, time: time) },
                     .action(String(localized: "刪除這一條"), icon: "trash", destructive: true, enabled: canEditNotes) { self.deleteNoteItem(ref) }]
         return entries
     }

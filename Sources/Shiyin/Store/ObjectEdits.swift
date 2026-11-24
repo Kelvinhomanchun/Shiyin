@@ -78,3 +78,73 @@ extension AppModel {
         }
     }
 }
+
+
+// MARK: - 用 AI 修正會議紀錄（fork）
+
+/// 彈窗要修正的對象：整份紀錄，或右鍵選的那一條
+struct RefineRequest: Identifiable, Equatable {
+    var meetingId: Int64
+    var ref: NoteItemRef?
+    var text: String?
+    var time: String?
+    var id: String { "\(meetingId)-\(ref.map { "\($0)" } ?? "all")" }
+}
+
+extension AppModel {
+    /// 打開「用 AI 修正」：跟「編輯」一樣的條件（有紀錄、不在垃圾桶、沒在錄、沒在整理）；整理工具沒設定時先說
+    func requestRefine(_ ref: NoteItemRef? = nil, text: String? = nil, time: String? = nil) {
+        guard let id = detail?.meeting.id else { return }
+        guard canEditNotes else {
+            noticeMessage = detail?.meeting.deletedAt != nil ? String(localized: "垃圾桶裡的會議要先還原才能操作")
+                : String(localized: "這場會議還在處理中，完成後再試一次")
+            return
+        }
+        if AppSettings.provider == .none {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，沒辦法用 AI 修正。請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，沒辦法用 AI 修正。請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        refineRequest = RefineRequest(meetingId: id, ref: ref, text: text, time: time)
+    }
+
+    /// 送出修正：排一個校稿工作（同依回答修正那條線），完成後留一版可以復原
+    @discardableResult
+    func submitRefine(_ request: RefineRequest, instruction: String) -> Bool {
+        let trimmed = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        guard let meeting = try? db.meeting(request.meetingId), meeting.deletedAt == nil, meeting.decodedNotes != nil else {
+            errorMessage = String(localized: "這場會議沒有會議紀錄可以修正")
+            return false
+        }
+        if let latest = try? db.latestJob(request.meetingId), latest.status == .queued || latest.status == .running {
+            noticeMessage = String(localized: "這場會議還在處理中，完成後再試一次")
+            return false
+        }
+        var focus: String?
+        if let text = request.text {
+            let id: String
+            switch request.ref {
+            case .summary: id = "summary"
+            case .decisions: id = "decisions"
+            case .actionItems: id = "actionItems"
+            case .openQuestions: id = "openQuestions"
+            case .person: id = "people"
+            case .custom(let c, _): id = meeting.decodedNotes?.custom.indices.contains(c) == true ? meeting.decodedNotes!.custom[c].title : "custom"
+            default: id = "topics"
+            }
+            let label = ["summary", "decisions", "actionItems", "openQuestions", "people", "topics"].contains(id)
+                ? TemplateDefinition.sectionLabel(id, language: meeting.notesOutputLanguage, prompt: true) : id
+            focus = "[\(label)] " + text + ((request.time ?? "").isEmpty ? "" : " (\(request.time ?? ""))")
+        }
+        refineDraft[request.id] = trimmed
+        perform {
+            let payload = String(decoding: try JSONEncoder().encode(RevisePayload(answers: [], instruction: trimmed, focus: focus)), as: UTF8.self)
+            try db.enqueue(request.meetingId, kind: .revise, payload: payload)
+        }
+        runner.wake()
+        return true
+    }
+}

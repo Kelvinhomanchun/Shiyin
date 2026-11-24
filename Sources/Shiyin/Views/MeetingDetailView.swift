@@ -442,6 +442,7 @@ struct StatusBanner: View {
             return AnyView(HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
                 switch running?.job.kind {
+                case .revise where running?.job.payload?.contains("\"instruction\"") == true: Text("正在用 \(provider) 依你的指示修正會議紀錄…")
                 case .revise: Text("正在用 \(provider) 依你的回答修正會議紀錄…")
                 default: Text("正在用 \(provider) 整理會議紀錄…")
                 }
@@ -449,7 +450,16 @@ struct StatusBanner: View {
         case .failed(let kind, let stored):
             let message = MeetingLanguage.uiStored(stored)
             return AnyView(Label {
-                Text(kind == .transcribe ? String(localized: "轉錄失敗：\(message)") : String(localized: "整理失敗：\(message)")).lineLimit(3).textSelection(.enabled)
+                Group {
+                    if kind == .revise, detail.latestJob?.payload?.contains("\"instruction\"") == true {
+                        // fork：用 AI 修正失敗：紀錄沒動過，打的指示還留著（重開彈窗會填回去）
+                        let reason = message.trimmingCharacters(in: CharacterSet(charactersIn: "。."))
+                        Text(String(localized: "用 AI 修正失敗：\(reason)。會議紀錄沒有改，你打的指示還留著"))
+                    } else {
+                        Text(kind == .transcribe ? String(localized: "轉錄失敗：\(message)") : String(localized: "整理失敗：\(message)"))
+                    }
+                }
+                .lineLimit(3).textSelection(.enabled)
             } icon: {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
             })

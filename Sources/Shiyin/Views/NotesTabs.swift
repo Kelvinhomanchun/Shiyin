@@ -302,7 +302,8 @@ struct NotesPage: View {
         if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
         AttendeeLens(detail: detail)
         EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true,
-                onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil) {
+                onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil,
+                onRefine: detail.meeting.deletedAt == nil ? { model.requestRefine() } : nil) {
             base = notes; editing = notes
         }
     }
@@ -480,6 +481,8 @@ struct EditBar: View {
     var disabled = false
     /// nil：沒有上一版，不顯示
     var onUndo: (() -> Void)? = nil
+    /// fork：用 AI 修正；nil 不顯示
+    var onRefine: (() -> Void)? = nil
     let onEdit: () -> Void
 
     var body: some View {
@@ -520,6 +523,16 @@ struct EditBar: View {
                 .disabled(disabled)
                 .help("換回上一版會議紀錄（再按一次換回更早的）")
                 .accessibilityLabel(Text("復原上一版"))
+            }
+            if let onRefine {
+                Button(action: onRefine) {
+                    if compact { Image(systemName: "sparkles") } else { Label("用 AI 修正", systemImage: "sparkles") }
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(disabled ? Color.secondary : Color.celadon)
+                .disabled(disabled)
+                .help(disabled ? "正在處理這場會議，完成後才能修正" : "打字告訴整理工具哪裡要補細節或不正確，它會對照逐字稿修正")
+                .accessibilityLabel(Text("用 AI 修正"))
             }
             Button("編輯", systemImage: "pencil", action: onEdit)
                 .buttonStyle(.borderless)

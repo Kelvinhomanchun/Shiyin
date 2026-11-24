@@ -262,8 +262,10 @@ struct GlossaryTerm: SnakeCaseRecord, Identifiable, Hashable {
 /// 會議的參考文件的種類（design §39.2）：PDF、投影片有頁碼
 enum DocumentKind: String, Codable, CaseIterable {
     case pdf, docx, pptx, text, image
+    /// 電子郵件（fork）：第 1 頁是信，每個附件一頁
+    case email
 
-    var isPaged: Bool { self == .pdf || self == .pptx }
+    var isPaged: Bool { self == .pdf || self == .pptx || self == .email }
 }
 
 /// 會議的參考文件（design §39.1、R61）：原始檔在 documents/<file>，讀出來的文字每頁一項

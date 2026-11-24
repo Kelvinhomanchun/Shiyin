@@ -145,6 +145,22 @@ enum DebugControl {
             default: model.meetingFilter = MeetingFilter()
             }
         case "undo": model.selection = id; model.undoNotes()
+        // fork：用 AI 修正。refine open [section index]：開彈窗（整份或某一條，section 是 summary/decisions/topic…）；
+        // refine send <指示>：照彈窗的「修正」送出；refine cancel <已打的字>：照「取消」（留著打的字）
+        case "refine":
+            switch args.count > 1 ? args[1] : "" {
+            case "open":
+                if args.count > 3, let index = Int(args[3]), let notes = model.detail?.notes {
+                    let ref: NoteItemRef? = switch args[2] {
+                    case "summary": .summary(index); case "decisions": .decisions(index); case "actionItems": .actionItems(index)
+                    case "openQuestions": .openQuestions(index); default: .topicPoint(index, 0)
+                    }
+                    if let ref { model.requestRefine(ref, text: notes.text(at: ref), time: nil) }
+                } else { model.requestRefine() }
+            case "send": if let r = model.refineRequest, args.count > 2, model.submitRefine(r, instruction: args[2]) { model.refineRequest = nil }
+            case "cancel": if let r = model.refineRequest { model.refineDraft[r.id] = args.count > 2 ? args[2] : nil; model.refineRequest = nil }
+            default: break
+            }
         case "trash": if let id { model.moveToTrash(id) }
         case "restore": if let id { model.restore(id) }
         case "purge": if let id { model.deletePermanently(id) }
@@ -1265,6 +1281,10 @@ enum DebugControl {
             "highlightSegment": model.highlightSegment ?? -1,
             "errorMessage": model.errorMessage ?? "",
             "noticeMessage": model.noticeMessage ?? "",
+            "refineOpen": model.refineRequest?.id ?? "", "refineFocus": model.refineRequest?.text ?? "",
+            "refineDraft": model.refineRequest.flatMap { model.refineDraft[$0.id] } ?? model.selection.flatMap { model.refineDraft["\($0)-all"] } ?? "",
+            "refineDrafts": model.refineDraft,
+            "canUndoNotes": model.detail?.canUndoNotes ?? false, "versionCount": model.detail?.versionCount ?? -1,
             // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用；sharing 是分享畫面時藏不藏（0 none、1 readOnly，design §53）
             "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible,
                                             "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,

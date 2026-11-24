@@ -40,12 +40,14 @@ struct DocumentsMenu: View {
         switch document.documentKind {
         case .pdf: text = String(localized: "\(document.name)（\(pages) 頁）")
         case .pptx: text = String(localized: "\(document.name)（\(pages) 張投影片）")
+        case .email: text = pages > 1 ? String(localized: "\(document.name)（信和 \(pages - 1) 個附件）") : document.name
         case .docx, .text, .image: text = document.name
         }
         if let use, use.truncated {
             switch use.cutByPages ? document.documentKind : .text {
             case .pdf: text += String(localized: "，太長，只用前 \(use.includedPages) 頁")
             case .pptx: text += String(localized: "，太長，只用前 \(use.includedPages) 張")
+            case .email: text += String(localized: "，太長，只用信和前 \(max(0, use.includedPages - 1)) 個附件")
             case .docx, .text, .image: text += String(localized: "，太長，只用前面的部分")
             }
         }

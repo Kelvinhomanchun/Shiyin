@@ -128,7 +128,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         let title = meeting.displayTitle
         if let error {
-            content.title = job.kind == .transcribe ? String(localized: "轉錄失敗") : String(localized: "整理失敗")
+            content.title = job.kind == .transcribe ? String(localized: "轉錄失敗")
+                : job.kind == .revise && job.payload?.contains("\"instruction\"") == true ? String(localized: "修正失敗") : String(localized: "整理失敗")
             // 只取第一行（design §40.2）：額度用完的第二行是 CLI 的原文，放不下就不要擠進來
             let firstLine = error.localizedDescription.split(whereSeparator: \.isNewline).first.map(String.init) ?? error.localizedDescription
             content.body = String(localized: "\(title)：\(String(firstLine.prefix(60)))")
@@ -139,6 +140,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                   (try? JSONDecoder().decode(SummarizePayload.self, from: Data(payload.utf8)))?.draft == true {
             content.title = String(localized: "會議紀錄草稿好了")
             content.body = String(localized: "\(title)（正式轉錄完成後會自動更新）")
+        } else if job.kind == .revise, job.payload?.contains("\"instruction\"") == true {
+            content.title = String(localized: "會議紀錄已依你的指示修正")
+            content.body = title
         } else {
             let count = meeting.decodedNotes?.reviewItems.count ?? 0
             content.title = String(localized: "會議紀錄整理好了")
