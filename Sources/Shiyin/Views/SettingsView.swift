@@ -391,11 +391,24 @@ struct ProviderSettings: View {
             Toggle("每場會議整理完都更新與會者的利害關係人分析", isOn: $stakeholderAnalysis)
                 .disabled(current == .none)
             if current != .none && current != .enterprise {
-                TextField("人物分析用的模型", text: $stakeholderModelName,
-                          prompt: Text(modelName.isEmpty ? "留空：跟會議紀錄同一個" : "留空：跟會議紀錄同一個（\(modelName)）"))
-                    .onChange(of: stakeholderModelName) { _, value in
-                        UserDefaults.standard.set(value.trimmingCharacters(in: .whitespacesAndNewlines), forKey: AppSettings.stakeholderModelKey(current))
-                    }
+                // 從整理工具提供的模型裡選（使用者：不要打字）；清單跟「選擇」同一份
+                Picker("人物分析用的模型", selection: Binding(get: { stakeholderModelName }, set: { value in
+                    stakeholderModelName = value
+                    stakeholderTestResult = nil
+                    UserDefaults.standard.set(value, forKey: AppSettings.stakeholderModelKey(current))
+                })) {
+                    Text(modelName.isEmpty ? "跟會議紀錄同一個" : "跟會議紀錄同一個（\(modelName)）").tag("")
+                    let choices = (availableModels.contains(stakeholderModelName) || stakeholderModelName.isEmpty
+                                   ? availableModels : [stakeholderModelName] + availableModels)
+                    if !choices.isEmpty { Divider() }
+                    ForEach(choices, id: \.self) { Text($0).tag($0) }
+                }
+                .onAppear { if availableModels.isEmpty && !loadingModels && canListModels { refreshModels() } }
+                if loadingModels {
+                    Text("正在取得模型清單…").font(.caption).foregroundStyle(.secondary)
+                } else if let modelListError, availableModels.isEmpty {
+                    Text(modelListError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+                }
                 if !stakeholderModelName.trimmingCharacters(in: .whitespaces).isEmpty {
                     HStack(spacing: 8) {
                         Button(stakeholderTesting ? "測試中…" : "測試這個模型") {

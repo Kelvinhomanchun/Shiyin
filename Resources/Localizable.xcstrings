@@ -29243,40 +29243,6 @@
         }
       }
     },
-    "留空：跟會議紀錄同一個": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Empty: same as meeting notes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "留空：跟会议记录同一个"
-          }
-        }
-      }
-    },
-    "留空：跟會議紀錄同一個（%@）": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Empty: same as meeting notes (%@)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "留空：跟会议记录同一个（%@）"
-          }
-        }
-      }
-    },
     "測試這個模型": {
       "extractionState": "manual",
       "localizations": {
@@ -29307,6 +29273,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "人物和利害关系人分析要读这个人所有的会议，会议越多越长，可以用比会议记录更强的模型（例如 Claude Opus）。用同一个整理工具的网址和 key；另外设置时一次会多送较旧的会议。"
+          }
+        }
+      }
+    },
+    "跟會議紀錄同一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as meeting notes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟会议记录同一个"
+          }
+        }
+      }
+    },
+    "跟會議紀錄同一個（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as meeting notes (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟会议记录同一个（%@）"
           }
         }
       }
