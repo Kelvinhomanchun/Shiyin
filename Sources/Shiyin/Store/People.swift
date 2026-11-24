@@ -110,6 +110,7 @@ enum SidebarMode: String {
 extension AppModel {
     func reloadPeopleOverview() {
         peopleOverview = (try? db.peopleOverview()) ?? []
+        stakeholderRecordsCache = nil
         personGroups = (try? db.personGroups()) ?? []
         meetingPeople = (try? db.meetingPeople()) ?? [:]
         if let filtered = meetingFilter.personId, !peopleOverview.contains(where: { $0.id == filtered }) { meetingFilter.personId = nil }
@@ -186,6 +187,29 @@ extension AppModel {
         return profile
     }
 
+    /// 搜尋人物（fork）：名字、你填的或推測的角色、組織、群組裡有這段字的人
+    func peopleMatching(_ query: String) -> [PersonOverview] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return [] }
+        if stakeholderRecordsCache == nil { stakeholderRecordsCache = (try? db.allStakeholderProfiles()) ?? [] }
+        let records = Dictionary((stakeholderRecordsCache ?? []).map { ($0.personId, $0) }, uniquingKeysWith: { a, _ in a })
+        return peopleOverview.filter { p in
+            if p.name.localizedCaseInsensitiveContains(q) || (p.group ?? "").localizedCaseInsensitiveContains(q) { return true }
+            guard let r = records[p.id] else { return false }
+            let profile = r.decoded
+            return [r.userRole, r.userOrg, profile?.role ?? "", profile?.organization ?? ""].contains { $0.localizedCaseInsensitiveContains(q) }
+        }
+    }
+
+    /// 搜尋結果裡人名下面那一行：角色 · 組織（你填的優先）
+    func personRoleLine(_ personId: Int64) -> String? {
+        guard let r = (stakeholderRecordsCache ?? []).first(where: { $0.personId == personId }) else { return nil }
+        let role = r.userRole.isEmpty ? (r.decoded?.role ?? "") : r.userRole
+        let org = r.userOrg.isEmpty ? (r.decoded?.organization ?? "") : r.userOrg
+        let line = [role, org].filter { !$0.isEmpty }.joined(separator: " · ")
+        return line.isEmpty ? nil : line
+    }
+
     func openPerson(_ personId: Int64) {
         sidebarMode = .people
         selectedPerson = personId
@@ -210,6 +234,7 @@ extension AppModel {
 
     func stakeholderUpdated(_ personId: Int64) {
         stakeholderCache[personId] = nil
+        stakeholderRecordsCache = nil
         analyzingStakeholders.remove(personId)
         if stakeholderPersonId == personId { loadStakeholder(personId) }
     }

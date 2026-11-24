@@ -18,9 +18,18 @@ struct MeetingListMenu: View {
             // inline 的 Picker 自己會帶段落標題和分隔線；再包一層 Section 會多出連續好幾條分隔線（2026-11-16 自己驗收時發現）
             sortPicker.pickerStyle(.inline)
             if !model.showTrash {
+                scopePicker.pickerStyle(.inline)
                 groupingPicker.pickerStyle(.inline)
                 Section("篩選") { filters }
             }
+        }
+    }
+
+    /// 下面的列表放什麼（fork）：全部的會議，或只放不在資料夾裡的（資料夾裡的在上面看得到）
+    private var scopePicker: some View {
+        Picker("列表", selection: Binding(get: { model.listAllMeetings }, set: { model.listAllMeetings = $0; model.folderFilter = nil })) {
+            Text("所有會議").tag(true)
+            Text("只有未分類的會議").tag(false)
         }
     }
 
@@ -83,6 +92,16 @@ struct MeetingListHeader: View {
             SidebarSectionHeader(title: title, key: "meetings", besideMenu: true)
                 .foregroundStyle(dropTargeted ? Color.celadon : Color.secondary)
             Spacer(minLength: 4)
+            // 正在看一個資料夾：✕ 回到全部的會議（取代原本最上面的「所有會議」，fork）
+            if model.folderFilter != nil {
+                SidebarHeaderIcon(systemName: "xmark.circle")
+                    .sidebarClick { model.folderFilter = nil }
+                    .help("回到全部的會議")
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(Text("回到全部的會議"))
+                    .accessibilityAction { model.folderFilter = nil }
+            }
             Menu {
                 MeetingListMenu(model: model)
             } label: {
@@ -104,7 +123,7 @@ struct MeetingListHeader: View {
     private var title: String {
         // 下面只放資料夾以外的會議時叫「其他會議」（R101.6）
         let scope = model.folderFilter.map(FolderPath.display)
-            ?? (model.listShowsOthersOnly ? String(localized: "其他會議") : String(localized: "所有會議"))
+            ?? (model.listShowsOthersOnly ? String(localized: "未分類的會議") : String(localized: "所有會議"))
         let grouping = model.effectiveGrouping
         return grouping == .none ? scope : scope + "・" + grouping.label
     }

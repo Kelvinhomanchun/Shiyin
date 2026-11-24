@@ -49,7 +49,7 @@ extension AppModel {
     /// 沒有看某個資料夾、沒有篩選、不是依資料夾分組時才這樣：篩選、依資料夾分組是要跨資料夾找東西。
     /// 還沒有資料夾時就是所有會議
     var listShowsOthersOnly: Bool {
-        !showTrash && folderFilter == nil && !meetingFilter.isActive
+        !listAllMeetings && !showTrash && folderFilter == nil && !meetingFilter.isActive
             && meetingGrouping != .folder && (meetings.contains { !$0.meeting.folder.isEmpty })
     }
 

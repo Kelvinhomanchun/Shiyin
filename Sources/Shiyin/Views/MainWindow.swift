@@ -310,7 +310,7 @@ struct SidebarView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
         }
-        .searchable(text: $model.searchQuery, placement: .sidebar, prompt: "搜尋所有會議")
+        .searchable(text: $model.searchQuery, placement: .sidebar, prompt: "搜尋會議和人物")
         .onAppear { model.reloadPeopleOverview() }
         .toolbar {
             ToolbarItemGroup {
@@ -330,13 +330,7 @@ struct SidebarView: View {
     /// 點了換下面那一段的內容（macOS 的側欄是導覽清單，不放分段控制）
     @ViewBuilder
     private var scopeSections: some View {
-        Section {
-            // 所有會議是回到預設的畫面，不畫選到的樣子；人物模式時人物亮
-            FolderRow(name: String(localized: "所有會議"), count: model.meetings.count, symbol: "tray.full", selected: false) {
-                model.sidebarMode = .meetings
-                model.folderFilter = nil
-            }
-        }
+        // 「所有會議」那一列拿掉了（fork，UX 檢查）：下面的列表本來就是會議，看資料夾時標題右邊的 ✕ 回到全部
         // 段落可以收起；每個資料夾可以在原地展開最近的會議（R101、design §75）。一直顯示，標題右邊「+」建空的資料夾（R104、design §78）
         Section {
             if model.isSectionExpanded("folders") {
@@ -706,8 +700,30 @@ struct SearchResultsList: View {
     var body: some View {
         let groups = Dictionary(grouping: model.searchResults, by: \.meetingId)
         let order = model.searchResults.map(\.meetingId).reduce(into: [Int64]()) { if !$0.contains($1) { $0.append($1) } }
+        let people = model.peopleMatching(model.searchQuery)
         List {
-            if model.searchResults.isEmpty {
+            // 人物（fork）：名字、角色、組織對得到的人放最上面，點了打開人物頁
+            if !people.isEmpty {
+                Section("人物") {
+                    ForEach(people) { person in
+                        Button { model.openPerson(person.id) } label: {
+                            HStack(spacing: 8) {
+                                PersonAvatar(name: person.name, color: Color.person(person.name), size: 22, isMe: person.isMe, scales: false)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(person.name)
+                                    if let role = model.personRoleLine(person.id) {
+                                        Text(role).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            if model.searchResults.isEmpty && people.isEmpty {
                 Text("找不到「\(model.searchQuery)」").foregroundStyle(.secondary)
             }
             ForEach(order, id: \.self) { meetingId in

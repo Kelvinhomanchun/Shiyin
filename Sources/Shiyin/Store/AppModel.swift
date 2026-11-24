@@ -1838,8 +1838,14 @@ final class AppModel {
     var peopleOverview: [PersonOverview] = []
     /// 人物群組（fork），照使用者排的順序
     var personGroups: [String] = []
+    /// 搜尋人物用的分析（fork）：角色、組織；人物或分析更新時清掉
+    @ObservationIgnored var stakeholderRecordsCache: [StakeholderRecord]?
     /// 側欄資料夾展開了「顯示全部」的（fork；不存，重開 app 回到前 5 場）
     var peekShowsAll: Set<String> = []
+    /// 側欄下面的列表放所有會議（fork，預設），或只放不在資料夾裡的
+    var listAllMeetings = UserDefaults.standard.object(forKey: "listAllMeetings") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(listAllMeetings, forKey: "listAllMeetings") }
+    }
     /// 移除一個人的確認（R85.7、design §60.2）
     var confirmRemovePerson: Int64?
     /// 每一種東西都能直接改、刪（R100、design §74）：刪除資料夾的確認、正在就地改的那一條紀錄

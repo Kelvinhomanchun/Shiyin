@@ -1248,6 +1248,7 @@ enum DebugControl {
                        "languageDetection": "\(model.models.state(.languageDetection))", "diarizer": "\(model.models.diarizerState)",
                        "nemotron": "\(model.models.nemotronState)", "diarizationModel": AppSettings.diarizationModel.rawValue],
             "exportMeeting": model.exportMeetingId as Any,
+            "searchPeople": model.peopleMatching(model.searchQuery).map { "\($0.name) | \(model.personRoleLine($0.id) ?? "")" },
             "search": ["query": model.searchQuery, "results": model.searchResults.map { ["meeting": $0.meetingId, "kind": $0.kind.rawValue, "ref": $0.ref, "snippet": $0.snippet] }],
             "trash": model.trash.map { $0.id },
             "templates": model.templates.map { $0.id },
