@@ -88,6 +88,12 @@ enum AppSettings {
         #endif
         return d.string(forKey: provider.modelKey) ?? ""
     }
+    /// 利害關係人分析用的模型（fork）：要讀很多場會議，可以用比整理會議紀錄更強的模型；留空就跟會議紀錄同一個
+    static func stakeholderModelKey(_ provider: LLMProvider) -> String { "\(provider.rawValue)StakeholderModel" }
+    static var stakeholderModel: String {
+        let custom = (d.string(forKey: stakeholderModelKey(provider)) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return custom.isEmpty ? model : custom
+    }
     static var autoSummarize: Bool { flag(autoSummarizeKey, default: true) }
     static var stakeholderAnalysis: Bool { flag(stakeholderAnalysisKey, default: true) }
     static var mcpEnabled: Bool { flag(mcpEnabledKey, default: false) }
@@ -800,10 +806,11 @@ final class JobRunner {
         // 字數上限：從最舊的會議開始，先拿掉上下文、再截短發言
         func size() -> Int { materials.reduce(0) { $0 + ($1.context + $1.lines).reduce(0) { $0 + $1.count } } }
         var i = materials.count - 1
-        while size() > StakeholderPrompt.characterLimit && i >= 0 {
+        let limit = StakeholderPrompt.characterLimit(customModel: AppSettings.stakeholderModel != AppSettings.model)
+        while size() > limit && i >= 0 {
             if !materials[i].context.isEmpty { materials[i].context = [] }
             else {
-                let over = size() - StakeholderPrompt.characterLimit
+                let over = size() - limit
                 var keep = materials[i].lines
                 var cut = 0
                 while cut < over, !keep.isEmpty { cut += keep.removeLast().count }
@@ -818,7 +825,7 @@ final class JobRunner {
                                               userRole: stored?.userRole ?? "", userOrg: stored?.userOrg ?? "", userNotes: stored?.userNotes ?? "",
                                               me: meName)
         let data = try await callLLM(lane) { onStart in
-            try await LLMClient.generateJSON(provider: provider, model: AppSettings.model, system: system, prompt: prompt,
+            try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: prompt,
                                              format: StakeholderProfile.format, onStart: onStart)
         }
         let decoded: StakeholderProfile

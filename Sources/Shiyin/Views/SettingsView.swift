@@ -228,6 +228,9 @@ struct ProviderSettings: View {
     @AppStorage(AppSettings.stakeholderAnalysisKey) private var stakeholderAnalysis = true
     @AppStorage(AppSettings.correctTranscriptKey) private var correctTranscript = true
     @State private var modelName = ""
+    @State private var stakeholderModelName = ""
+    @State private var stakeholderTesting = false
+    @State private var stakeholderTestResult: (ok: Bool, message: String)?
     @State private var baseURL = ""
     @State private var key = ""
     @State private var keySaved = false
@@ -387,6 +390,34 @@ struct ProviderSettings: View {
             // 利害關係人分析（fork）
             Toggle("每場會議整理完都更新與會者的利害關係人分析", isOn: $stakeholderAnalysis)
                 .disabled(current == .none)
+            if current != .none && current != .enterprise {
+                TextField("人物分析用的模型", text: $stakeholderModelName,
+                          prompt: Text(modelName.isEmpty ? "留空：跟會議紀錄同一個" : "留空：跟會議紀錄同一個（\(modelName)）"))
+                    .onChange(of: stakeholderModelName) { _, value in
+                        UserDefaults.standard.set(value.trimmingCharacters(in: .whitespacesAndNewlines), forKey: AppSettings.stakeholderModelKey(current))
+                    }
+                if !stakeholderModelName.trimmingCharacters(in: .whitespaces).isEmpty {
+                    HStack(spacing: 8) {
+                        Button(stakeholderTesting ? "測試中…" : "測試這個模型") {
+                            Task {
+                                stakeholderTesting = true
+                                stakeholderTestResult = nil
+                                do {
+                                    let seconds = try await SummarizerTest.run(provider: current, model: stakeholderModelName.trimmingCharacters(in: .whitespaces))
+                                    stakeholderTestResult = (true, String(localized: "可以使用（\(seconds) 秒）"))
+                                } catch { stakeholderTestResult = (false, error.localizedDescription) }
+                                stakeholderTesting = false
+                            }
+                        }
+                        .disabled(stakeholderTesting)
+                        if let r = stakeholderTestResult {
+                            Text(r.message).foregroundStyle(r.ok ? Color.celadon : Color.red).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                Text("人物和利害關係人分析要讀這個人所有的會議，會議越多越長，可以用比會議紀錄更強的模型（例如 Claude Opus）。用同一個整理工具的網址和 key；另外設定時一次會多送較舊的會議。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             Text("會議紀錄整理好、重新整理或校稿之後，以及改了說話者的名字、合併說話者、改了哪句是誰說的之後，都會把這場會議裡每個認得名字的與會者（你自己除外）說的話交給整理工具，更新他的分析和「怎麼跟他合作」。結果在側欄「人物」的人物頁。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Section {
@@ -505,6 +536,8 @@ struct ProviderSettings: View {
         login = nil
         Task { await checkLogin() }
         modelName = UserDefaults.standard.string(forKey: current.modelKey) ?? ""
+        stakeholderModelName = UserDefaults.standard.string(forKey: AppSettings.stakeholderModelKey(current)) ?? ""
+        stakeholderTestResult = nil
         companyModels = nil
         Task { await refreshCompany() }
         baseURL = UserDefaults.standard.string(forKey: OpenAICompatibleAPI.baseURLKey) ?? ""

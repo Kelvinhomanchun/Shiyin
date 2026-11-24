@@ -378,6 +378,8 @@ enum StakeholderPrompt {
 
     /// 送出的字數上限：超過就先刪舊會議的上下文、再截短舊會議的發言
     static let characterLimit = 40_000
+    /// 另外選了分析用的模型（通常是長上下文的大模型）：可以多送一些較舊的會議
+    static func characterLimit(customModel: Bool) -> Int { customModel ? 150_000 : characterLimit }
 
     static func system(_ language: MeetingLanguage) -> String {
         let name = language.profile.outputName ?? language.profile.uiName.en
