@@ -569,6 +569,15 @@ final class AppDatabase: @unchecked Sendable {
             } else {
                 try db.execute(sql: "UPDATE folders SET name = ? WHERE name = ?", arguments: [newName, old])
             }
+            // 與會者分析裡這個案子的評估跟著改名（fork：改名後同一個案子在人物頁出現兩筆）
+            for record in try StakeholderRecord.fetchAll(db, sql: "SELECT * FROM stakeholder_profiles WHERE profile LIKE ?",
+                                                         arguments: ["%" + old + "%"]) {
+                guard let profile = record.decoded else { continue }
+                let renamed = profile.renamingProject(old, to: newName)
+                guard renamed != profile else { continue }
+                try db.execute(sql: "UPDATE stakeholder_profiles SET profile = ? WHERE person_id = ?",
+                               arguments: [renamed.jsonString(), record.personId])
+            }
             // 問這個資料夾的紀錄跟著改名；刪除資料夾時一起刪
             let oldScope = AskScope.folderScope(old)
             if newName.isEmpty {
@@ -1274,10 +1283,22 @@ final class AppDatabase: @unchecked Sendable {
     }
 
     /// 取出下一個排隊的工作，改成 running。模型還沒下載好的語言也照樣轉錄（先用 macOS 內建辨識，design §21.17）
+    /// 自動的與會者分析要等會議紀錄定下來幾秒（DEBUG 可以改短）
+    nonisolated(unsafe) static var stakeholderSettleSeconds: TimeInterval = 60
+
     func claimNext(lane: JobLane) throws -> Job? {
         let kinds = JobKind.allCases.filter { $0.lane == lane }.map(\.rawValue)
         return try pool.write { db in
-            guard var job = try Job.filter(Column("status") == JobStatus.queued.rawValue && kinds.contains(Column("kind")))
+            // 會議整理完自動排的與會者分析（沒有 payload）：等會議紀錄定下來再做（fork，2026-11-25 使用者回答待確認、
+            // 再用 AI 修正，一場會議連分析三次、每次都把四場會議送給大模型）。排進來滿一分鐘、
+            // 這場會議也沒有還沒做完的整理（整理、修正）才拿；之前那段時間有新的整理排進來就再等
+            let settle = Date().addingTimeInterval(-Self.stakeholderSettleSeconds).ISO8601Format()
+            guard var job = try Job.filter(sql: """
+                status = ? AND kind IN (\(kinds.map { _ in "?" }.joined(separator: ","))) AND NOT (
+                    kind = 'stakeholders' AND payload IS NULL AND (created_at > ? OR EXISTS (
+                        SELECT 1 FROM jobs j WHERE j.meeting_id = jobs.meeting_id AND j.kind IN ('summarize', 'revise')
+                            AND j.status IN ('queued', 'running'))))
+                """, arguments: StatementArguments([JobStatus.queued.rawValue] + kinds + [settle]))
                 .order(Column("id")).fetchOne(db) else { return nil }
             job.status = .running
             job.startedAt = Clock.now()

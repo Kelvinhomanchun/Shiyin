@@ -181,6 +181,7 @@ extension AppModel {
 
     /// 滑過名字的小卡用：每個人的分析（不在人物頁也讀得到），會議頁打開時讀一次
     func stakeholderSummary(_ personId: Int64) -> StakeholderProfile? {
+        _ = stakeholderRevision   // 觀察這個：分析更新時呼叫的畫面跟著重畫
         if let cached = stakeholderCache[personId] { return cached }
         let profile = (try? db.stakeholderProfile(personId))??.decoded
         stakeholderCache[personId] = profile
@@ -246,6 +247,7 @@ extension AppModel {
     func stakeholderUpdated(_ personId: Int64) {
         stakeholderCache[personId] = nil
         stakeholderRecordsCache = nil
+        stakeholderRevision += 1
         analyzingStakeholders.remove(personId)
         if stakeholderPersonId == personId { loadStakeholder(personId) }
     }

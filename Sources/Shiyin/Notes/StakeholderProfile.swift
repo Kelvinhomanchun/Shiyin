@@ -117,6 +117,42 @@ struct StakeholderProfile: Codable, Hashable {
     var confidence: String = ""
     /// 他需要我們提供的東西
     var needs: [String] = []
+
+    // MARK: 人物側寫（第三版，2026-11-25）：像顧問準備見一個人時要知道的（不是他在會議裡做了什麼）
+    // 參考 Chief of Staff 關係人地圖（owns / measured on / this quarter / how they like to work / trusts）、
+    // Umbrex 大客戶管理（strategic priorities、personal wins、risk posture、decision triggers）、
+    // Miller Heiman 的 personal win、Social Styles 的決策風格、Maister / Sobel 的「客戶的議程」
+
+    /// 他的人物側寫
+    struct Portrait: Codable, Hashable {
+        /// 他負責什麼、對什麼結果負責（職責、管的範圍、團隊）
+        var mandate: [Point]
+        /// 他被怎麼評量：他的成功標準、指標、期限
+        var measuredOn: [Point]
+        /// 他現在的議程：這段時間最優先要完成的事
+        var agenda: [Point]
+        /// 壓力來源：上面、外面給他的壓力，他擔心的風險
+        var pressures: [Point]
+        /// 個人的贏面：做成了對他自己有什麼好處（名聲、升遷、證明自己、保住位置），推測要講明
+        var personalWin: String
+        /// 決策風格：怎麼下決定、相信什麼證據、怎麼看風險
+        var decisionStyle: [Point]
+        /// 工作和溝通的方式：直接或委婉、看細節或大方向、節奏
+        var workingStyle: [Point]
+        /// 底線、會讓他反彈的事
+        var redLines: [Point]
+        /// 他聽誰的、相信誰的意見
+        var trustedVoices: [String]
+        static let empty = Portrait(mandate: [], measuredOn: [], agenda: [], pressures: [], personalWin: "", decisionStyle: [],
+                                    workingStyle: [], redLines: [], trustedVoices: [])
+        var isEmpty: Bool {
+            mandate.isEmpty && measuredOn.isEmpty && agenda.isEmpty && pressures.isEmpty && personalWin.isEmpty
+                && decisionStyle.isEmpty && workingStyle.isEmpty && redLines.isEmpty
+        }
+    }
+    var portrait: Portrait = .empty
+    /// 這次更新改了什麼（第一次分析時空的）：每一點一句，例如「態度從存疑變成支持」
+    var changes: [String] = []
     var commitments: [Commitment] = []
     var relationships: [Relationship] = []
     var nextMeeting: NextMeeting = .empty
@@ -155,7 +191,7 @@ struct StakeholderProfile: Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case summary, role, power, powerReason, interest, personality, motivations, topics, readings, advice, openQuestions
         case organization, attitude, attitudeTrend, decisionRole, confidence, needs, commitments, relationships, nextMeeting, projects
-        case workingWithMe
+        case workingWithMe, portrait, changes
     }
 
     init(from decoder: Decoder) throws {
@@ -168,6 +204,7 @@ struct StakeholderProfile: Codable, Hashable {
         decisionRole = v(.decisionRole, ""); confidence = v(.confidence, ""); needs = v(.needs, [])
         commitments = v(.commitments, []); relationships = v(.relationships, []); nextMeeting = v(.nextMeeting, .empty)
         projects = v(.projects, []); workingWithMe = v(.workingWithMe, .empty)
+        portrait = v(.portrait, .empty); changes = v(.changes, [])
     }
 
     static let empty = StakeholderProfile(summary: "", role: "", power: "", powerReason: "", interest: "",
@@ -191,8 +228,9 @@ struct StakeholderProfile: Codable, Hashable {
         let level = #"{"type":"string","enum":["high","medium","low"]}"#
         let attitude = #"{"type":"string","enum":["champion","supporter","neutral","skeptic","blocker"]}"#
         let working = #"{"type":"object","additionalProperties":false,"required":["relationship","trust","expectations","communication","buildTrust","watchOuts","interactions"],"properties":{"relationship":{"type":"string"},"trust":"# + level + #","expectations":"# + strings + #","communication":"# + strings + #","buildTrust":"# + strings + #","watchOuts":"# + strings + #","interactions":"# + readings + "}}"
+        let portrait = #"{"type":"object","additionalProperties":false,"required":["mandate","measuredOn","agenda","pressures","personalWin","decisionStyle","workingStyle","redLines","trustedVoices"],"properties":{"mandate":"# + point + #","measuredOn":"# + point + #","agenda":"# + point + #","pressures":"# + point + #","personalWin":{"type":"string"},"decisionStyle":"# + point + #","workingStyle":"# + point + #","redLines":"# + point + #","trustedVoices":"# + strings + "}}"
         let projects = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["folder","power","interest","attitude","note"],"properties":{"folder":{"type":"string"},"power":"# + level + #","interest":"# + level + #","attitude":"# + attitude + #","note":{"type":"string"}}}}"#
-        return #"{"type":"object","additionalProperties":false,"required":["summary","role","organization","power","powerReason","interest","attitude","attitudeTrend","decisionRole","confidence","personality","motivations","needs","topics","readings","commitments","relationships","nextMeeting","projects","workingWithMe","advice","openQuestions"],"properties":{"summary":{"type":"string"},"role":{"type":"string"},"organization":{"type":"string"},"power":"# + level
+        return #"{"type":"object","additionalProperties":false,"required":["summary","portrait","changes","role","organization","power","powerReason","interest","attitude","attitudeTrend","decisionRole","confidence","personality","motivations","needs","topics","readings","commitments","relationships","nextMeeting","projects","workingWithMe","advice","openQuestions"],"properties":{"summary":{"type":"string"},"portrait":"# + portrait + #","changes":"# + strings + #","role":{"type":"string"},"organization":{"type":"string"},"power":"# + level
             + #","powerReason":{"type":"string"},"interest":"# + level
             + #","attitude":{"type":"string","enum":["champion","supporter","neutral","skeptic","blocker"]},"attitudeTrend":{"type":"string","enum":["improving","stable","declining","unknown"]},"decisionRole":{"type":"string","enum":["decision maker","influencer","gatekeeper","expert","user","other"]},"confidence":"# + level
             + #","personality":"# + point + #","motivations":"# + point + #","needs":"# + strings + #","topics":"# + topics + #","readings":"# + readings
@@ -229,12 +267,75 @@ struct StakeholderProfile: Codable, Hashable {
             if TimeFormat.seconds(c.time) == nil { c.time = "" }
             return c
         }
-        p.projects = projects.filter { !$0.folder.isEmpty }
+        p.projects = Self.mergedProjects(projects.filter { !$0.folder.isEmpty })
+        func cleanPoints(_ list: [Point]) -> [Point] {
+            list.compactMap { $0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : Point(text: $0.text, evidence: clean($0.evidence)) }
+        }
+        p.portrait.mandate = cleanPoints(portrait.mandate)
+        p.portrait.measuredOn = cleanPoints(portrait.measuredOn)
+        p.portrait.agenda = cleanPoints(portrait.agenda)
+        p.portrait.pressures = cleanPoints(portrait.pressures)
+        p.portrait.decisionStyle = cleanPoints(portrait.decisionStyle)
+        p.portrait.workingStyle = cleanPoints(portrait.workingStyle)
+        p.portrait.redLines = cleanPoints(portrait.redLines)
+        p.portrait.personalWin = portrait.personalWin.trimmingCharacters(in: .whitespacesAndNewlines)
+        p.changes = changes.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         p.workingWithMe.interactions = workingWithMe.interactions.compactMap { r in
             var r = r
             r.time = TimeFormat.clean(r.time)
             return meetingIds.contains(r.meetingId) && TimeFormat.seconds(r.time) != nil ? r : nil
         }
+        return p
+    }
+
+    /// 把文字裡的會議編號（Meeting 22、會議 22）換成日期和標題；只換認得的編號，出處的 meetingId 不動
+    func namingMeetings(_ labels: [Int64: String]) -> StakeholderProfile {
+        guard !labels.isEmpty, let regex = try? NSRegularExpression(pattern: #"(\b[Ii]n )?\[?\b(?:[Mm]eeting|會議|会议)\s?#?(?:id=)?(\d+)\b\]?"#) else { return self }  // l10n-skip
+        let json = jsonString()
+        let ns = json as NSString
+        var out = ""
+        var last = 0
+        for match in regex.matches(in: json, range: NSRange(location: 0, length: ns.length)) {
+            guard let id = Int64(ns.substring(with: match.range(at: 2))), let label = labels[id] else { continue }
+            out += ns.substring(with: NSRange(location: last, length: match.range.location - last))
+            // 「In Meeting 22」→「on 2026-11-25 “標題”」
+            if match.range(at: 1).location != NSNotFound { out += ns.substring(with: match.range(at: 1)).hasPrefix("I") ? "On " : "on " }
+            // 放進 JSON 字串：引號、反斜線要跳脫
+            out += label.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            last = match.range.location + match.range.length
+        }
+        guard last > 0 else { return self }
+        out += ns.substring(from: last)
+        return (try? JSONDecoder().decode(StakeholderProfile.self, from: Data(out.utf8))) ?? self
+    }
+
+    /// 同一個案子只留一筆（資料夾改名後，舊名字和新名字各一筆）：留第一筆（新的分析先寫），沒寫的說明用另一筆補
+    static func mergedProjects(_ list: [Project]) -> [Project] {
+        var out: [Project] = []
+        for p in list {
+            if let i = out.firstIndex(where: { $0.folder.caseInsensitiveCompare(p.folder) == .orderedSame }) {
+                if out[i].note.isEmpty { out[i].note = p.note }
+            } else {
+                out.append(p)
+            }
+        }
+        return out
+    }
+
+    /// 資料夾改名：案子的評估跟著改名，跟新名字原本的那筆合併；刪掉資料夾（改成空的）時拿掉
+    func renamingProject(_ old: String, to new: String) -> StakeholderProfile {
+        guard projects.contains(where: { $0.folder.caseInsensitiveCompare(old) == .orderedSame }) else { return self }
+        func same(_ x: String, _ y: String) -> Bool { x.caseInsensitiveCompare(y) == .orderedSame }
+        // 改成的名字原本就有一筆：留原本那筆（它是用新名字分析的），舊的只補說明
+        let existing = projects.filter { same($0.folder, new) }
+        let moved = new.isEmpty ? [] : projects.filter { same($0.folder, old) }.map { project -> Project in
+            var project = project
+            project.folder = new
+            return project
+        }
+        let rest = projects.filter { !same($0.folder, old) && !same($0.folder, new) }
+        var p = self
+        p.projects = Self.mergedProjects(existing + moved) + rest
         return p
     }
 }
@@ -328,6 +429,32 @@ extension AppDatabase {
         }
     }
 
+    /// 還在的資料夾（資料夾表、會議用到的）：分析裡的案子要是其中一個
+    func existingFolders() throws -> Set<String> {
+        try pool.read { db in
+            Set(try String.fetchAll(db, sql: "SELECT name FROM folders UNION SELECT DISTINCT folder FROM meetings WHERE folder <> '' AND deleted_at IS NULL"))
+        }
+    }
+
+    /// 拿掉分析裡已經不在的資料夾的案子評估（這個修正之前改名的資料夾，留下舊名字的一筆）。回傳改了幾個人
+    @discardableResult
+    func pruneStakeholderProjects() throws -> Int {
+        let folders = try existingFolders()
+        guard !folders.isEmpty else { return 0 }
+        return try pool.write { db in
+            var changed = 0
+            for record in try StakeholderRecord.fetchAll(db, sql: "SELECT * FROM stakeholder_profiles WHERE profile <> ''") {
+                guard var profile = record.decoded else { continue }
+                let kept = profile.projects.filter { folders.contains($0.folder) }
+                guard kept.count != profile.projects.count else { continue }
+                profile.projects = kept
+                try db.execute(sql: "UPDATE stakeholder_profiles SET profile = ? WHERE person_id = ?", arguments: [profile.jsonString(), record.personId])
+                changed += 1
+            }
+            return changed
+        }
+    }
+
     func deleteStakeholderProfile(_ personId: Int64) throws {
         try pool.write { db in try db.execute(sql: "DELETE FROM stakeholder_profiles WHERE person_id = ?", arguments: [personId]) }
     }
@@ -343,9 +470,11 @@ extension AppDatabase {
                 """, arguments: [meetingId]) ?? false
         }
         guard ready, try !peopleInMeeting(meetingId).isEmpty else { return false }
-        let queued = try pool.read { db in
-            try Bool.fetchOne(db, sql: "SELECT 1 FROM jobs WHERE meeting_id = ? AND kind = 'stakeholders' AND status = 'queued' AND payload IS NULL",
-                              arguments: [meetingId]) ?? false
+        // 已經有一個在等：重新計時（會議紀錄又改了，等改完再一次分析），不另外排
+        let queued = try pool.write { db -> Bool in
+            try db.execute(sql: "UPDATE jobs SET created_at = ? WHERE meeting_id = ? AND kind = 'stakeholders' AND status = 'queued' AND payload IS NULL",
+                           arguments: [Clock.now(), meetingId])
+            return db.changesCount > 0
         }
         if queued { return false }
         _ = try enqueue(meetingId, kind: .stakeholders)
@@ -395,37 +524,59 @@ enum StakeholderPrompt {
     static func system(_ language: MeetingLanguage) -> String {
         let name = language.profile.outputName ?? language.profile.uiName.en
         return """
-        You are an experienced stakeholder analyst helping a consultant understand a person they meet with. \
-        From the meetings provided, build a stakeholder profile of ONE person (the target). The other people in the excerpts are only context.
+        You are a senior management consultant and executive coach helping the user (a consultant) understand ONE person they work with (the target). \
+        From the meetings provided, write the private profile the user would want before meeting this person: who they are, what they own and are measured on, \
+        what they are trying to achieve and what pressures them, what drives them, how they decide and like to work, and how to work with them. \
+        The other people in the excerpts are only context.
+
+        What a good profile is:
+        - It describes the PERSON, not the meetings. Synthesise across all meetings into stable traits, goals and patterns. Do not narrate what happened in meetings ("In the meeting on … he said …") outside the evidence, readings, commitments and changes fields.
+        - Every point is specific to this person and useful for the user: no generic statements that would fit anyone in that job ("wants the project to succeed"). Name the concrete deliverable, metric, deadline, risk or person.
+        - Separate observation from inference. When something is an inference, say so plainly ("likely", "seems to") and keep it modest; never state a guess as fact.
 
         Rules:
         1. Base everything only on what the target actually said and how they said it in the excerpts, plus the meeting notes for context. Do not use outside knowledge about real people.
-        2. Separate observation from inference. When something is an inference, say so plainly ("seems to", "likely") and keep it modest; never state a guess as fact.
-        3. Every personality point, motivation and topic needs evidence: meetingId (the [Meeting N] number), time exactly as in the excerpt ([mm:ss] or [h:mm:ss], without brackets), and a short quote of the target's own words (at most 25 words, in the original language).
-        4. power: the target's influence over decisions and resources in these meetings (high / medium / low), with powerReason explaining why (title, who defers to them, who decides). interest: how engaged and invested they are overall (high / medium / low).
-        5. topics: the subjects the target cares about, each with interest (high / medium / low) and stance (supportive, opposed, neutral, concerned, undecided… in a few words).
-        6. readings: 3 to 8 notable things the target said where the underlying meaning differs from or goes beyond the literal words (hedging, polite refusal, hidden concern, pressure, a test, an indirect request). quote is their words; meaning is what it most likely signals, considering their role and context. Be culturally aware: Hong Kong / Cantonese and other Asian business communication is often indirect.
-        7. advice: 2 to 5 practical tips for working with this person (how to frame proposals, what to prepare, what to avoid).
-        8. openQuestions: what cannot be judged yet from these meetings.
-        9. When a previous profile is given, update it with the new meetings: keep what still holds, revise what the new evidence changes, add new points, and keep the old evidence that still applies. Do not drop earlier meetings' insights just because they are not in the new excerpts.
-        10. Be concise and professional. This is a private working note for the user; avoid judgmental or offensive wording, and do not speculate about health, religion, politics or other sensitive personal attributes.
-        11. Write every text value (summary, role, organization, powerReason, personality, motivations, needs, topics, stance, meaning, commitments, relationships, nextMeeting, workingWithMe, advice, openQuestions) in \(name). Keep quotes in the original language of the transcript. The enum fields (power, interest, attitude, attitudeTrend, decisionRole, confidence, trust, who) stay exactly as the allowed English values.
-        12. If "Facts from the user" are given, they are ground truth: use them for role, organization, power and decision role, and interpret everything the target says in that light. Do not contradict them; if the meetings seem to conflict, mention it in openQuestions.
-        13. organization: the company or team the target belongs to (client, our firm, vendor, department), if known.
-        14. attitude toward the user's work / project / proposal: champion (actively advocates), supporter, neutral, skeptic (doubts, pushes back), blocker (actively resists). attitudeTrend: improving / stable / declining across the meetings in date order, or unknown with only one meeting.
-        15. decisionRole: decision maker (signs off, owns budget), influencer (shapes the decision), gatekeeper (controls access or process), expert (technical/subject authority), user (affected by the outcome), other.
-        16. confidence: high when the target spoke a lot across several meetings, low when there is little to go on (one short meeting, few lines).
-        17. needs: 2 to 5 concrete things the target needs from the user or the user's team (information, deliverables, reassurance, decisions).
-        18. commitments: promises in the meetings — who "them" (the target promised) or "us" (the user / the user's side promised the target), the commitment in a few words, meetingId and time. Only explicit commitments.
-        19. relationships: how the target relates to other named people in the excerpts (defers to, aligned with, tension with, manages, reports to), with a short note. Only what the excerpts show.
-        20. nextMeeting: a practical plan for the user's next conversation with the target — objective (one sentence), talkingPoints (2 to 4), questions to ask to close the openQuestions (2 to 4), avoid (1 to 3 things that would likely backfire).
-        21. projects: meetings are grouped into projects (the "project/folder" shown on each meeting). For EACH project the target appears in, assess power, interest and attitude on THAT project specifically — the same person can be a decision maker on one project and a bystander on another — with a one-sentence note on their stake in it. folder must be exactly the project name as given. Keep entries from the previous profile for projects not in the new excerpts. The top-level power / interest / attitude are the overall view across all projects.
-        22. workingWithMe: advice written specifically for the user (named in "The user" below; their lines are marked ▲). Base it on how the target and the user actually interact in the excerpts — what the user says and how the target responds, who drives, where they agree or push back. relationship: how the target sees and treats the user (e.g. as an executor, trusted advisor, junior, peer, vendor). trust: high / medium / low. expectations (2 to 4): what the target expects from the user. communication (2 to 4): the format, level of detail, cadence and language that work best with this target. buildTrust (2 to 4): concrete moves that would raise the user's credibility with the target. watchOuts (1 to 3): habits or behaviours of the user in these meetings that may land badly with this target. interactions (1 to 4): telling exchanges, quote = the target's words in reply to the user (meetingId, time), meaning = what it reveals about their working relationship. If the user does not appear with the target, give empty arrays and say so in relationship.
+        2. Meetings are labelled [Meeting id=N]. Put N only in meetingId fields. Never write "Meeting N", meeting ids or "the meeting above" in any text value; when text must refer to a meeting, use its date and short title, e.g. "on 2026-11-25 (AXA weekly progress)".
+        3. Evidence: meetingId, time exactly as in the excerpt ([mm:ss] or [h:mm:ss], without brackets), and a short quote of the target's own words (at most 25 words, in the original language). Give evidence for every point that can be backed by a quote; a point without evidence must be phrased as an inference.
+        4. summary: 3 to 4 sentences, a profile in brief, written so it stays true across meetings: (a) who they are and what they own, (b) what they are driving toward right now and under what pressure, (c) how they operate (style, what they value, how they decide), (d) what this means for the user. No meeting dates, no event narration, no comments about the analysis itself.
+        5. portrait (each list 1 to 4 points, one sentence each, most important first; empty when there is no basis):
+           - mandate: what they are responsible and accountable for — scope, team, budget, systems, deliverables they own.
+           - measuredOn: how their success is judged — the outcomes, metrics, deadlines or approvals they answer for (infer from what they chase and report on; mark inferences).
+           - agenda: their priorities right now, the few things they are trying to get done in the coming weeks or months.
+           - pressures: pressure on them (from their boss, sponsor, customers, regulators, deadlines, budget) and the risks they worry about.
+           - personalWin: one or two sentences on what success would do for them personally (credibility, being proven right, protecting their team, career, reputation). Always phrase as an inference.
+           - decisionStyle: how they make decisions — what evidence they trust (data, artefacts, people, precedent), speed, consensus vs. directive, risk appetite, what they need before saying yes.
+           - workingStyle: how they communicate and like to work — direct or diplomatic, detail or big picture, written or verbal, pace, humour, how they give feedback, how they run meetings.
+           - redLines: what they will not accept or what reliably triggers push-back from them.
+           - trustedVoices: names (or roles) of the people whose opinion they rely on or defer to, from the excerpts only.
+        6. personality: 2 to 4 enduring character traits and values (e.g. "holds people to commitments", "protective of his team"), distinct from workingStyle. motivations: 2 to 4 deeper drivers — what energises them and why they care, distinct from agenda.
+        7. power: the target's influence over decisions and resources (high / medium / low), with powerReason explaining why (title, who defers to them, who decides). interest: how engaged and invested they are overall (high / medium / low).
+        8. topics: the subjects the target cares about, each with interest (high / medium / low) and stance (supportive, opposed, neutral, concerned, undecided… in a few words).
+        9. readings: 3 to 8 notable things the target said where the underlying meaning differs from or goes beyond the literal words (hedging, polite refusal, hidden concern, pressure, a test, an indirect request). quote is their words; meaning is what it most likely signals, considering their role and context. Be culturally aware: Hong Kong / Cantonese and other Asian business communication is often indirect.
+        10. advice: 2 to 5 practical tips for working with this person (how to frame proposals, what to prepare, what to avoid).
+        11. openQuestions: 2 to 5 things about the PERSON the user should still find out (their real authority, what they are measured on, their view on an open decision, their relationship with someone). Only questions about the person and their situation. Never ask about the app or the data: folder or project names, duplicate entries, speaker labels or transcription errors.
+        12. When a previous profile is given, update it with the new meetings: keep what still holds, revise what the new evidence changes, add new points, and keep the old evidence that still applies. Do not drop earlier meetings' insights just because they are not in the new excerpts. If the new material adds nothing, return the previous profile unchanged.
+        13. changes: compared with the previous (or earlier) profile, 0 to 5 short items on what changed about the person — a new priority, a shifted stance or attitude, a new pressure, a commitment made or kept, a revised assessment — each naming the meeting by date as in rule 2, e.g. "Attitude to the BA team moved from critical to supportive (2026-11-25 weekly progress)". Empty when there is no previous profile or nothing changed. Do not list wording or formatting changes.
+        14. Be concise and professional. This is a private working note for the user; avoid judgmental or offensive wording, and do not speculate about health, family, religion, politics or other sensitive personal attributes. If you would not say a line to the person's face, rephrase it.
+        15. Write every text value (summary, portrait, changes, role, organization, powerReason, personality, motivations, needs, topics, stance, meaning, commitments, relationships, nextMeeting, workingWithMe, advice, openQuestions) in \(name). Keep quotes in the original language of the transcript. The enum fields (power, interest, attitude, attitudeTrend, decisionRole, confidence, trust, who) stay exactly as the allowed English values.
+        16. If "Facts from the user" are given, they are ground truth: use them for role, organization, mandate, power and decision role, and interpret everything the target says in that light. Do not contradict them; if the meetings seem to conflict, mention it in openQuestions.
+        17. organization: the company or team the target belongs to (client, our firm, vendor, department), if known.
+        18. attitude toward the user's work / project / proposal: champion (actively advocates), supporter, neutral, skeptic (doubts, pushes back), blocker (actively resists). attitudeTrend: improving / stable / declining across the meetings in date order, or unknown with only one meeting.
+        19. decisionRole: decision maker (signs off, owns budget), influencer (shapes the decision), gatekeeper (controls access or process), expert (technical/subject authority), user (affected by the outcome), other.
+        20. confidence: high when the target spoke a lot across several meetings, low when there is little to go on (one short meeting, few lines).
+        21. needs: 2 to 5 concrete things the target needs from the user or the user's team (information, deliverables, reassurance, decisions).
+        22. commitments: promises in the meetings — who "them" (the target promised) or "us" (the user / the user's side promised the target), the commitment in a few words, meetingId and time. Only explicit commitments.
+        23. relationships: how the target relates to other named people in the excerpts (defers to, aligned with, tension with, manages, reports to), with a short note. Only what the excerpts show.
+        24. nextMeeting: a practical plan for the user's next conversation with the target — objective (one sentence), talkingPoints (2 to 4), questions to ask to close the openQuestions (2 to 4), avoid (1 to 3 things that would likely backfire).
+        25. projects: meetings are grouped into projects (the "project/folder" shown on each meeting). For EACH project the target appears in, assess power, interest and attitude on THAT project specifically — the same person can be a decision maker on one project and a bystander on another — with a one-sentence note on their stake in it. folder must be exactly the project name as given. Keep entries from the previous profile for projects not in the new excerpts. The top-level power / interest / attitude are the overall view across all projects.
+        26. workingWithMe: advice written specifically for the user (named in "The user" below; their lines are marked ▲). Base it on how the target and the user actually interact in the excerpts — what the user says and how the target responds, who drives, where they agree or push back. relationship: how the target sees and treats the user (e.g. as an executor, trusted advisor, junior, peer, vendor). trust: high / medium / low. expectations (2 to 4): what the target expects from the user. communication (2 to 4): the format, level of detail, cadence and language that work best with this target. buildTrust (2 to 4): concrete moves that would raise the user's credibility with the target. watchOuts (1 to 3): habits or behaviours of the user in these meetings that may land badly with this target. interactions (1 to 4): telling exchanges, quote = the target's words in reply to the user (meetingId, time), meaning = what it reveals about their working relationship. If the user does not appear with the target, give empty arrays and say so in relationship.
         """
     }
 
+    /// comparison：重新分析（從全部會議重做）時的上一版，只用來寫「這次改了什麼」
     static func prompt(person: String, otherNames: [String], previous: StakeholderProfile?, meetings: [MeetingMaterial],
-                       userRole: String = "", userOrg: String = "", userNotes: String = "", me: String? = nil) -> String {
+                       userRole: String = "", userOrg: String = "", userNotes: String = "", me: String? = nil,
+                       comparison: StakeholderProfile? = nil) -> String {
         var out: [String] = []
         out.append("Target person: \(person)")
         out.append("The user (who will read this analysis): " + (me ?? "the person who recorded these meetings (not identified in the transcript)"))
@@ -441,11 +592,15 @@ enum StakeholderPrompt {
             out.append("")
             out.append("Previous profile (JSON), to update:")
             out.append(previous.jsonString())
+        } else if let comparison {
+            out.append("")
+            out.append("Earlier profile (JSON), for the changes field only. Rebuild the profile from the meetings below; do not copy it:")
+            out.append(comparison.jsonString())
         }
         for m in meetings {
             out.append("")
             // 子資料夾是「客戶/案子」：projects 用完整的路徑當 folder，分析時看得出是哪個客戶的哪個案子
-            out.append("[Meeting \(m.id)] \(m.title) (\(m.date))" + (m.folder.isEmpty ? "" :
+            out.append("[Meeting id=\(m.id)] \(m.date) · \(m.title)" + (m.folder.isEmpty ? "" :
                 FolderPath.isSub(m.folder) ? " — account: \(FolderPath.account(m.folder)), project/folder: \(m.folder)" : " — project/folder: \(m.folder)"))
             if !m.context.isEmpty {
                 out.append("Meeting notes (context):")

@@ -113,6 +113,17 @@ struct StakeholderCard: View {
                     .textSelection(.enabled)
                     .padding(.top, 2)
             }
+            if let profile, !profile.changes.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("這次更新", systemImage: "arrow.triangle.2.circlepath").font(.callout.weight(.semibold)).foregroundStyle(Color.celadon)
+                    ForEach(Array(profile.changes.enumerated()), id: \.offset) { _, change in
+                        Text("• " + change).font(.callout).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.celadon.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+            }
             if let record, let profile { footnote(record, profile) }
         }
         .padding(16)
@@ -227,13 +238,15 @@ struct StakeholderContextEditor: View {
 
 // MARK: - 內容
 
-/// 分析的內容分成五個分頁（UX：一頁太長、沒有分組）。照顧問準備見面的順序：
-/// 先「怎麼做」（下次見面、怎麼跟你合作）→「讀懂他」→「他在意什麼」→「他的人脈」→「記錄」（待辦、會議）
+/// 分析的內容分成六個分頁（UX：一頁太長、沒有分組）。照顧問準備見一個人的順序：
+/// 先「他是誰」（職責、評量、議程、壓力、決策和工作方式）→「怎麼做」（下次見面、怎麼跟你合作）→「讀懂他」→
+/// 「他在意什麼」→「他的人脈」→「記錄」（待辦、會議）
 enum StakeholderTab: String, CaseIterable, Identifiable {
-    case plan, read, interests, network, record
+    case profile, plan, read, interests, network, record
     var id: String { rawValue }
     var label: String {
         switch self {
+        case .profile: return String(localized: "他是誰")
         case .plan: return String(localized: "怎麼做")
         case .read: return String(localized: "讀懂他")
         case .interests: return String(localized: "在意什麼")
@@ -293,6 +306,7 @@ struct StakeholderDetails: View {
             // 自己畫的分頁列放得下就一行，放不下就可以左右捲，不會撐出欄外
             StakeholderTabBar(selection: $model.stakeholderTab)
             switch model.stakeholderTab {
+            case .profile: portrait
             case .plan: plan
             case .read: read
             case .interests: interests
@@ -301,6 +315,46 @@ struct StakeholderDetails: View {
             }
             if model.stakeholderTab != .record {
                 Text("這是整理工具從他說的話推測的，只供參考；你填的背景會優先。").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: 他是誰
+
+    /// 人物側寫：先看他對什麼負責、被怎麼評量、現在要完成什麼、壓力在哪，再看他怎麼下決定、怎麼做事、個性和動機
+    @ViewBuilder
+    private var portrait: some View {
+        let p = profile.portrait
+        VStack(alignment: .leading, spacing: 22) {
+            if !p.mandate.isEmpty || !p.measuredOn.isEmpty {
+                pointColumns((String(localized: "負責什麼"), p.mandate), (String(localized: "怎麼評量他"), p.measuredOn))
+            }
+            if !p.agenda.isEmpty || !p.pressures.isEmpty {
+                pointColumns((String(localized: "現在要完成的"), p.agenda), (String(localized: "壓力和擔心"), p.pressures))
+            }
+            if !p.personalWin.isEmpty {
+                block(String(localized: "對他自己的好處")) {
+                    Text(p.personalWin).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                    Text("推測，只供參考").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if !p.decisionStyle.isEmpty || !p.workingStyle.isEmpty {
+                pointColumns((String(localized: "怎麼下決定"), p.decisionStyle), (String(localized: "怎麼做事、溝通"), p.workingStyle))
+            }
+            if !profile.personality.isEmpty || !profile.motivations.isEmpty {
+                pointColumns((String(localized: "個性"), profile.personality), (String(localized: "動力來源"), profile.motivations))
+            }
+            if !p.redLines.isEmpty { block(String(localized: "底線、會讓他反彈的事")) { points(p.redLines) } }
+            if !p.trustedVoices.isEmpty {
+                block(String(localized: "他聽誰的")) {
+                    Text(p.trustedVoices.joined(separator: "、")).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)  // l10n-skip
+                }
+            }
+            if p.isEmpty {
+                if profile.personality.isEmpty && profile.motivations.isEmpty { empty } else {
+                    Text("這是舊版的分析，還沒有職責、評量、議程這些。按「重新分析」用新的方式整理。")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }
@@ -399,10 +453,8 @@ struct StakeholderDetails: View {
                     }
                 }
             }
-            if !profile.personality.isEmpty { block(String(localized: "個性與溝通風格")) { points(profile.personality) } }
-            if !profile.motivations.isEmpty { block(String(localized: "在意的事、動機")) { points(profile.motivations) } }
-            if !profile.openQuestions.isEmpty { block(String(localized: "還看不出來的地方")) { bullets(profile.openQuestions) } }
-            if profile.readings.isEmpty && profile.personality.isEmpty && profile.motivations.isEmpty { empty }
+            if !profile.openQuestions.isEmpty { block(String(localized: "還要弄清楚的")) { bullets(profile.openQuestions) } }
+            if profile.readings.isEmpty && profile.openQuestions.isEmpty { empty }
         }
     }
 
@@ -505,6 +557,29 @@ struct StakeholderDetails: View {
                 }
             }
         }
+    }
+
+    /// 兩組有出處的重點：放得下並排，放不下上下
+    @ViewBuilder
+    private func pointColumns(_ a: (String, [StakeholderProfile.Point]), _ b: (String, [StakeholderProfile.Point])) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 24) {
+                if !a.1.isEmpty { pointColumn(a.0, a.1) }
+                if !b.1.isEmpty { pointColumn(b.0, b.1) }
+            }
+            VStack(alignment: .leading, spacing: 18) {
+                if !a.1.isEmpty { pointColumn(a.0, a.1) }
+                if !b.1.isEmpty { pointColumn(b.0, b.1) }
+            }
+        }
+    }
+
+    private func pointColumn(_ title: String, _ items: [StakeholderProfile.Point]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).contentTitleFont(16)
+            points(items)
+        }
+        .frame(minWidth: 240, maxWidth: .infinity, alignment: .leading)
     }
 
     private func column(_ title: String, _ items: [String]) -> some View {

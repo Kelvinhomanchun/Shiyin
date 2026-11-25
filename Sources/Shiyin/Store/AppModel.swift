@@ -477,6 +477,8 @@ final class AppModel {
         purgeExpiredTrash()
         purgeExpiredEdits()
         recoverRecordings()
+        // 與會者分析裡已經不在的資料夾（改名前留下的）
+        if (try? db.pruneStakeholderProjects()) ?? 0 > 0 { stakeholderCache = [:] }
         runner.start()
         // 語言偵測模型很小（60 MB），開著自動偵測就先下載好
         if AppSettings.autoDetectLanguage { models.autoStart(.languageDetection) }
@@ -1827,8 +1829,10 @@ final class AppModel {
     var actionDone: Set<String> = []
     /// 名字小卡用的分析（stakeholderSummary），分析更新時清掉那一個人
     @ObservationIgnored var stakeholderCache: [Int64: StakeholderProfile?] = [:]
+    /// 分析更新了幾次：快取不在觀察裡，會議頁的與會者、名字小卡讀這個，分析好了才會重畫（fork，2026-11-25）
+    var stakeholderRevision = 0
     /// 人物頁分析看哪個分頁（換人時保留，比較同一面向）
-    var stakeholderTab: StakeholderTab = .plan
+    var stakeholderTab: StakeholderTab = .profile
     /// 關係人地圖看哪個資料夾（空字串 = 所有會議）
     var stakeholderMapFolder = ""
     var stakeholderMapChosen = false

@@ -53,3 +53,33 @@ The **Stakeholder map** opens from the People header ("Map") as a window: a 2×2
 ## 4. Data
 
 `stakeholder_profiles` gains `user_role`, `user_org`, `user_notes` (user context, kept across re-analysis). Profile JSON gains: `organization`, `quadrant`, `attitude`, `attitudeTrend`, `decisionRole`, `confidence`, `needs[]`, `commitments[] {who, text, meetingId, time}`, `relationships[] {person, relation, note}`, `nextMeeting {objective, talkingPoints[], questions[], avoid[]}`. Old profiles decode with defaults; they are re-analysed after install.
+
+## 5. Version 3: a profile of the person, not a diary of meetings (2026-11-25)
+
+**Problem.** The summary narrated meeting events ("In Meeting 22 he…"). It read like notes from several meetings, not a briefing on a person. Open questions mixed in app housekeeping (duplicate folder names). Meetings were cited by internal number.
+
+**What a consultant wants to know before meeting someone** draws on chief-of-staff stakeholder maps (*owns · measured on · this quarter · how they like to work · trusts*), key-account management (*strategic priorities, personal wins, risk posture, decision triggers*), Miller Heiman's *personal win*, Social Styles (*how they decide*) and Maister/Sobel (*the client's agenda*). The new **portrait** has these fields:
+
+| Field | Question it answers |
+|---|---|
+| mandate | What do they own and answer for? |
+| measuredOn | How is their success judged (outcomes, metrics, deadlines)? |
+| agenda | What are they trying to get done right now? |
+| pressures | What pressure are they under, and what risks worry them? |
+| personalWin | What would success do for them personally? (always marked as inferred) |
+| decisionStyle | What evidence they trust, speed, consensus or directive, risk appetite |
+| workingStyle | Direct or diplomatic, detail or big picture, pace, humour, feedback |
+| redLines | What triggers push-back |
+| trustedVoices | Whose opinion they rely on |
+
+The existing *personality* (enduring traits and values) and *motivations* (deeper drivers) stay, and move into the same tab.
+
+**Other changes.**
+- **Summary:** 3–4 sentences that stay true across meetings (who they are, what they're driving toward, how they operate, what it means for you). No meeting narration.
+- **What changed:** 0–5 items comparing this update with the previous profile, each citing the meeting by date. Shown on the card, so after a meeting you can see at a glance what the update changed. On a full re-analysis, the earlier profile is sent only for this comparison.
+- **Meetings by date and title:** the prompt labels meetings `[Meeting id=N] date · title` and forbids ids in text. Any "Meeting N" left in the answer is replaced with `date “title”`.
+- **Open questions** are about the person only, never about the app or the data.
+- **Person page tabs:** **Who they are** (portrait, then character and drivers) → Plan → Read them (readings and what to find out) → Interests → Network → Record.
+- **Freshness:** the attendee row and hover cards redraw when an analysis finishes (an observed revision counter).
+- **Automatic analysis waits:** it runs one minute after the notes settle, not after every edit.
+- **Renamed folders:** project entries are renamed with the folder and merged. On startup and after each analysis, entries for folders that no longer exist are dropped.

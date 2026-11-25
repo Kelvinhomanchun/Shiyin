@@ -3976,6 +3976,40 @@
         }
       }
     },
+    "他是誰": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他是谁"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who they are"
+          }
+        }
+      }
+    },
+    "他聽誰的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他听谁的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who they listen to"
+          }
+        }
+      }
+    },
     "他說的話還不多。按「補充背景」填他的角色和你知道的事，分析會準一些。": {
       "extractionState": "manual",
       "localizations": {
@@ -4976,19 +5010,19 @@
         }
       }
     },
-    "個性與溝通風格": {
+    "個性": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personality and communication style"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "个性与沟通风格"
+            "value": "个性"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Character"
           }
         }
       }
@@ -7318,6 +7352,23 @@
         }
       }
     },
+    "動力來源": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动力来源"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What drives them"
+          }
+        }
+      }
+    },
     "包含時間點": {
       "extractionState": "manual",
       "localizations": {
@@ -8975,23 +9026,6 @@
         }
       }
     },
-    "在意的事、動機": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Motivations and concerns"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在意的事、动机"
-          }
-        }
-      }
-    },
     "在播放頭的位置切開，後半變成新的一場": {
       "extractionState": "manual",
       "localizations": {
@@ -9250,6 +9284,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "填他的实际角色、组织和你知道的背景；分析会以这些为准"
+          }
+        }
+      }
+    },
+    "壓力和擔心": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "压力和担心"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressures and worries"
           }
         }
       }
@@ -9692,6 +9743,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "专家"
+          }
+        }
+      }
+    },
+    "對他自己的好處": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对他自己的好处"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's in it for them"
           }
         }
       }
@@ -11215,6 +11283,23 @@
         }
       }
     },
+    "底線、會讓他反彈的事": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "底线、会让他反弹的事"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red lines and what triggers push-back"
+          }
+        }
+      }
+    },
     "建立": {
       "extractionState": "manual",
       "localizations": {
@@ -11964,6 +12049,23 @@
         }
       }
     },
+    "怎麼下決定": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "怎么下决定"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How they decide"
+          }
+        }
+      }
+    },
     "怎麼做": {
       "extractionState": "manual",
       "localizations": {
@@ -11981,6 +12083,23 @@
         }
       }
     },
+    "怎麼做事、溝通": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "怎么做事、沟通"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How they work and communicate"
+          }
+        }
+      }
+    },
     "怎麼溝通最有效": {
       "extractionState": "manual",
       "localizations": {
@@ -11994,6 +12113,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "怎么沟通最有效"
+          }
+        }
+      }
+    },
+    "怎麼評量他": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "怎么评量他"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How they're measured"
           }
         }
       }
@@ -14224,6 +14360,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "推测"
+          }
+        }
+      }
+    },
+    "推測，只供參考": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推测，只供参考"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inferred, for reference only"
           }
         }
       }
@@ -20119,6 +20272,23 @@
         }
       }
     },
+    "現在要完成的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现在要完成的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current agenda"
+          }
+        }
+      }
+    },
     "琥珀色是辨識信心低的段落": {
       "extractionState": "manual",
       "localizations": {
@@ -24256,6 +24426,23 @@
         }
       }
     },
+    "負責什麼": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "负责什么"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What they own"
+          }
+        }
+      }
+    },
     "負責的待辦": {
       "extractionState": "manual",
       "localizations": {
@@ -26197,6 +26384,23 @@
         }
       }
     },
+    "這是舊版的分析，還沒有職責、評量、議程這些。按「重新分析」用新的方式整理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是旧版的分析，还没有职责、评量、议程这些。按“重新分析”用新的方式整理。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This analysis is from an older version and doesn't have responsibilities, success measures or agenda yet. Click Reanalyse to build it the new way."
+          }
+        }
+      }
+    },
     "這次不用": {
       "extractionState": "manual",
       "localizations": {
@@ -26210,6 +26414,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这次不用"
+          }
+        }
+      }
+    },
+    "這次更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这次更新"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What changed"
           }
         }
       }
@@ -27288,19 +27509,19 @@
         }
       }
     },
-    "還看不出來的地方": {
+    "還要弄清楚的": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not clear yet"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还看不出来的地方"
+            "value": "还要弄清楚的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Still to find out"
           }
         }
       }

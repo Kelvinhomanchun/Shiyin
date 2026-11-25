@@ -427,7 +427,8 @@ enum DebugControl {
         case "stakeholdercontext": if let id { model.saveStakeholderContext(id, role: args[2], org: args.count > 3 ? args[3] : "", notes: args.count > 4 ? args[4] : "") }   // stakeholdercontext <人物 id> <角色> [組織] [背景]
         case "notesquery": model.notesQuery = args.count > 1 ? args.dropFirst().joined(separator: " ") : ""   // notesquery [字]：會議紀錄的搜尋
         case "actiondone": if let id, args.count > 2 { model.toggleActionDone(id, args.dropFirst(2).joined(separator: " ")) }   // actiondone <會議 id> <事項>
-        case "stakeholdertab": if args.count > 1, let tab = StakeholderTab(rawValue: args[1]) { model.stakeholderTab = tab }   // stakeholdertab plan|read|interests|network|record
+        case "stakeholdertab": if args.count > 1, let tab = StakeholderTab(rawValue: args[1]) { model.stakeholderTab = tab }   // stakeholdertab profile|plan|read|interests|network|record
+        case "settle": AppDatabase.stakeholderSettleSeconds = Double(args[1]) ?? 60   // settle <秒>：自動的與會者分析要等多久
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
         case "template": model.selection = id; model.setTemplate(args[2])
         case "language": model.selection = id; model.setMeetingLanguage(MeetingLanguage(rawValue: args[2]) ?? .zh)
