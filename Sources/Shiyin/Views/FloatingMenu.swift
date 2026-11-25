@@ -77,13 +77,28 @@ final class FloatingMenuController {
         }
     }
 
+    func debugOpenSubmenu(_ index: Int) { state?.hover(index) }
+    /// 當成游標移到面板裡的 (x, y)（左上原點），回傳亮起來的那一項
+    func debugMove(_ x: Double, _ y: Double) -> String {
+        guard let state else { return "" }
+        state.trackMouse(CGPoint(x: x, y: y))
+        if let j = state.subHighlighted, state.submenuEntries.indices.contains(j) { return state.submenuEntries[j].title }
+        if let i = state.highlighted, state.entries.indices.contains(i) { return state.entries[i].title }
+        return ""
+    }
+    func debugKey(_ code: UInt16) {
+        guard let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                                           characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: code) else { return }
+        _ = state?.handleKey(event)
+    }
+
     var debugFrame: NSRect? { panel?.frame }
     var debugWindowNumber: Int { panel?.windowNumber ?? -1 }
 
     var debugState: String {
         guard let state else { return "" }
         let mouse = state.lastPoint.map { "\(Int($0.x)),\(Int($0.y))" } ?? "-"
-        return "open=\(state.openSubmenu ?? -1) hl=\(state.highlighted ?? -1) sub=\(state.subHighlighted ?? -1) frame=\(state.submenuFrame) mouse=\(mouse)"
+        return "open=\(state.openSubmenu ?? -1) hl=\(state.highlighted ?? -1) sub=\(state.subHighlighted ?? -1) frame=\(state.submenuFrame) off=\(Int(state.scrollOffset)),\(Int(state.subScrollOffset)) mouse=\(mouse)"
     }
     #endif
 
@@ -93,6 +108,10 @@ final class FloatingMenuController {
         guard !entries.isEmpty else { return }
         let state = FloatingMenuState(entries: entries) { [weak self] in self?.close() }
         self.state = state
+        // 選單、子選單最多多高（螢幕放不下時改成可以捲，2026-11-25 使用者「合併到」的名單太長、下面的人選不到）
+        let inset = FloatingMenuView.shadowInset
+        let screenFrame = (NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main)?.visibleFrame
+        if let screenFrame { state.maxHeight = screenFrame.height - inset * 2; state.availableBelowTop = state.maxHeight }
         let host = NSHostingView(rootView: FloatingMenuView(state: state) { [weak self] size in self?.resize(to: size) })
         host.sizingOptions = []
         let size = host.fittingSize
@@ -112,13 +131,14 @@ final class FloatingMenuController {
         panel.contentView = host
 
         // 內容外面留了 12 點畫陰影，看得到的選單左上角對齊這一點
-        let inset = FloatingMenuView.shadowInset
         var origin = NSPoint(x: point.x - inset, y: point.y + inset - size.height)
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(point) })?.visibleFrame {
             if origin.y < screen.minY { origin.y = min(point.y + 4, screen.maxY - size.height) }
             if origin.x + size.width > screen.maxX { origin.x = screen.maxX - size.width }
         }
         topLeft = NSPoint(x: origin.x, y: origin.y + size.height)
+        // 子選單從選單上緣往下最多能放多高（螢幕下緣為止）
+        if let screenFrame { state.availableBelowTop = max(120, topLeft.y - screenFrame.minY - inset * 2) }
         panel.setFrame(NSRect(origin: origin, size: size), display: true)
         panel.orderFront(nil)
         self.panel = panel
@@ -196,6 +216,12 @@ final class FloatingMenuState {
     var highlighted: Int?
     var openSubmenu: Int?
     var subHighlighted: Int?
+    /// 一層選單最多多高（螢幕的可用高度）、子選單從選單上緣往下能放多高；超過的那一層可以捲
+    /// 捲動的那一層往下捲了多少（列的框是沒捲時量的，找游標在哪一列時加回去）
+    @ObservationIgnored var scrollOffset: CGFloat = 0
+    @ObservationIgnored var subScrollOffset: CGFloat = 0
+    @ObservationIgnored var maxHeight: CGFloat = .infinity
+    @ObservationIgnored var availableBelowTop: CGFloat = .infinity
 
     init(entries: [MenuEntry], dismiss: @escaping () -> Void) {
         self.entries = entries
@@ -218,6 +244,7 @@ final class FloatingMenuState {
     @ObservationIgnored private var pendingSwitch: Task<Void, Never>?
     /// 子選單在面板裡的框、最後一次滑鼠移動的位置（都是左上原點）：換子選單之前看游標是不是已經在子選單裡
     @ObservationIgnored var submenuFrame: CGRect = .zero
+    @ObservationIgnored var mainFrame: CGRect = .zero
     @ObservationIgnored var lastPoint: CGPoint?
 
     func hover(_ index: Int) {
@@ -226,7 +253,7 @@ final class FloatingMenuState {
         let apply = { [weak self] in
             guard let self else { return }
             if case .submenu = self.entries[index].kind, self.entries[index].enabled {
-                if self.openSubmenu != index { self.openSubmenu = index; self.subHighlighted = nil; self.subRowFrames = [:] }
+                if self.openSubmenu != index { self.openSubmenu = index; self.subHighlighted = nil; self.subRowFrames = [:]; self.subScrollOffset = 0 }
             } else {
                 self.openSubmenu = nil
                 self.subRowFrames = [:]
@@ -252,9 +279,12 @@ final class FloatingMenuState {
 
     func trackMouse(_ point: CGPoint) {
         lastPoint = point
-        if openSubmenu != nil, let j = subRowFrames.first(where: { $0.value.contains(point) })?.key {
+        // 列的框是在那一層自己的座標量的（捲動時不變），游標的位置換成那一層裡、加上捲了多少
+        func inPanel(_ frame: CGRect, _ offset: CGFloat) -> CGPoint { CGPoint(x: point.x - frame.minX, y: point.y - frame.minY + offset) }
+        if openSubmenu != nil, submenuFrame.contains(point),
+           let j = subRowFrames.first(where: { $0.value.contains(inPanel(submenuFrame, subScrollOffset)) })?.key {
             if subHighlighted != j { hoverSubmenu(j) }
-        } else if let i = rowFrames.first(where: { $0.value.contains(point) })?.key {
+        } else if mainFrame.contains(point), let i = rowFrames.first(where: { $0.value.contains(inPanel(mainFrame, scrollOffset)) })?.key {
             if highlighted != i || (openSubmenu == nil && isSubmenu(i)) { hover(i) }
         } else if openSubmenu == nil || !submenuFrame.contains(point) {
             if highlighted != openSubmenu { highlighted = openSubmenu }
@@ -314,11 +344,14 @@ struct FloatingMenuView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
             panel(state.entries, sub: false)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { state.mainFrame = $0 }
             if state.openSubmenu != nil {
-                // 用 padding 不用 offset：面板的大小要算到子選單往下挪的部分，不然下面被切掉
+                // 用 padding 不用 offset：面板的大小要算到子選單往下挪的部分，不然下面被切掉。
+                // 放不下時往上挪（最多挪到選單上緣），還放不下就可以捲
+                let height = min(Self.height(of: state.submenuEntries), state.availableBelowTop)
                 panel(state.submenuEntries, sub: true)
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { state.submenuFrame = $0 }
-                    .padding(.top, submenuOffset)
+                    .padding(.top, max(0, min(submenuOffset, state.availableBelowTop - height)))
             }
         }
         .padding(FloatingMenuView.shadowInset)   // 陰影的空間
@@ -334,11 +367,39 @@ struct FloatingMenuView: View {
             + CGFloat(before.filter(\.isDivider).count) * FloatingMenuView.dividerHeight
     }
 
+    /// 一層選單全部展開的高度（含上下 5 點）
+    static func height(of entries: [MenuEntry]) -> CGFloat {
+        CGFloat(entries.filter { !$0.isDivider }.count) * rowHeight + CGFloat(entries.filter(\.isDivider).count) * dividerHeight + 10
+    }
+
     static let rowHeight: CGFloat = 30
     static let shadowInset: CGFloat = 12
     static let dividerHeight: CGFloat = 9
 
+    @ViewBuilder
     private func panel(_ entries: [MenuEntry], sub: Bool) -> some View {
+        let limit = sub ? state.availableBelowTop : state.maxHeight
+        if Self.height(of: entries) > limit {
+            // 太長：固定高度、可以捲（滑鼠滾輪、觸控板），鍵盤上下移時捲到亮著的那一項
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) { rows(entries, sub: sub).fixedSize() }
+                    .scrollIndicators(.visible)
+                    .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, y in
+                        if sub { state.subScrollOffset = y } else { state.scrollOffset = y }
+                    }
+                    .frame(height: limit)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .onChange(of: sub ? state.subHighlighted : state.highlighted) { _, i in
+                        if let i, entries.indices.contains(i) { proxy.scrollTo(entries[i].id) }
+                    }
+            }
+            .modifier(MenuPanelChrome())
+        } else {
+            rows(entries, sub: sub).fixedSize().modifier(MenuPanelChrome())
+        }
+    }
+
+    private func rows(_ entries: [MenuEntry], sub: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                 if entry.isDivider {
@@ -346,18 +407,29 @@ struct FloatingMenuView: View {
                         .padding(.horizontal, 8).padding(.vertical, 4)
                 } else {
                     row(entry, highlighted: sub ? state.subHighlighted == index : (state.highlighted == index || state.openSubmenu == index))
-                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.rowsSpace)) } action: { frame in
                             if sub { state.subRowFrames[index] = frame } else { state.rowFrames[index] = frame }
                         }
                         .onTapGesture {
                             if case .submenu = entry.kind { if !sub { state.hover(index) } } else { state.activate(entry) }
                         }
+                        .id(entry.id)
                 }
             }
         }
         .padding(5)
         .frame(minWidth: 200, alignment: .leading)
-        .fixedSize()
+        .coordinateSpace(.named(Self.rowsSpace))
+    }
+
+    /// 列的框在那一層自己的座標量（左上原點、不跟著捲動）
+    static let rowsSpace = "floatingMenuRows"
+}
+
+/// 選單面板的底：圓角 14、深色模式深灰、淺色白、陰影、細框
+private struct MenuPanelChrome: ViewModifier {
+    func body(content: Content) -> some View {
+        content
         .background {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color(nsColor: NSColor(name: nil) { appearance in
@@ -367,8 +439,10 @@ struct FloatingMenuView: View {
         }
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
     }
+}
 
-    private func row(_ entry: MenuEntry, highlighted: Bool) -> some View {
+extension FloatingMenuView {
+    fileprivate func row(_ entry: MenuEntry, highlighted: Bool) -> some View {
         let color: Color = entry.destructive ? .red : .primary
         return HStack(spacing: 10) {
             Group {

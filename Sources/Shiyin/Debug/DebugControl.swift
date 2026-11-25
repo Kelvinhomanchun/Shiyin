@@ -118,6 +118,20 @@ enum DebugControl {
         // 自己畫的選單（R105）：floatpick <項目>（子選單「移到資料夾 ▸ 客戶」）選開著的那一項；floatclose 關掉
         case "floatpick": if args.count > 1 { FloatingMenuController.shared.debugPick(args.dropFirst().joined(separator: " ")) }
         case "floatclose": FloatingMenuController.shared.close()
+        // floatperson <人物 id> <x> <y> [子選單位置]：在螢幕的 (x, y)（左下原點）打開那個人的選單，給了位置就打開那一項的子選單（長名單捲動的驗收）
+        case "floatperson":
+            if args.count > 3, let pid = Int64(args[1]), let x = Double(args[2]), let y = Double(args[3]),
+               let person = model.peopleOverview.first(where: { $0.id == pid }) {
+                FloatingMenuController.shared.show(model.personMenu(person), at: NSPoint(x: x, y: y), from: NSApp.windows.first { $0.identifier?.rawValue == "main" })
+                if args.count > 4, let i = Int(args[4]) { FloatingMenuController.shared.debugOpenSubmenu(i) }
+            }
+        case "floatmove":   // floatmove <x> <y> <輸出.json>：游標移到選單面板裡的 (x, y)（左上原點），寫出亮起來的那一項
+            if args.count > 3, let x = Double(args[1]), let y = Double(args[2]) {
+                write(["hit": FloatingMenuController.shared.debugMove(x, y)], to: args[3])
+            }
+        case "floatkey":   // floatkey <down|up|right|left>：在開著的選單按方向鍵
+            let codes: [String: UInt16] = ["down": 125, "up": 126, "right": 124, "left": 123]
+            if args.count > 1, let code = codes[args[1]] { FloatingMenuController.shared.debugKey(code) }
         case "floatothers": FloatingMenuController.shared.ignoreOtherApps = args.count > 1 && args[1] == "off"   // floatothers off：點別的 app 不關選單
         case "foldernew": if args.count > 1 { model.createFolder(args[1]) }   // 等於按「資料夾」標題的「+」建立（R104）
         case "importinto": if args.count > 2 { model.importDropped([URL(fileURLWithPath: args[2])], into: args[1]) }   // 等於從 Finder 把檔案拖到資料夾（R103.3）
