@@ -246,6 +246,8 @@ final class JobRunner {
     @ObservationIgnored var onStakeholderUpdated: ((Int64) -> Void)?
     /// 分析的工作結束（成功或失敗）：人物頁的「分析中」要停
     @ObservationIgnored var onStakeholdersFinished: ((Job, Error?) -> Void)?
+    /// 我的表現（fork）：教練建議更新好了、或失敗了
+    @ObservationIgnored var onCoachingFinished: ((Job, Error?) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
     /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
@@ -349,6 +351,7 @@ final class JobRunner {
             case .correct: await correct(job, lane: lane)
             case .clean: try await clean(job, lane: lane)
             case .stakeholders: try await stakeholders(job, lane: lane)
+            case .coaching: try await coaching(job, lane: lane)
             case .nameSpeakers: await nameSpeakers(job, lane: lane)
             case .rediarize: try await rediarize(job, lane: lane)
             }
@@ -382,6 +385,7 @@ final class JobRunner {
             // 壓縮、逐字稿校正是背景的輔助工作，不發通知；有草稿時正式版不再發（design §21.3）
             if !job.kind.isAuxiliary && (notify || failure != nil) { onFinished?(job, failure) }
             if job.kind == .stakeholders { onStakeholdersFinished?(job, failure) }
+            if job.kind == .coaching { onCoachingFinished?(job, failure) }
         }
         onChange?()
     }
@@ -581,7 +585,7 @@ final class JobRunner {
             let count = Set(assigned.compactMap { $0 }).count
             log.info("rediarized meeting \(job.meetingId): \(count) speakers, \(inherited.count) names kept")
             // 誰說了哪句換過了：與會者的分析重送這場會議
-            if AppSettings.summarizerReady { try db.enqueueStakeholderRefresh(job.meetingId) }
+            if AppSettings.summarizerReady { try db.enqueueStakeholderRefresh(job.meetingId); try db.enqueueCoachingRefresh(job.meetingId) }
             onRediarized?(job.meetingId, .success(count))
             wake()
         } catch {
@@ -884,6 +888,93 @@ final class JobRunner {
         log.info("stakeholder \(personId) updated from \(materials.count) meetings")
     }
 
+    // MARK: 我的表現（fork）
+
+    struct CoachingPayload: Codable { var rebuild: Bool = true }
+
+    /// 教練建議：自動的（會議整理完）只送還沒看過的會議、更新上一版；按「重新整理」從全部會議重寫
+    private func coaching(_ job: Job, lane: JobLane) async throws {
+        let provider = AppSettings.provider
+        guard provider != .none else { return }
+        let rebuild = job.payload.flatMap { try? JSONDecoder().decode(CoachingPayload.self, from: Data($0.utf8)) }?.rebuild ?? false
+        guard let personId = try db.myPersonIds().sorted().first,
+              let me = try db.peopleOverview().first(where: { $0.id == personId }) else { return }
+        running[lane]?.provider = provider
+        running[lane]?.stage = String(localized: "整理我的表現")
+        let (stats, _) = try db.coachingStats(personId)
+        guard stats.count >= 2 else { return }
+        let stored = try db.coachingRecord(personId)
+        let existing = rebuild ? nil : stored?.decoded
+        let done = existing == nil ? [] : (stored?.analyzedMeetings ?? [])
+        // 新的會議全部送；更新時也帶最近幾場已經看過的會議，趨勢才比得出來
+        let fresh = stats.filter { !done.contains($0.id) || $0.id == job.meetingId }
+        guard !fresh.isEmpty else { return }
+        let chosen = existing == nil ? stats : Array(Set(fresh.map(\.id) + stats.suffix(4).map(\.id))).compactMap { id in stats.first { $0.id == id } }
+            .sorted { ($0.date, $0.id) < ($1.date, $1.id) }
+        // 材料：我說的每一句（加上前一句別人說的話）；太長時從最舊的會議開始截短
+        var materials: [CoachingPrompt.MeetingMaterial] = []
+        for s in chosen {
+            let speakers = try db.speakers(s.id)
+            let mine = Set(speakers.filter { $0.personId == personId }.map(\.idx))
+            let names = Dictionary(uniqueKeysWithValues: speakers.map { ($0.idx, $0.name) })
+            let language = (try db.meeting(s.id))?.meetingLanguage ?? .en
+            let segments = try db.segments(s.id)
+            var lines: [String] = []
+            var lastAdded = -1
+            for (i, seg) in segments.enumerated() where seg.speaker.map(mine.contains) == true {
+                if i > 0, i - 1 > lastAdded, let prev = Optional(segments[i - 1]), prev.speaker.map(mine.contains) != true {
+                    let who = prev.speaker.map { names[$0] ?? language.defaultSpeaker($0) } ?? "?"
+                    lines.append("  [\(TimeFormat.string(prev.start))] \(who): \(prev.text)")
+                }
+                lines.append("★ [\(TimeFormat.string(seg.start))] \(me.name): \(seg.text)")
+                lastAdded = i
+            }
+            if !lines.isEmpty { materials.append(.init(stats: s, lines: lines)) }
+        }
+        func size() -> Int { materials.reduce(0) { $0 + $1.lines.reduce(0) { $0 + $1.count } } }
+        let limit = AppSettings.stakeholderModel != AppSettings.model ? 150_000 : CoachingPrompt.characterLimit
+        var i = 0
+        while size() > limit && i < materials.count {
+            // 每場最多留前 60 句；還是太長就從最舊的會議開始只留 20 句
+            let keep = size() > limit * 2 ? 20 : 60
+            if materials[i].lines.count > keep { materials[i].lines = Array(materials[i].lines.prefix(keep)) }
+            i += 1
+        }
+        let language = AppSettings.defaultNotesLanguage ?? MeetingLanguage.interface
+        let context = try db.stakeholderProfile(personId)
+        let prompt = CoachingPrompt.prompt(me: me.name, role: context?.userRole ?? "", org: context?.userOrg.nonEmpty ?? me.group ?? "",
+                                           summaries: Coaching.summaries(stats), meetings: materials,
+                                           previous: stored?.decoded, rebuild: rebuild, rejected: stored?.rejectedTitles ?? [])
+        let system = CoachingPrompt.system(language)
+        let data = try await callLLM(lane) { onStart in
+            try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: prompt,
+                                             format: CoachingProfile.format, onStart: onStart)
+        }
+        guard isStillRunning(job) else { return }
+        var decoded: CoachingProfile
+        do { decoded = try JSONDecoder().decode(CoachingProfile.self, from: data) }
+        catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+        // 少了強項、弱項（有些模型只回前面幾個欄位）：再要一次
+        if decoded.strengths.isEmpty || decoded.weaknesses.isEmpty {
+            log.info("coaching answer missing findings, asking again")
+            let retry = prompt + "\n\nIMPORTANT: Return the COMPLETE JSON object with EVERY field: summary, strengths, weaknesses, trust, byKind, plan and changes. Each strength and weakness needs evidence objects {meetingId, time, quote}."  // l10n-skip
+            if let again = try? await callLLM(lane, { onStart in
+                try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: retry,
+                                                 format: CoachingProfile.format, onStart: onStart)
+            }), let better = try? JSONDecoder().decode(CoachingProfile.self, from: again), !better.strengths.isEmpty {
+                decoded = better
+            }
+        }
+        let rejected = Set(stored?.rejectedTitles ?? [])
+        var profile = decoded.validated(meetingIds: Set(stats.map(\.id)))
+        profile.strengths.removeAll { rejected.contains($0.title) }
+        profile.weaknesses.removeAll { rejected.contains($0.title) }
+        try db.saveCoaching(CoachingRecord(personId: personId, profile: profile.jsonString(),
+                                           meetingIds: Self.idsJSON(done.union(chosen.map(\.id))),
+                                           language: language.rawValue, provider: provider.rawValue, model: AppSettings.stakeholderModel))
+        log.info("coaching updated from \(materials.count) meetings")
+    }
+
     private static func idsJSON(_ ids: Set<Int64>) -> String {
         (try? JSONEncoder().encode(ids.sorted())).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
     }
@@ -974,6 +1065,8 @@ final class JobRunner {
         // 正式的會議紀錄好了（整理、重新整理、校稿都算）：更新這場會議裡每個人的利害關係人分析
         //（輔助線，不擋別的工作）。這場會議就算分析過也重送，用最新的紀錄和名字
         if AppSettings.summarizerReady, try db.enqueueStakeholderRefresh(job.meetingId) { wake() }
+        // 我的表現：我在這場會議，教練建議也更新（同樣等會議紀錄定下來）
+        if AppSettings.summarizerReady, try db.enqueueCoachingRefresh(job.meetingId) { wake() }
         // 整理完有標題了，照資料夾的條件放（design §72）
         if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder) }
         return answers != nil || hadDraft == 0

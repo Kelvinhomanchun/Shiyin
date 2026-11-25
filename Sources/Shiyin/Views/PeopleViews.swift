@@ -41,7 +41,8 @@ struct PersonPage: View {
         return ReadingColumn {
             header
             StakeholderSection(person: person, record: AnyView(recordSections))
-            if !hasProfile { recordSections }
+            // 自己的頁：待辦和會議在「我的表現」的「記錄」分頁（會議不夠兩場時直接列出）
+            if !hasProfile && !isMe { recordSections }
         }
     }
 

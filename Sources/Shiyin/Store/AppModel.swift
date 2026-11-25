@@ -412,6 +412,7 @@ final class AppModel {
         }
         runner.onStakeholderUpdated = { [weak self] personId in self?.stakeholderUpdated(personId) }
         runner.onStakeholdersFinished = { [weak self] job, error in self?.stakeholdersFinished(job, error: error) }
+        runner.onCoachingFinished = { [weak self] job, error in self?.coachingFinished(job, error: error) }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             // 錄音壓縮成 m4a 後換檔案：接著原本的位置，正在播的繼續播
@@ -1831,6 +1832,14 @@ final class AppModel {
     @ObservationIgnored var stakeholderCache: [Int64: StakeholderProfile?] = [:]
     /// 分析更新了幾次：快取不在觀察裡，會議頁的與會者、名字小卡讀這個，分析好了才會重畫（fork，2026-11-25）
     var stakeholderRevision = 0
+    /// 我的表現（fork）：自己人物頁的數字和教練建議
+    var coachingStats: [Coaching.MeetingStats] = []
+    var coachingSkipped = 0
+    var coaching: CoachingRecord?
+    var coachingRunning = false
+    var coachingTab: CoachingTab = .overview
+    /// 趨勢分頁只看一種會議；nil：全部
+    var coachingKind: Coaching.Kind?
     /// 人物頁分析看哪個分頁（換人時保留，比較同一面向）
     var stakeholderTab: StakeholderTab = .profile
     /// 關係人地圖看哪個資料夾（空字串 = 所有會議）

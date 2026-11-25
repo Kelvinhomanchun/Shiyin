@@ -428,6 +428,17 @@ enum DebugControl {
         case "notesquery": model.notesQuery = args.count > 1 ? args.dropFirst().joined(separator: " ") : ""   // notesquery [字]：會議紀錄的搜尋
         case "actiondone": if let id, args.count > 2 { model.toggleActionDone(id, args.dropFirst(2).joined(separator: " ")) }   // actiondone <會議 id> <事項>
         case "stakeholdertab": if args.count > 1, let tab = StakeholderTab(rawValue: args[1]) { model.stakeholderTab = tab }   // stakeholdertab profile|plan|read|interests|network|record
+        case "coachingtab": if args.count > 1, let tab = CoachingTab(rawValue: args[1]) { model.coachingTab = tab }   // coachingtab overview|findings|trends|trust|record
+        case "coachingkind": model.coachingKind = args.count > 1 ? Coaching.Kind(rawValue: args[1]) : nil   // coachingkind [client|internal|interview|one-on-one]：趨勢的篩選
+        case "coachingrefresh": if let id { model.refreshCoaching(id) }   // coachingrefresh <我的人物 id>：等於按「重新整理」
+        case "coachingreject": if let id, args.count > 2 { model.rejectCoachingFinding(id, title: args.dropFirst(2).joined(separator: " ")) }   // coachingreject <人物 id> <標題>：等於按「不對」
+        case "personcite": if let id { model.openFromPersonPage(id, seconds: args.count > 2 ? TimeFormat.seconds(args[2]) : nil) }   // personcite <會議 id> [時間]：等於點人物頁的出處
+        case "coachingstate":   // coachingstate <輸出.json>
+            write(["stats": model.coachingStats.count, "skipped": model.coachingSkipped, "running": model.coachingRunning,
+                   "hasProfile": model.coaching?.decoded != nil, "strengths": model.coaching?.decoded?.strengths.map(\.title) ?? [],
+                   "weaknesses": model.coaching?.decoded?.weaknesses.map(\.title) ?? [], "updatedAt": model.coaching?.updatedAt ?? "",
+                   "selection": model.selection.map { Int($0) } ?? -1, "mode": "\(model.sidebarMode)", "person": model.selectedPerson.map { Int($0) } ?? -1,
+                   "tab": model.coachingTab.rawValue], to: args[1])
         case "settle": AppDatabase.stakeholderSettleSeconds = Double(args[1]) ?? 60   // settle <秒>：自動的與會者分析要等多久
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
         case "template": model.selection = id; model.setTemplate(args[2])

@@ -17,9 +17,8 @@ struct StakeholderSection: View {
         let isMe = person.isMe || model.stakeholderMe.contains(person.id)
         VStack(alignment: .leading, spacing: 22) {
             if isMe {
-                NotesSection(title: String(localized: "利害關係人分析")) {
-                    Text("這是你自己，不做分析。").foregroundStyle(.secondary)
-                }
+                // 自己：我的表現（「記錄」分頁裡是待辦和會議）
+                CoachingSection(person: person, record: self.record)
             } else {
                 StakeholderCard(person: person, record: record, profile: profile, analyzing: analyzing, editing: $editing)
                 if editing {

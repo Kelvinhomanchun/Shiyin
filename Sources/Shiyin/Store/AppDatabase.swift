@@ -428,6 +428,21 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("fork-stakeholder-model") { db in
             try db.execute(sql: "ALTER TABLE stakeholder_profiles ADD COLUMN model TEXT NOT NULL DEFAULT ''")
         }
+        // 我的表現（fork）：自己的整體教練建議，一個人一份
+        migrator.registerMigration("fork-coaching") { db in
+            try db.execute(sql: """
+                CREATE TABLE coaching (
+                  person_id   INTEGER PRIMARY KEY REFERENCES people(id) ON DELETE CASCADE,
+                  profile     TEXT NOT NULL,
+                  meeting_ids TEXT NOT NULL DEFAULT '[]',
+                  rejected    TEXT NOT NULL DEFAULT '[]',
+                  language    TEXT NOT NULL DEFAULT '',
+                  provider    TEXT NOT NULL DEFAULT '',
+                  model       TEXT NOT NULL DEFAULT '',
+                  updated_at  TEXT NOT NULL
+                );
+                """)
+        }
         return migrator
     }
 
@@ -1295,7 +1310,7 @@ final class AppDatabase: @unchecked Sendable {
             let settle = Date().addingTimeInterval(-Self.stakeholderSettleSeconds).ISO8601Format()
             guard var job = try Job.filter(sql: """
                 status = ? AND kind IN (\(kinds.map { _ in "?" }.joined(separator: ","))) AND NOT (
-                    kind = 'stakeholders' AND payload IS NULL AND (created_at > ? OR EXISTS (
+                    kind IN ('stakeholders', 'coaching') AND payload IS NULL AND (created_at > ? OR EXISTS (
                         SELECT 1 FROM jobs j WHERE j.meeting_id = jobs.meeting_id AND j.kind IN ('summarize', 'revise')
                             AND j.status IN ('queued', 'running'))))
                 """, arguments: StatementArguments([JobStatus.queued.rawValue] + kinds + [settle]))

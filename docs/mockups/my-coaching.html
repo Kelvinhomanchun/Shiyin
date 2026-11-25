@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>KelNote · My coaching (mock-up)</title>
+<style>
+@font-face { font-family: "Plex"; src: url("../../Resources/Fonts/IBMPlexSans-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Plex"; src: url("../../Resources/Fonts/IBMPlexSans-Medium.ttf"); font-weight: 500; }
+@font-face { font-family: "Plex"; src: url("../../Resources/Fonts/IBMPlexSans-SemiBold.ttf"); font-weight: 600; }
+:root {
+  --blue: #0F62FE; --purple: #8A3FFC; --teal: #007D79; --green: #198038; --orange: #BA4E00; --red: #DA1E28;
+  --ink: #161616; --muted: #6F6F6F; --faint: #A8A8A8; --line: #E4E4E4; --bg: #FFFFFF; --side: #F4F4F4;
+  --client: #0F62FE; --internal: #007D79; --interview: #8A3FFC;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #D9DCE1; font-family: "Plex", -apple-system, "PingFang TC", sans-serif; color: var(--ink); font-size: 14px; -webkit-font-smoothing: antialiased; }
+.note { max-width: 1320px; margin: 18px auto 10px; padding: 0 12px; color: #3d3d3d; font-size: 13px; }
+.note b { color: var(--ink); }
+.window { max-width: 1320px; margin: 0 auto 40px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.22), 0 0 0 .5px rgba(0,0,0,.25); display: grid; grid-template-columns: 236px 1fr; min-height: 1400px; }
+/* sidebar */
+.side { background: var(--side); border-right: 1px solid var(--line); padding: 14px 10px; }
+.lights { display: flex; gap: 8px; padding: 2px 6px 18px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.side h6 { margin: 16px 8px 6px; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.side a { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; color: var(--ink); text-decoration: none; font-size: 13.5px; }
+.side a.sel { background: rgba(15,98,254,.12); }
+.side a .av { width: 22px; height: 22px; font-size: 10px; }
+.side .count { margin-left: auto; color: var(--muted); font-size: 12px; }
+.ico { width: 16px; text-align: center; color: var(--muted); }
+/* content */
+.main { padding: 26px 0 60px; overflow: hidden; }
+.col { max-width: 1000px; margin: 0 auto; padding: 0 40px; }
+.av { border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-weight: 600; flex: none; }
+.me { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--blue); }
+header.person { display: flex; gap: 18px; align-items: center; }
+header.person .av { width: 56px; height: 56px; font-size: 20px; background: #1192E8; }
+header h1 { margin: 0; font: 600 26px ui-serif, "New York", "Songti TC", Georgia, serif; letter-spacing: -.01em; }
+header .sub { color: var(--muted); margin-top: 3px; font-size: 13.5px; }
+header .sub span + span::before { content: "·"; margin: 0 7px; color: var(--faint); }
+.spacer { flex: 1; }
+.btn { border: 1px solid #D0D0D0; background: #fff; border-radius: 7px; padding: 6px 12px; font: 500 13px "Plex", sans-serif; color: var(--ink); display: inline-flex; gap: 7px; align-items: center; cursor: pointer; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.status { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
+.status .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 5px; vertical-align: 1px; }
+/* tabs */
+.tabs { display: inline-flex; background: #F2F2F2; border-radius: 9px; padding: 3px; margin: 24px 0 6px; gap: 2px; }
+.tabs button { border: 0; background: none; padding: 6px 16px; border-radius: 7px; font: 500 13px "Plex", sans-serif; color: #393939; cursor: pointer; }
+.tabs button.on { background: #fff; color: var(--blue); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.tab { display: none; } .tab.on { display: block; }
+h2 { font: 600 20px ui-serif, "New York", Georgia, serif; margin: 34px 0 14px; letter-spacing: -.01em; display: flex; align-items: baseline; gap: 10px; }
+h2 small { font: 400 13px "Plex", sans-serif; color: var(--muted); }
+.card { border-radius: 10px; padding: 16px 18px; background: rgba(15,98,254,.035); border: 1px solid rgba(15,98,254,.12); }
+.card.purple { background: rgba(138,63,252,.05); border-color: rgba(138,63,252,.16); }
+.card.green { background: rgba(25,128,56,.05); border-color: rgba(25,128,56,.16); }
+.card.orange { background: rgba(186,78,0,.05); border-color: rgba(186,78,0,.16); }
+.card.plain { background: #fff; border-color: var(--line); }
+.label { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.up { color: var(--green); background: rgba(25,128,56,.1); }
+.flat { color: #525252; background: #EDEDED; }
+.down { color: var(--orange); background: rgba(186,78,0,.1); }
+.none { color: var(--muted); background: #F2F2F2; font-weight: 500; }
+.tag { display: inline-block; white-space: nowrap; font-size: 11.5px; padding: 1px 8px; border-radius: 99px; border: 1px solid; }
+.t-client { color: var(--client); border-color: rgba(15,98,254,.3); }
+.t-internal { color: var(--internal); border-color: rgba(0,125,121,.3); }
+.t-interview { color: var(--interview); border-color: rgba(138,63,252,.3); }
+a.time { color: var(--blue); text-decoration: none; font-variant-numeric: tabular-nums; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px; margin-top: 18px; }
+.scorebox { display: flex; gap: 22px; align-items: center; }
+.ring { position: relative; width: 132px; height: 132px; flex: none; }
+.ring svg { transform: rotate(-90deg); }
+.ring .val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.ring .val b { font-size: 38px; font-weight: 600; letter-spacing: -.02em; line-height: 1; display: block; }
+.ring .val span { font-size: 11px; color: var(--muted); }
+.summary p { margin: 0 0 10px; line-height: 1.55; }
+
+/* stat sheet */
+.sheet { display: grid; grid-template-columns: 1fr 1.5fr 1fr; grid-template-areas: ". top ." "l1 radar r1" "l2 radar r2" ". bottom ."; gap: 14px 22px; align-items: center; }
+.stat { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; position: relative; }
+.stat .nm { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 7px; }
+.stat .what { color: var(--muted); font-size: 12px; margin-top: 1px; }
+.stat .nums { display: flex; align-items: baseline; gap: 8px; margin: 8px 0 6px; }
+.stat .now { font-size: 30px; font-weight: 600; color: var(--blue); line-height: 1; letter-spacing: -.02em; }
+.stat .was { color: var(--faint); font-size: 15px; }
+.stat .was::before { content: "|"; margin-right: 6px; color: #D0D0D0; }
+.stat .raw { font-size: 12px; color: #525252; border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 4px; }
+.stat .bar { height: 5px; background: #EFEFEF; border-radius: 99px; overflow: hidden; margin-top: 2px; }
+.stat .bar i { display: block; height: 100%; background: var(--blue); border-radius: 99px; }
+.legend { display: flex; gap: 18px; justify-content: center; font-size: 12px; color: #525252; margin-top: 12px; }
+.legend i { display: inline-block; width: 18px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+/* focus */
+.focus { display: grid; grid-template-columns: 1fr 260px; gap: 22px; }
+.focus h3 { margin: 4px 0 6px; font-size: 17px; font-weight: 600; }
+.steps { margin: 10px 0 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; display: flex; gap: 10px; margin: 8px 0; line-height: 1.45; }
+.steps li::before { content: counter(s); flex: none; width: 21px; height: 21px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 11.5px; font-weight: 600; display: grid; place-items: center; margin-top: 1px; }
+.progress { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.dots { display: flex; gap: 7px; margin: 10px 0 6px; }
+.dots i { flex: 1; height: 30px; border-radius: 6px; background: #F2F2F2; border: 1px dashed #C6C6C6; display: grid; place-items: center; font-style: normal; font-size: 11px; color: var(--faint); }
+.dots i.miss { background: rgba(186,78,0,.08); border: 1px solid rgba(186,78,0,.25); color: var(--orange); }
+.big { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+
+/* badges */
+.badges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.badge { border: 1px solid var(--line); border-radius: 12px; padding: 14px; text-align: center; background: #fff; }
+.badge .medal { width: 54px; height: 54px; margin: 2px auto 8px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; }
+.badge.earned .medal { background: radial-gradient(circle at 35% 30%, #fff 0, #D0E2FF 30%, #78A9FF 100%); box-shadow: 0 0 0 3px #fff, 0 0 0 4px #A6C8FF; }
+.badge.locked { background: #FAFAFA; }
+.badge.locked .medal { background: #EDEDED; filter: grayscale(1); opacity: .6; }
+.badge b { display: block; font-size: 13.5px; }
+.badge p { margin: 4px 0 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.mini { height: 5px; border-radius: 99px; background: #E8E8E8; margin-top: 10px; overflow: hidden; }
+.mini i { display: block; height: 100%; background: var(--purple); }
+
+/* types */
+.type .row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.type .row:first-of-type { border-top: 0; }
+.type .val { font-weight: 600; font-variant-numeric: tabular-nums; }
+.type .val.off { color: var(--orange); }
+.type .tgt { color: var(--faint); font-size: 11.5px; margin-left: 6px; font-weight: 400; }
+.type .head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.type .head b { font-size: 14px; }
+
+/* changes */
+.changes li { margin: 6px 0; line-height: 1.45; }
+.changes { margin: 6px 0 0; padding-left: 18px; }
+
+/* findings */
+.finding { padding: 16px 18px; border-radius: 10px; border: 1px solid var(--line); background: #fff; margin-bottom: 12px; }
+.finding .top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.finding h4 { margin: 0; font-size: 15px; font-weight: 600; }
+.finding .why { margin: 8px 0 10px; line-height: 1.5; color: #393939; }
+.quote { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 9px 12px; background: #F7F7F7; border-radius: 8px; margin-top: 6px; font-size: 13px; line-height: 1.5; }
+.quote .src { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.fb { display: flex; gap: 6px; margin-top: 10px; }
+.fb button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 3px 10px; font: 12px "Plex", sans-serif; color: #525252; cursor: pointer; }
+.colhead { display: flex; align-items: center; gap: 8px; font-weight: 600; margin: 4px 0 12px; font-size: 15px; }
+
+/* trends */
+.seg { display: inline-flex; border: 1px solid #D0D0D0; border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-right: 1px solid #D0D0D0; background: #fff; padding: 5px 14px; font: 500 12.5px "Plex", sans-serif; cursor: pointer; color: #393939; }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--ink); color: #fff; }
+.chart { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 8px; }
+.chart .ch { display: flex; align-items: center; gap: 8px; }
+.chart .ch b { font-size: 14px; }
+.chart .ch .meta { margin-left: auto; font-size: 12px; color: var(--muted); }
+.chart svg { width: 100%; height: 150px; display: block; margin-top: 6px; overflow: visible; }
+.tip { position: fixed; pointer-events: none; background: #161616; color: #fff; padding: 7px 10px; border-radius: 7px; font-size: 12px; line-height: 1.4; opacity: 0; transition: opacity .1s; max-width: 260px; z-index: 9; }
+
+/* trust */
+.trust { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.formula { text-align: center; padding: 18px; }
+.formula .eq { display: inline-flex; align-items: center; gap: 14px; font-size: 15px; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; }
+.frac .n { padding: 0 6px 6px; border-bottom: 2px solid var(--ink); }
+.frac .d { padding-top: 6px; }
+.meter { height: 8px; border-radius: 99px; background: #EDEDED; margin: 10px 0 4px; position: relative; }
+.meter i { position: absolute; inset: 0 auto 0 0; border-radius: 99px; }
+.meter u { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--faint); }
+</style>
+</head>
+<body>
+
+<div class="note"><b>Mock-up for confirmation.</b> The numbers are real, calculated from your 16 meetings with the draft rules, comparing 6–20 Nov with 23–25 Nov. The AI text (summary, strengths, weaknesses, plan, trust reading) is a hand-written example of what the AI would produce. Click the tabs; hover over the chart dots.</div>
+
+<div class="window">
+  <aside class="side">
+    <div class="lights"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i></div>
+    <a><span class="ico">◷</span>All meetings<span class="count">19</span></a>
+    <a><span class="ico">⌕</span>Search</a>
+    <a><span class="ico">☑</span>Action items</a>
+    <h6>People</h6>
+    <a class="sel"><span class="av me" style="background:#1192E8">K</span><b style="font-weight:600">Kelvin (me)</b></a>
+    <a><span class="av" style="background:#8A3FFC">S</span>Sandy<span class="count">AXA</span></a>
+    <a><span class="av" style="background:#007D79">M</span>Matthew<span class="count">IBM</span></a>
+    <a><span class="av" style="background:#D02670">E</span>Emma<span class="count">AXA</span></a>
+    <a><span class="av" style="background:#198038">B</span>Benjamin<span class="count">IBM</span></a>
+    <a><span class="av" style="background:#0043CE">L</span>Lili<span class="count">Visa</span></a>
+    <a><span class="av" style="background:#A2191F">B</span>Bernard<span class="count">IBM</span></a>
+    <a><span class="av" style="background:#4D5358">D</span>Debayan<span class="count">IBM</span></a>
+    <h6>Folders</h6>
+    <a><span class="ico">▸</span>AXA</a><a><span class="ico">▸</span>HKJC</a><a><span class="ico">▸</span>Visa</a>
+  </aside>
+
+  <main class="main"><div class="col">
+    <header class="person">
+      <span class="av me">K</span>
+      <div>
+        <h1>Kelvin <span class="muted" style="font-weight:400">(me)</span></h1>
+        <div class="sub"><span>IBM</span><span>Based on 16 meetings, 6–25 Nov 2026</span><span>3 left out</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div>
+        <button class="btn" onclick="refreshDemo(this)">↻ Refresh</button>
+        <div class="status" id="status"><span class="dot"></span>Updated automatically after “Catchup with Emma”, 25 Nov 07:30</div>
+      </div>
+    </header>
+
+    <div class="tabs" id="tabs">
+      <button class="on" data-t="overview">Overview</button>
+      <button data-t="sw">Strengths &amp; weaknesses</button>
+      <button data-t="trends">Trends</button>
+      <button data-t="trust">Trust</button>
+      <button data-t="record">Record</button>
+    </div>
+
+    <!-- ============ OVERVIEW ============ -->
+    <section class="tab on" id="overview">
+      <div class="hero">
+        <div class="card plain scorebox">
+          <div class="ring">
+            <svg width="132" height="132"><circle cx="66" cy="66" r="56" fill="none" stroke="#EDEDED" stroke-width="11"/>
+              <circle cx="66" cy="66" r="56" fill="none" stroke="#0F62FE" stroke-width="11" stroke-linecap="round" stroke-dasharray="351.9" stroke-dashoffset="99.6"/>
+              <circle cx="66" cy="66" r="56" fill="none" stroke="#A8A8A8" stroke-width="2" stroke-dasharray="2 4" stroke-dashoffset="-1" opacity=".0"/></svg>
+            <div class="val"><div><b>3.6</b><span>out of 5</span></div></div>
+          </div>
+          <div>
+            <div class="muted small" style="font-weight:600;letter-spacing:.03em">MEETING SCORE</div>
+            <div style="margin:6px 0 8px"><span class="chip down">↓ 0.6 from 4.2</span></div>
+            <div class="small muted" style="line-height:1.5">The average of your six meeting skills, over your last 8 meetings, compared with the 8 before.<br>Driven by more filler words and more rapid-fire questions in this week's AXA catch-ups.</div>
+          </div>
+        </div>
+        <div class="card summary">
+          <div class="label" style="margin-bottom:8px">✦ How you come across</div>
+          <p>With clients you are a calm, structured listener: you let Sandy and the AXA team lead, then turn complex material into clear groupings.</p>
+          <p>In interviews the pattern flips. You open with long project briefings (6–12 minutes) before the candidate speaks, so you learn less about them.</p>
+          <p class="muted small" style="margin:0">This week, catch-ups got faster and denser: more questions per minute and more restarts.</p>
+        </div>
+      </div>
+
+      <h2>Your stats <small>0–5 for each skill, compared with your own earlier meetings</small></h2>
+      <div class="sheet" id="sheet"></div>
+      <div class="legend"><span><i style="background:rgba(15,98,254,.25);border:2px solid #0F62FE"></i>Last 8 meetings (23–25 Nov)</span><span><i style="border:2px dashed #8D8D8D"></i>8 before (6–20 Nov)</span><span><i style="border:1.5px solid #42BE65"></i>Target (4)</span></div>
+
+      <h2>Your focus</h2>
+      <div class="card focus">
+        <div>
+          <div class="muted small" style="font-weight:600;letter-spacing:.03em;color:var(--purple)">RECOMMENDED · FROM YOUR WEAKNESSES</div>
+          <h3>Keep interview briefings under 2 minutes, then let the candidate talk</h3>
+          <div class="muted" style="line-height:1.5">In your 4 IQPP interviews your longest stretch was 5:41 to 11:45 and you spoke 61–79% of the time. The candidate only started describing their experience after 13 minutes.</div>
+          <ol class="steps">
+            <li><span>Send the HKJC project one-pager before the call, and open with a 90-second version.</span></li>
+            <li><span>Hand over with an open question: <i>“Walk me through a project where you built CTD models in IQPP.”</i></span></li>
+            <li><span>Explain the parts of the project that link to what they just said, not the whole architecture.</span></li>
+          </ol>
+          <div class="quote" style="margin-top:12px;background:rgba(25,128,56,.06)"><span>✓</span><div>You already do this well with clients. In <a class="time" href="shiyin://open?meeting=8&t=0">Regular Progress Update with Sandy, 20 Nov</a> your longest stretch was 1:08 and Sandy's team did 80% of the talking.</div></div>
+        </div>
+        <div class="progress">
+          <div class="small muted" style="font-weight:600">LONGEST STRETCH IN INTERVIEWS</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px"><span class="big">7:30</span><span class="muted small">median · target under 2:00</span></div>
+          <div class="dots"><i>next</i><i></i><i></i><i></i><i></i></div>
+          <div class="small muted">Hit the target in 4 of your next 5 interviews and it becomes a habit. Then KelNote suggests your next focus.</div>
+          <button class="btn" style="margin-top:12px;width:100%;justify-content:center">Change focus</button>
+        </div>
+      </div>
+
+      <h2>By type of meeting <small>median of your meetings of each type</small></h2>
+      <div class="grid3" id="types"></div>
+
+      <h2>Achievements <small>earned from evidence in your meetings</small></h2>
+      <div class="badges">
+        <div class="badge earned"><div class="medal">👂</div><b>Room maker</b><p>A client spoke over 5 minutes without you cutting in.<br><a class="time" href="shiyin://open?meeting=11&t=823">Sandy, 23 Nov, 7:21</a></p></div>
+        <div class="badge earned"><div class="medal">🎯</div><b>Crisp briefer</b><p>A client meeting with no stretch over 1:30.<br><a class="time" href="shiyin://open?meeting=1&t=0">Sandy, 6 Nov</a> and 4 more</p></div>
+        <div class="badge locked"><div class="medal">⏱</div><b>Short &amp; sharp</b><p>3 interviews in a row with no stretch over 2:00.</p><div class="mini"><i style="width:0%"></i></div><p>0 of 3</p></div>
+        <div class="badge locked"><div class="medal">⚖️</div><b>Steady hand</b><p>Talk share on target in 5 meetings in a row.</p><div class="mini"><i style="width:40%"></i></div><p>2 of 5</p></div>
+      </div>
+
+      <h2>What changed since the last update</h2>
+      <div class="card plain">
+        <ul class="changes">
+          <li><span class="chip down">↓</span> <b>Clarity</b> fell from 4.1 to 2.0: about 7 fillers a minute in this week's AXA catch-ups, against 4 earlier.</li>
+          <li><span class="chip up">↑</span> <b>Dialogue</b> rose from 4.0 to 4.3: more back-and-forth in client and internal meetings.</li>
+          <li><span class="chip none">new</span> New weakness: <b>answering before the question is clear</b>, seen in “Catchup on Claim Project”, 25 Nov.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ STRENGTHS & WEAKNESSES ============ -->
+    <section class="tab" id="sw">
+      <div class="grid2" style="margin-top:22px;align-items:start">
+        <div>
+          <div class="colhead" style="color:var(--green)">● Strengths</div>
+          <div class="finding">
+            <div class="top"><h4>You let clients lead</h4><span class="chip flat">→ No change</span><span class="tag t-client">Client</span></div>
+            <div class="why">With Sandy you speak 11–31% of the time and keep your turns short, so he lays out his real concerns in full. That builds intimacy, the trust factor most consultants under-use.</div>
+            <div class="quote"><span>❝</span><div>Sandy spoke for 7:21 without interruption about next steps with users.<div class="src"><a class="time" href="shiyin://open?meeting=11&t=823">Regular Progress Update with Sandy · 23 Nov · 13:43</a></div></div></div>
+            <div class="fb"><button>👍 Useful</button><button>Not right</button></div>
+          </div>
+          <div class="finding">
+            <div class="top"><h4>You turn complexity into clear groupings</h4><span class="chip up">↑ Improving</span><span class="tag t-client">Client</span><span class="tag t-internal">Internal</span></div>
+            <div class="why">You broke about 500 open questions into three kinds and explained where each comes from. This lowers the client's load and builds credibility.</div>
+            <div class="quote"><span>❝</span><div>咁所以就有呢三類型嘅 questions 咯。<div class="src"><a class="time" href="shiyin://open?meeting=23&t=298">Catchup on Claim Project · 25 Nov · 4:58</a></div></div></div>
+            <div class="fb"><button>👍 Useful</button><button>Not right</button></div>
+          </div>
+          <div class="finding">
+            <div class="top"><h4>You probe the “why” behind scope</h4><span class="chip flat">→ No change</span><span class="tag t-client">Client</span></div>
+            <div class="why">Rather than accept a requirement, you ask who it serves. That is how you found the CFO account question.</div>
+            <div class="quote"><span>❝</span><div>點解佢仲要有個 CFO 嘅 account 咁？其實佢背後係啲咩人嚟嘅呢？<div class="src"><a class="time" href="shiyin://open?meeting=1&t=862">Regular Progress Update with Sandy · 6 Nov · 14:22</a></div></div></div>
+            <div class="fb"><button>👍 Useful</button><button>Not right</button></div>
+          </div>
+        </div>
+        <div>
+          <div class="colhead" style="color:var(--orange)">● Weaknesses</div>
+          <div class="finding">
+            <div class="top"><h4>Long briefings at the start of interviews</h4><span class="chip flat">→ No change</span><span class="tag t-interview">Interview</span></div>
+            <div class="why">You open with 6–12 minutes of project background. The candidate waits, and you hear less about their actual experience. This is your current focus.</div>
+            <div class="quote"><span>❝</span><div>“I think we have thirty minutes for today. I just want to give you a bit of background…” (then 11:45 without a pause)<div class="src"><a class="time" href="shiyin://open?meeting=12&t=25">Chat with Debayan · 23 Nov · 0:25</a></div></div></div>
+            <div class="quote"><span>❝</span><div>“So let me give you some background, because before this project we have another project with this client…” (7:20)<div class="src"><a class="time" href="shiyin://open?meeting=4&t=259">Chat with Greeshma · 19 Nov · 4:19</a></div></div></div>
+            <div class="fb"><button>👍 Useful</button><button>Not right</button></div>
+          </div>
+          <div class="finding">
+            <div class="top"><h4>Answering before the question is clear</h4><span class="chip none">New</span><span class="tag t-client">Client</span></div>
+            <div class="why">You start replying, then stop to work out what was asked. A one-line check first (“Do you mean the first batch of questions?”) saves time and sounds surer.</div>
+            <div class="quote"><span>❝</span><div>誒等先，誒你而家講緊係我哋係你係咪……<div class="src"><a class="time" href="shiyin://open?meeting=23&t=44">Catchup on Claim Project · 25 Nov · 0:44</a></div></div></div>
+            <div class="fb"><button>👍 Useful</button><button>Not right</button></div>
+          </div>
+          <div class="finding">
+            <div class="top"><h4>Fillers and restarts under pressure</h4><span class="chip down">↓ Getting worse</span><span class="tag t-client">Client</span><span class="tag t-interview">Interview</span></div>
+            <div class="why">About 7 fillers a minute in this week's AXA meetings, up from 4. Pausing silently for a second before a hard point reads as more confident than “誒”.</div>
+            <div class="quote"><span>❝</span><div>我我我我都好難控制……<div class="src"><a class="time" href="shiyin://open?meeting=23&t=77">Catchup on Claim Project · 25 Nov · 1:17</a></div></div></div>
+            <div class="fb"><button>👍 Useful</button><button>Not right</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TRENDS ============ -->
+    <section class="tab" id="trends">
+      <div style="display:flex;align-items:center;gap:14px;margin-top:22px">
+        <div class="seg" id="seg"><button class="on" data-k="all">All</button><button data-k="client">Client</button><button data-k="internal">Internal</button><button data-k="interview">Interview</button></div>
+        <span class="muted small" id="segnote"></span>
+        <div class="spacer"></div>
+        <span class="small"><span style="color:var(--client)">●</span> Client &nbsp; <span style="color:var(--internal)">●</span> Internal &nbsp; <span style="color:var(--interview)">●</span> Interview</span>
+      </div>
+      <div class="grid2" style="margin-top:14px" id="charts"></div>
+    </section>
+
+    <!-- ============ TRUST ============ -->
+    <section class="tab" id="trust">
+      <div class="card plain formula" style="margin-top:22px">
+        <div class="eq"><b>Trust</b> = <span class="frac"><span class="n"><span style="color:var(--blue)">Credibility</span> + <span style="color:var(--teal)">Reliability</span> + <span style="color:var(--purple)">Intimacy</span></span><span class="d" style="color:var(--orange)">Self-orientation</span></span></div>
+        <div class="muted small" style="margin-top:10px">Maister, Green &amp; Galford, <i>The Trusted Advisor</i>. Self-orientation (focus on yourself) counts most, so lower is better.</div>
+      </div>
+      <div class="trust" style="margin-top:14px" id="trustcards"></div>
+    </section>
+
+    <!-- ============ RECORD ============ -->
+    <section class="tab" id="record">
+      <h2>Your action items</h2>
+      <div class="muted">Unchanged from today: your action items and the meetings you attended.</div>
+    </section>
+  </div></main>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const D = [{"id":1,"date":"2026-11-06","title":"Regular Progress Update with Sandy","kind":"client","talk":31,"longest":58,"q30":20.7,"sw5":14.9,"fill_min":4.0,"room":184},{"id":2,"date":"2026-11-18","title":"HKJC – WPP QE PoC Phase 1 & Phase 2 - Staffing","kind":"internal","talk":46,"longest":125,"q30":3.6,"sw5":6.5,"fill_min":0.0,"room":111},{"id":4,"date":"2026-11-19","title":"Chat with Greeshma on an IQPP Project Opportunity","kind":"interview","talk":79,"longest":440,"q30":5.1,"sw5":10.4,"fill_min":0.0,"room":103},{"id":5,"date":"2026-11-19","title":"Chat with Senthilkumar on an IQPP Project Opportunity","kind":"interview","talk":61,"longest":459,"q30":17.9,"sw5":3.4,"fill_min":3.9,"room":183},{"id":7,"date":"2026-11-19","title":"HKJC QE project resources arrangement confirmation","kind":"internal","talk":49,"longest":94,"q30":13.6,"sw5":16.2,"fill_min":6.2,"room":41},{"id":8,"date":"2026-11-20","title":"Regular Progress Update with Sandy","kind":"client","talk":20,"longest":68,"q30":10.0,"sw5":23.6,"fill_min":5.6,"room":64},{"id":9,"date":"2026-11-20","title":"HKJC – WPP QE PoC - Staffing touchpoint","kind":"internal","talk":18,"longest":86,"q30":10.2,"sw5":28.5,"fill_min":4.6,"room":52},{"id":10,"date":"2026-11-20","title":"UT Exemption Guideline from Bernard","kind":"internal","talk":10,"longest":24,"q30":3.1,"sw5":9.9,"fill_min":5.0,"room":383},{"id":11,"date":"2026-11-23","title":"Regular Progress Update with Sandy","kind":"client","talk":11,"longest":72,"q30":4.3,"sw5":11.5,"fill_min":6.4,"room":441},{"id":12,"date":"2026-11-23","title":"Chat with Debayan on an IQPP Project Opportunity","kind":"interview","talk":69,"longest":705,"q30":21.0,"sw5":8.4,"fill_min":6.9,"room":126},{"id":13,"date":"2026-11-23","title":"HKJC – WPP QE PoC - Staffing touchpoint","kind":"internal","talk":43,"longest":81,"q30":6.0,"sw5":24.0,"fill_min":15.2,"room":54},{"id":18,"date":"2026-11-24","title":"Meeting with Timothy on the CFO account","kind":"client","talk":48,"longest":22,"q30":34.1,"sw5":20.8,"fill_min":7.1,"room":28},{"id":19,"date":"2026-11-24","title":"Chat with Mudita on an IQPP Project Opportunity","kind":"interview","talk":71,"longest":341,"q30":6.7,"sw5":3.9,"fill_min":9.2,"room":89},{"id":22,"date":"2026-11-25","title":"P&C Claim Modernization - Regular Progress Update","kind":"client","talk":40,"longest":89,"q30":11.8,"sw5":23.9,"fill_min":7.4,"room":132},{"id":23,"date":"2026-11-25","title":"Catchup on Claim Project","kind":"client","talk":54,"longest":180,"q30":30.1,"sw5":14.1,"fill_min":8.6,"room":89},{"id":24,"date":"2026-11-25","title":"Catchup with Emma","kind":"client","talk":59,"longest":67,"q30":41.5,"sw5":20.8,"fill_min":5.4,"room":49}];
+
+// skill = metric, target per type [lo, hi], scale (distance that costs 4 points)
+const M = {
+  talk:     {skill:"Listening", what:"How much of the talking you leave to others", unit:"%", name:"Talk share", t:{client:[30,50],internal:[35,60],interview:[30,45]}, s:30, fmt:v=>Math.round(v)+"%"},
+  longest:  {skill:"Concision", what:"Getting to the point without long stretches", unit:"", name:"Longest stretch", t:{client:[0,120],internal:[0,180],interview:[0,120]}, s:300, fmt:v=>`${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`},
+  sw5:      {skill:"Dialogue", what:"Back-and-forth, not monologues", unit:"", name:"Switches per 5 min", t:{client:[15,99],internal:[15,99],interview:[15,99]}, s:15, fmt:v=>v.toFixed(1)},
+  fill_min: {skill:"Clarity", what:"Speaking without fillers and restarts", unit:"", name:"Fillers per minute", t:{client:[0,3],internal:[0,3],interview:[0,3]}, s:6, fmt:v=>v.toFixed(1)},
+  room:     {skill:"Room given", what:"Letting others finish their story", unit:"", name:"Others' longest story", t:{client:[120,9999],internal:[60,9999],interview:[120,9999]}, s:120, fmt:v=>`${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`},
+  q30:      {skill:"Curiosity", what:"Asking enough, without interrogating", unit:"", name:"Questions per 30 min", t:{client:[8,20],internal:[4,20],interview:[8,20]}, s:15, fmt:v=>v.toFixed(0)},
+};
+const order = ["talk","longest","sw5","fill_min","room","q30"];   // clockwise from top
+const area = {talk:"top", longest:"r1", sw5:"r2", fill_min:"bottom", room:"l2", q30:"l1"};
+const icon = {talk:"👂", longest:"✂️", sw5:"🔁", fill_min:"🎙", room:"🤲", q30:"❓"};
+const med = a => { const s=[...a].sort((x,y)=>x-y), n=s.length; return n? (n%2? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2) : NaN; };
+const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
+function score(x, m){ const [lo,hi]=M[m].t[x.kind]; const v=x[m]; const d=v<lo?lo-v:(v>hi?v-hi:0); return 5-4*Math.min(1,d/M[m].s); }
+const E = D.slice(0,8), R = D.slice(8);
+const S = {}; order.forEach(m=>{ S[m] = {now: mean(R.map(x=>score(x,m))), was: mean(E.map(x=>score(x,m))), raw: med(R.map(x=>x[m]))}; });
+function trend(now, was){ const d=now-was; return Math.abs(d)<0.3 ? ["flat","→ No change"] : d>0 ? ["up","↑ Improving"] : ["down","↓ Getting worse"]; }
+
+// ---- stat sheet
+const sheet = document.getElementById("sheet");
+const targetsText = m => { const t=M[m].t, f=M[m].fmt; const r=t.client; return r[0]===0 ? `target under ${f(r[1])}` : r[1]>=9999 ? `target over ${f(r[0])}` : r[1]>=99 ? `target ${f(r[0])}+` : `target ${f(r[0])}–${f(r[1])}`; };
+order.forEach(m=>{
+  const s=S[m], [c,l]=trend(s.now,s.was), el=document.createElement("div");
+  el.className="stat"; el.style.gridArea=area[m];
+  el.innerHTML = `<div class="nm"><span>${icon[m]}</span>${M[m].skill}<span class="spacer"></span><span class="chip ${c}">${l}</span></div>
+    <div class="what">${M[m].what}</div>
+    <div class="nums"><span class="now">${s.now.toFixed(1)}</span><span class="was">${s.was.toFixed(1)} earlier</span></div>
+    <div class="bar"><i style="width:${s.now/5*100}%"></i></div>
+    <div class="raw">${M[m].name}: <b>${M[m].fmt(s.raw)}</b> median · ${targetsText(m)} (client)</div>`;
+  sheet.appendChild(el);
+});
+// radar
+(function(){
+  const W=360, C=W/2, Rr=135, n=6, pt=(i,v)=>{ const a=-Math.PI/2+i*2*Math.PI/n; return [C+Math.cos(a)*Rr*v/5, C+Math.sin(a)*Rr*v/5]; };
+  const poly = vals => vals.map((v,i)=>pt(i,v).join(",")).join(" ");
+  let g = "";
+  for (let k=1;k<=5;k++) g += `<polygon points="${poly(Array(6).fill(k))}" fill="${k===5?'#FAFAFA':'none'}" stroke="#E0E0E0" stroke-width="1" ${k<5?'stroke-dasharray="3 4"':''}/>`;
+  for (let i=0;i<n;i++){ const [x,y]=pt(i,5); g += `<line x1="${C}" y1="${C}" x2="${x}" y2="${y}" stroke="#E0E0E0"/>`; }
+  for (let k=1;k<=5;k++){ const [x,y]=pt(0,k); g += `<text x="${x+5}" y="${y+4}" font-size="10" fill="#A8A8A8">${k}</text>`; }
+  g += `<polygon points="${poly(Array(6).fill(4))}" fill="none" stroke="#42BE65" stroke-width="1.5"/>`;
+  g += `<polygon points="${poly(order.map(m=>S[m].was))}" fill="none" stroke="#8D8D8D" stroke-width="2" stroke-dasharray="5 4"/>`;
+  g += `<polygon points="${poly(order.map(m=>S[m].now))}" fill="rgba(15,98,254,.18)" stroke="#0F62FE" stroke-width="2.5" stroke-linejoin="round"/>`;
+  order.forEach((m,i)=>{ const [x,y]=pt(i,S[m].now); g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="#fff" stroke="#0F62FE" stroke-width="2.5"/>`;
+    const [lx,ly]=pt(i,5.75); g+=`<text x="${lx}" y="${ly+4}" text-anchor="middle" font-size="13" font-weight="600" fill="#393939">${M[m].skill}</text>`; });
+  const d=document.createElement("div"); d.style.gridArea="radar"; d.style.textAlign="center";
+  d.innerHTML=`<svg viewBox="-58 -26 476 412" width="100%">${g}</svg>`;
+  sheet.appendChild(d);
+})();
+
+// ---- by type
+const types = document.getElementById("types");
+[["client","Client meetings","AXA, Visa"],["internal","Internal meetings","IBM, HKJC team"],["interview","Interviews","IQPP candidates"]].forEach(([k,name,who])=>{
+  const xs=D.filter(x=>x.kind===k);
+  const row = m => { const v=med(xs.map(x=>x[m])), [lo,hi]=M[m].t[k]; const off=v<lo||v>hi; const f=M[m].fmt;
+    const tg = hi>=9999? `over ${f(lo)}` : lo===0? `under ${f(hi)}` : hi>=99? `${f(lo)}+` : `${f(lo)}–${f(hi)}`;
+    return `<div class="row"><span>${M[m].name}</span><span class="val ${off?'off':''}">${f(v)}<span class="tgt">${tg}</span></span></div>`; };
+  const el=document.createElement("div"); el.className="card plain type";
+  el.innerHTML = `<div class="head"><span class="tag t-${k}">${name}</span><span class="muted small">${xs.length} meetings · ${who}</span></div>
+    ${row("talk")}${row("longest")}${row("q30")}${row("fill_min")}
+    <div class="small" style="margin-top:8px;color:${k==='interview'?'var(--orange)':'var(--muted)'}">${k==='client'?'On target for talk and stretch length; questions and fillers have crept up this week.':k==='internal'?'Balanced. You steer, others get space.':'Talk share and stretch length are well off target: this is where your focus is.'}</div>`;
+  types.appendChild(el);
+});
+
+// ---- trends charts
+const charts = document.getElementById("charts"), tip=document.getElementById("tip");
+const color = {client:"#0F62FE", internal:"#007D79", interview:"#8A3FFC"};
+function drawCharts(kind){
+  charts.innerHTML="";
+  const xs = kind==="all" ? D : D.filter(x=>x.kind===kind);
+  let note="";
+  order.forEach(m=>{
+    const W=440, H=150, pl=40, pr=8, pt=10, pb=22, vals=xs.map(x=>x[m]);
+    let maxv = Math.max(...D.map(x=>x[m]))*1.08;
+    const X=i=> pl + (xs.length===1? (W-pl-pr)/2 : i*(W-pl-pr)/(xs.length-1)), Y=v=> pt+(H-pt-pb)*(1-v/maxv);
+    let g="";
+    for (let k=0;k<=4;k++){ const v=maxv*k/4, y=Y(v); g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#F0F0F0"/><text x="${pl-6}" y="${y+3}" text-anchor="end" font-size="10" fill="#A8A8A8">${M[m].fmt(v)}</text>`; }
+    if (kind!=="all"){ const [lo,hi]=M[m].t[kind]; g+=`<rect x="${pl}" width="${W-pl-pr}" y="${Y(Math.min(hi,maxv))}" height="${Y(lo)-Y(Math.min(hi,maxv))}" fill="rgba(66,190,101,.12)"/>`; }
+    // trend
+    let chip;
+    if (kind==="all"){ const [c,l]=trend(S[m].now,S[m].was); chip=`<span class="chip ${c}">${l}</span>`; }
+    else { const n=Math.min(5, Math.floor(xs.length/2));
+      if (n<3){ chip=`<span class="chip none">Not enough meetings yet · ${6-xs.length} more</span>`; }
+      else { const sc=a=>mean(a.map(x=>score(x,m))); const now=sc(xs.slice(-n)), was=sc(xs.slice(-2*n,-n)); const [c,l]=trend(now,was); chip=`<span class="chip ${c}">${l}</span>`;
+        const mid=(X(xs.length-n-0.5)); g+=`<line x1="${mid}" x2="${mid}" y1="${pt}" y2="${H-pb}" stroke="#C6C6C6" stroke-dasharray="3 3"/><text x="${mid+4}" y="${pt+9}" font-size="10" fill="#8D8D8D">recent ${n}</text>`; } }
+    // line + dots
+    g+=`<polyline points="${xs.map((x,i)=>X(i)+","+Y(x[m])).join(" ")}" fill="none" stroke="#C6C6C6" stroke-width="1.5"/>`;
+    xs.forEach((x,i)=>{ g+=`<circle class="pt" data-i="${D.indexOf(x)}" data-m="${m}" cx="${X(i)}" cy="${Y(x[m])}" r="5" fill="${color[x.kind]}" stroke="#fff" stroke-width="1.5" style="cursor:pointer"/>`; });
+    g+=`<text x="${pl}" y="${H-4}" font-size="10" fill="#A8A8A8">${xs[0].date.slice(5).replace("-","/")}</text><text x="${W-pr}" y="${H-4}" text-anchor="end" font-size="10" fill="#A8A8A8">${xs[xs.length-1].date.slice(5).replace("-","/")}</text>`;
+    const el=document.createElement("div"); el.className="chart";
+    el.innerHTML=`<div class="ch"><span>${icon[m]}</span><b>${M[m].skill}</b><span class="muted small">${M[m].name}</span>${chip}<span class="meta">median ${M[m].fmt(med(vals))}</span></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
+    charts.appendChild(el);
+  });
+  document.getElementById("segnote").textContent = kind==="all" ? "Last 8 meetings against the 8 before. Pick a type to see its target band." : "Last 5 meetings of this type against the 5 before. Green band = target.";
+  charts.querySelectorAll(".pt").forEach(c=>{
+    c.onmouseenter=e=>{ const x=D[+c.dataset.i], m=c.dataset.m; tip.innerHTML=`<b>${x.title}</b><br>${x.date} · ${x.kind}<br>${M[m].name}: <b>${M[m].fmt(x[m])}</b><br><span style="opacity:.7">Click to open the meeting</span>`; tip.style.opacity=1; };
+    c.onmousemove=e=>{ tip.style.left=(e.clientX+14)+"px"; tip.style.top=(e.clientY+14)+"px"; };
+    c.onmouseleave=()=>tip.style.opacity=0;
+    c.onclick=()=>location.href=`shiyin://open?meeting=${D[+c.dataset.i].id}`;
+  });
+}
+drawCharts("all");
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{ document.querySelectorAll("#seg button").forEach(x=>x.classList.toggle("on",x===b)); drawCharts(b.dataset.k); });
+
+// ---- trust
+const T = [
+  {k:"Credibility", c:"#0F62FE", now:4.1, was:3.9, txt:"Clear, structured explanations of complex scope; you cite the ARB deck and architecture guidelines instead of guessing.", q:"咁佢係一個用一個 holistic 嘅 view 去串成個 user journey 去搵到嘅一啲 questions。", src:["Catchup on Claim Project · 25 Nov · 4:34",23,274]},
+  {k:"Reliability", c:"#007D79", now:3.6, was:3.6, txt:"You follow up on what was asked last time (Sandy's request about master-process matching), but 6 of your 14 action items are still open.", q:"之前阿 Sandy 都有講話要去 explore 下……我走去問阿 Cliff……", src:["Regular Progress Update with Sandy · 6 Nov · 21:13",1,1273]},
+  {k:"Intimacy", c:"#8A3FFC", now:3.0, was:3.2, txt:"Clients open up to you on substance, but there is little personal rapport: meetings start straight on the agenda. No evidence yet of clients sharing worries off the record.", q:"我哋誒可以開始住先啦。咁我諗幾個，share 個 screen 先啊。", src:["Regular Progress Update with Sandy · 23 Nov · 0:00",11,0]},
+  {k:"Self-orientation", c:"#BA4E00", now:2.8, was:2.6, lower:true, txt:"Low with clients. Higher in interviews, where long briefings put your agenda before the candidate's story.", q:"I just want to give you a bit of background…", src:["Chat with Debayan · 23 Nov · 0:25",12,25]},
+];
+document.getElementById("trustcards").innerHTML = T.map(t=>{ const better = t.lower ? t.was-t.now : t.now-t.was; const [c,l]=trend(better,0); const w=t.now/5*100;
+  return `<div class="card plain"><div class="label" style="color:${t.c}">${t.k}<span class="spacer"></span><span class="chip ${c}">${l}</span></div>
+  <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px"><span class="big" style="color:${t.c}">${t.now.toFixed(1)}</span><span class="muted small">${t.was.toFixed(1)} earlier${t.lower?' · lower is better':''}</span></div>
+  <div class="meter"><i style="width:${w}%;background:${t.c}"></i><u style="left:${t.was/5*100}%"></u></div>
+  <div style="line-height:1.5;margin-top:10px;color:#393939">${t.txt}</div>
+  <div class="quote"><span>❝</span><div>${t.q}<div class="src"><a class="time" href="shiyin://open?meeting=${t.src[1]}&t=${t.src[2]}">${t.src[0]}</a></div></div></div></div>`; }).join("");
+
+// ---- tabs & refresh demo
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{ document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b)); document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id===b.dataset.t)); });
+if (location.hash) { const b=document.querySelector(`#tabs button[data-t="${location.hash.slice(1)}"]`); b&&b.click(); }
+function refreshDemo(btn){ const s=document.getElementById("status"); btn.disabled=true; btn.style.opacity=.5; s.innerHTML='<span class="dot" style="background:#0F62FE"></span>Updating… showing the previous coaching until it is ready';
+  setTimeout(()=>{ btn.disabled=false; btn.style.opacity=1; s.innerHTML='<span class="dot"></span>Rebuilt from all 16 meetings just now'; }, 2200); }
+</script>
+</body>
+</html>
