@@ -13,6 +13,16 @@ struct StakeholderProfile: Codable, Hashable {
     struct Point: Codable, Hashable {
         var text: String
         var evidence: [Evidence]
+        init(text: String, evidence: [Evidence]) { self.text = text; self.evidence = evidence }
+        /// 有些模型把重點寫成一句字（沒有出處）：照樣收下，不要整份側寫因為型別不對被丟掉（fork，2026-11-25）
+        init(from decoder: Decoder) throws {
+            if let text = try? decoder.singleValueContainer().decode(String.self) {
+                self.text = text; evidence = []; return
+            }
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            text = (try? c.decode(String.self, forKey: .text)) ?? ""
+            evidence = (try? c.decode([Evidence].self, forKey: .evidence)) ?? []
+        }
     }
     struct Topic: Codable, Hashable {
         var topic: String
@@ -61,6 +71,19 @@ struct StakeholderProfile: Codable, Hashable {
         var text: String
         var meetingId: Int64
         var time: String
+        /// open（還沒做）／done（後來的會議看得出做了）／unknown；舊的分析沒有（第三版）
+        var status: String = ""
+        init(who: String, text: String, meetingId: Int64, time: String, status: String = "") {
+            self.who = who; self.text = text; self.meetingId = meetingId; self.time = time; self.status = status
+        }
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            who = (try? c.decode(String.self, forKey: .who)) ?? ""
+            text = (try? c.decode(String.self, forKey: .text)) ?? ""
+            meetingId = (try? c.decode(Int64.self, forKey: .meetingId)) ?? 0
+            time = (try? c.decode(String.self, forKey: .time)) ?? ""
+            status = (try? c.decode(String.self, forKey: .status)) ?? ""
+        }
     }
     /// 跟其他人的關係：聽誰的、跟誰站同一邊、跟誰有摩擦
     struct Relationship: Codable, Hashable {
@@ -145,6 +168,21 @@ struct StakeholderProfile: Codable, Hashable {
         var trustedVoices: [String]
         static let empty = Portrait(mandate: [], measuredOn: [], agenda: [], pressures: [], personalWin: "", decisionStyle: [],
                                     workingStyle: [], redLines: [], trustedVoices: [])
+        init(mandate: [Point], measuredOn: [Point], agenda: [Point], pressures: [Point], personalWin: String, decisionStyle: [Point],
+             workingStyle: [Point], redLines: [Point], trustedVoices: [String]) {
+            self.mandate = mandate; self.measuredOn = measuredOn; self.agenda = agenda; self.pressures = pressures
+            self.personalWin = personalWin; self.decisionStyle = decisionStyle; self.workingStyle = workingStyle
+            self.redLines = redLines; self.trustedVoices = trustedVoices
+        }
+        /// 一個欄位的型別不對只丟那個欄位（以前整份側寫變成空的）
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            func points(_ key: CodingKeys) -> [Point] { (try? c.decode([Point].self, forKey: key)) ?? [] }
+            mandate = points(.mandate); measuredOn = points(.measuredOn); agenda = points(.agenda); pressures = points(.pressures)
+            decisionStyle = points(.decisionStyle); workingStyle = points(.workingStyle); redLines = points(.redLines)
+            personalWin = (try? c.decode(String.self, forKey: .personalWin)) ?? ""
+            trustedVoices = (try? c.decode([String].self, forKey: .trustedVoices)) ?? []
+        }
         var isEmpty: Bool {
             mandate.isEmpty && measuredOn.isEmpty && agenda.isEmpty && pressures.isEmpty && personalWin.isEmpty
                 && decisionStyle.isEmpty && workingStyle.isEmpty && redLines.isEmpty
@@ -222,7 +260,7 @@ struct StakeholderProfile: Codable, Hashable {
         let topics = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["topic","interest","stance","evidence"],"properties":{"topic":{"type":"string"},"interest":{"type":"string","enum":["high","medium","low"]},"stance":{"type":"string"},"evidence":"# + evidence + "}}}"
         let readings = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["meetingId","time","quote","meaning"],"properties":{"meetingId":{"type":"integer"},"time":{"type":"string"},"quote":{"type":"string"},"meaning":{"type":"string"}}}}"#
         let strings = #"{"type":"array","items":{"type":"string"}}"#
-        let commitments = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["who","text","meetingId","time"],"properties":{"who":{"type":"string","enum":["them","us"]},"text":{"type":"string"},"meetingId":{"type":"integer"},"time":{"type":"string"}}}}"#
+        let commitments = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["who","text","meetingId","time","status"],"properties":{"who":{"type":"string","enum":["them","us"]},"text":{"type":"string"},"meetingId":{"type":"integer"},"time":{"type":"string"},"status":{"type":"string","enum":["open","done","unknown"]}}}}"#
         let relationships = #"{"type":"array","items":{"type":"object","additionalProperties":false,"required":["person","relation","note"],"properties":{"person":{"type":"string"},"relation":{"type":"string"},"note":{"type":"string"}}}}"#
         let next = #"{"type":"object","additionalProperties":false,"required":["objective","talkingPoints","questions","avoid"],"properties":{"objective":{"type":"string"},"talkingPoints":"# + strings + #","questions":"# + strings + #","avoid":"# + strings + "}}"
         let level = #"{"type":"string","enum":["high","medium","low"]}"#
@@ -551,9 +589,9 @@ enum StakeholderPrompt {
            - trustedVoices: names (or roles) of the people whose opinion they rely on or defer to, from the excerpts only.
         6. personality: 2 to 4 enduring character traits and values (e.g. "holds people to commitments", "protective of his team"), distinct from workingStyle. motivations: 2 to 4 deeper drivers — what energises them and why they care, distinct from agenda.
         7. power: the target's influence over decisions and resources (high / medium / low), with powerReason explaining why (title, who defers to them, who decides). interest: how engaged and invested they are overall (high / medium / low).
-        8. topics: the subjects the target cares about, each with interest (high / medium / low) and stance (supportive, opposed, neutral, concerned, undecided… in a few words).
-        9. readings: 3 to 8 notable things the target said where the underlying meaning differs from or goes beyond the literal words (hedging, polite refusal, hidden concern, pressure, a test, an indirect request). quote is their words; meaning is what it most likely signals, considering their role and context. Be culturally aware: Hong Kong / Cantonese and other Asian business communication is often indirect.
-        10. advice: 2 to 5 practical tips for working with this person (how to frame proposals, what to prepare, what to avoid).
+        8. topics: 3 to 8 subjects the target cares about, most important first, each with interest (high / medium / low) and stance: their position in a few words and why (e.g. "concerned: integration contracts missing before January"). Name the actual subject, not a generic area.
+        9. readings: 3 to 8 notable things the target said where the underlying meaning differs from or goes beyond the literal words (hedging, polite refusal, hidden concern, pressure, a test, an indirect request). quote is their words; meaning is what it most likely signals and what the user should do about it, considering their role and context. Order by importance for the user's work, favouring recent meetings; drop readings that only restate the literal words. Be culturally aware: Hong Kong / Cantonese and other Asian business communication is often indirect.
+        10. advice: the engagement strategy over the coming weeks, 2 to 4 moves: how to move this person toward supporting the user's work (or keep their support), what proof or result would convince them, whom to involve or go through, and the risk to manage. Tie it to their quadrant and attitude. Do not repeat nextMeeting or workingWithMe items.
         11. openQuestions: 2 to 5 things about the PERSON the user should still find out (their real authority, what they are measured on, their view on an open decision, their relationship with someone). Only questions about the person and their situation. Never ask about the app or the data: folder or project names, duplicate entries, speaker labels or transcription errors.
         12. When a previous profile is given, update it with the new meetings: keep what still holds, revise what the new evidence changes, add new points, and keep the old evidence that still applies. Do not drop earlier meetings' insights just because they are not in the new excerpts. If the new material adds nothing, return the previous profile unchanged.
         13. changes: compared with the previous (or earlier) profile, 0 to 5 short items on what changed about the person — a new priority, a shifted stance or attitude, a new pressure, a commitment made or kept, a revised assessment — each naming the meeting by date as in rule 2, e.g. "Attitude to the BA team moved from critical to supportive (2026-11-25 weekly progress)". Empty when there is no previous profile or nothing changed. Do not list wording or formatting changes.
@@ -564,10 +602,10 @@ enum StakeholderPrompt {
         18. attitude toward the user's work / project / proposal: champion (actively advocates), supporter, neutral, skeptic (doubts, pushes back), blocker (actively resists). attitudeTrend: improving / stable / declining across the meetings in date order, or unknown with only one meeting.
         19. decisionRole: decision maker (signs off, owns budget), influencer (shapes the decision), gatekeeper (controls access or process), expert (technical/subject authority), user (affected by the outcome), other.
         20. confidence: high when the target spoke a lot across several meetings, low when there is little to go on (one short meeting, few lines).
-        21. needs: 2 to 5 concrete things the target needs from the user or the user's team (information, deliverables, reassurance, decisions).
-        22. commitments: promises in the meetings — who "them" (the target promised) or "us" (the user / the user's side promised the target), the commitment in a few words, meetingId and time. Only explicit commitments.
-        23. relationships: how the target relates to other named people in the excerpts (defers to, aligned with, tension with, manages, reports to), with a short note. Only what the excerpts show.
-        24. nextMeeting: a practical plan for the user's next conversation with the target — objective (one sentence), talkingPoints (2 to 4), questions to ask to close the openQuestions (2 to 4), avoid (1 to 3 things that would likely backfire).
+        21. needs: 2 to 5 concrete things the target needs from the user or the user's team (information, deliverables, reassurance, decisions), most urgent first, each specific enough to act on (what, and by when if known).
+        22. commitments: promises in the meetings — who "them" (the target promised) or "us" (the user / the user's side promised the target), the commitment in a few words, meetingId and time, and status: done when a later meeting shows it was delivered, open when it is still owed, unknown otherwise. Only explicit commitments; keep the open ones from the previous profile and update their status.
+        23. relationships: how the target relates to other named people in the excerpts — relation in 1 to 3 words from the target's side (reports to, defers to, aligned with, tension with, manages, works with) — with a short note on what it means for the user (e.g. "go through him to reach Timothy"). Most influential first. Only what the excerpts show; person is the name as written in the transcript.
+        24. nextMeeting: a practical plan for the user's next conversation with the target — objective (one sentence: the outcome the user wants from it), talkingPoints (2 to 4, linked to the target's agenda and needs, open commitments first), questions to ask that close the most important openQuestions (2 to 4, phrased as the user would ask them), avoid (1 to 3 things that would likely backfire with this person).
         25. projects: meetings are grouped into projects (the "project/folder" shown on each meeting). For EACH project the target appears in, assess power, interest and attitude on THAT project specifically — the same person can be a decision maker on one project and a bystander on another — with a one-sentence note on their stake in it. folder must be exactly the project name as given. Keep entries from the previous profile for projects not in the new excerpts. The top-level power / interest / attitude are the overall view across all projects.
         26. workingWithMe: advice written specifically for the user (named in "The user" below; their lines are marked ▲). Base it on how the target and the user actually interact in the excerpts — what the user says and how the target responds, who drives, where they agree or push back. relationship: how the target sees and treats the user (e.g. as an executor, trusted advisor, junior, peer, vendor). trust: high / medium / low. expectations (2 to 4): what the target expects from the user. communication (2 to 4): the format, level of detail, cadence and language that work best with this target. buildTrust (2 to 4): concrete moves that would raise the user's credibility with the target. watchOuts (1 to 3): habits or behaviours of the user in these meetings that may land badly with this target. interactions (1 to 4): telling exchanges, quote = the target's words in reply to the user (meetingId, time), meaning = what it reveals about their working relationship. If the user does not appear with the target, give empty arrays and say so in relationship.
         """

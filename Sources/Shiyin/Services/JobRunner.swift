@@ -848,14 +848,23 @@ final class JobRunner {
         catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
         // 有些模型（經過閘道的 Claude）只回前面幾個欄位：下次見面、怎麼合作、話中的意思都缺時再要一次，
         // 明講每個欄位都要有（fork：使用者看到人物頁的分頁都是空的）
-        let keys = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]).map { Set($0.keys) } ?? []
-        if !keys.contains("nextMeeting") || !keys.contains("workingWithMe") || !keys.contains("readings") || !keys.contains("portrait") {
-            log.info("stakeholder \(personId) answer missing sections, asking again")
-            let retry = prompt + "\n\nIMPORTANT: Return the COMPLETE JSON object with EVERY field in the schema, including portrait, changes, nextMeeting, workingWithMe, readings, topics, relationships, commitments, projects and openQuestions. Do not stop after the first fields."  // l10n-skip
+        let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        // 模型把側寫的欄位放在最外層（沒有包在 portrait 裡）：照樣收下
+        if decoded.portrait.isEmpty, object?["mandate"] != nil || object?["agenda"] != nil,
+           let flat = try? JSONDecoder().decode(StakeholderProfile.Portrait.self, from: data) {
+            decoded.portrait = flat
+        }
+        let keys = object.map { Set($0.keys) } ?? []
+        // 側寫是空的也再要一次（使用者重新分析後「他是誰」還是空的：模型回了空的側寫，或格式不對）
+        if !keys.contains("nextMeeting") || !keys.contains("workingWithMe") || !keys.contains("readings") || decoded.portrait.isEmpty {
+            let shape = object?["portrait"].map { String(describing: type(of: $0)) } ?? "missing"
+            log.info("stakeholder \(personId) answer missing sections (portrait: \(shape, privacy: .public)), asking again")
+            let retry = prompt + "\n\nIMPORTANT: Return the COMPLETE JSON object with EVERY field in the schema, including portrait, changes, nextMeeting, workingWithMe, readings, topics, relationships, commitments, projects and openQuestions. Do not stop after the first fields. portrait must be an object whose lists (mandate, measuredOn, agenda, pressures, decisionStyle, workingStyle, redLines) hold objects {text, evidence}; fill every one you have any basis for."  // l10n-skip
             if let again = try? await callLLM(lane, { onStart in
                 try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: retry,
                                                  format: StakeholderProfile.format, onStart: onStart)
-            }), let better = try? JSONDecoder().decode(StakeholderProfile.self, from: again) {
+            }), let better = try? JSONDecoder().decode(StakeholderProfile.self, from: again),
+               !better.portrait.isEmpty || decoded.portrait.isEmpty {
                 decoded = better
             }
         }

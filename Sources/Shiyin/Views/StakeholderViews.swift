@@ -321,179 +321,215 @@ struct StakeholderDetails: View {
 
     // MARK: 他是誰
 
-    /// 人物側寫：先看他對什麼負責、被怎麼評量、現在要完成什麼、壓力在哪，再看他怎麼下決定、怎麼做事、個性和動機
+    /// 人物側寫，像顧問的人物簡報：
+    /// 「角色」一排兩張卡（負責什麼、怎麼評量他）→「現在」一排兩張卡（議程、壓力）→ 對他的好處（一句、淡色）→
+    /// 「他這個人」（怎麼下決定、怎麼做事、個性、動力）→ 底線（橘色提醒）→ 他聽誰的（名字標籤，點了打開人物頁）
     @ViewBuilder
     private var portrait: some View {
         let p = profile.portrait
-        VStack(alignment: .leading, spacing: 22) {
-            if !p.mandate.isEmpty || !p.measuredOn.isEmpty {
-                pointColumns((String(localized: "負責什麼"), p.mandate), (String(localized: "怎麼評量他"), p.measuredOn))
-            }
-            if !p.agenda.isEmpty || !p.pressures.isEmpty {
-                pointColumns((String(localized: "現在要完成的"), p.agenda), (String(localized: "壓力和擔心"), p.pressures))
-            }
-            if !p.personalWin.isEmpty {
-                block(String(localized: "對他自己的好處")) {
-                    Text(p.personalWin).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    Text("推測，只供參考").font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            if !p.decisionStyle.isEmpty || !p.workingStyle.isEmpty {
-                pointColumns((String(localized: "怎麼下決定"), p.decisionStyle), (String(localized: "怎麼做事、溝通"), p.workingStyle))
-            }
-            if !profile.personality.isEmpty || !profile.motivations.isEmpty {
-                pointColumns((String(localized: "個性"), profile.personality), (String(localized: "動力來源"), profile.motivations))
-            }
-            if !p.redLines.isEmpty { block(String(localized: "底線、會讓他反彈的事")) { points(p.redLines) } }
-            if !p.trustedVoices.isEmpty {
-                block(String(localized: "他聽誰的")) {
-                    Text(p.trustedVoices.joined(separator: "、")).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)  // l10n-skip
-                }
-            }
+        VStack(alignment: .leading, spacing: 26) {
             if p.isEmpty {
-                if profile.personality.isEmpty && profile.motivations.isEmpty { empty } else {
+                // 舊版的分析：先講清楚，按鈕就在旁邊
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "info.circle").foregroundStyle(Color.caution)
                     Text("這是舊版的分析，還沒有職責、評量、議程這些。按「重新分析」用新的方式整理。")
-                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button("重新分析") { model.analyzeStakeholder(profileOwner) }
+                        .disabled(model.askUnavailableReason != nil || model.isAnalyzingStakeholder(profileOwner))
+                }
+                .font(.callout)
+                .padding(12)
+                .background(Color.caution.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+            }
+            if !p.mandate.isEmpty || !p.measuredOn.isEmpty {
+                group(String(localized: "角色")) {
+                    cards(card(String(localized: "負責什麼"), "briefcase", p.mandate),
+                          card(String(localized: "怎麼評量他"), "chart.bar", p.measuredOn))
                 }
             }
+            if !p.agenda.isEmpty || !p.pressures.isEmpty || !p.personalWin.isEmpty {
+                group(String(localized: "現在")) {
+                    cards(card(String(localized: "現在要完成的"), "flag", p.agenda),
+                          card(String(localized: "壓力和擔心"), "exclamationmark.triangle", p.pressures))
+                    if !p.personalWin.isEmpty {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "star").foregroundStyle(Color.accent2).frame(width: 18)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("對他自己的好處").font(.callout.weight(.semibold))
+                                Text(p.personalWin).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                                Text("推測，只供參考").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.accent2.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+            if !p.decisionStyle.isEmpty || !p.workingStyle.isEmpty || !profile.personality.isEmpty || !profile.motivations.isEmpty {
+                group(String(localized: "他這個人")) {
+                    cards(card(String(localized: "怎麼下決定"), "scalemass", p.decisionStyle),
+                          card(String(localized: "怎麼做事、溝通"), "bubble.left.and.bubble.right", p.workingStyle))
+                    cards(card(String(localized: "個性"), "person.crop.circle", profile.personality),
+                          card(String(localized: "動力來源"), "bolt", profile.motivations))
+                }
+            }
+            if let red = card(String(localized: "底線、會讓他反彈的事"), "hand.raised", p.redLines, tint: Color.caution) { red }
+            if !p.trustedVoices.isEmpty {
+                group(String(localized: "他聽誰的")) { nameTags(p.trustedVoices) }
+            }
+            if p.isEmpty && profile.personality.isEmpty && profile.motivations.isEmpty { empty }
         }
     }
 
     // MARK: 怎麼做
 
+    /// 先下次見面（最常用），再「怎麼跟他合作」（他怎麼看你、期待、溝通、信用、小心），最後整體的策略
     @ViewBuilder
     private var plan: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 26) {
             nextMeeting
             workingWithMe
+            if !profile.advice.isEmpty {
+                group(String(localized: "整體的策略")) {
+                    numbered(profile.advice)
+                }
+            }
             if profile.nextMeeting.objective.isEmpty && profile.workingWithMe.isEmpty && profile.advice.isEmpty {
                 empty
             }
         }
     }
 
-    /// 下次見面：目標、要談的、要問的、要避免的
+    /// 下次見面：目標放最上面（一句、粗體），下面三張卡：要談的、要問的、避免
     @ViewBuilder
     private var nextMeeting: some View {
         let n = profile.nextMeeting
         if !n.objective.isEmpty || !n.talkingPoints.isEmpty || !n.questions.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Label("下次見面", systemImage: "target").font(.headline).foregroundStyle(Color.celadon)
-                if !n.objective.isEmpty { Text(n.objective).fontWeight(.medium).fixedSize(horizontal: false, vertical: true) }
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 24) { nextColumns(n) }
-                    VStack(alignment: .leading, spacing: 12) { nextColumns(n) }
+                if !n.objective.isEmpty {
+                    Text(n.objective).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                 }
+                cards(listCard(String(localized: "要談的"), "text.bubble", n.talkingPoints),
+                      listCard(String(localized: "要問的"), "questionmark.bubble", n.questions))
+                if let avoid = listCard(String(localized: "避免"), "nosign", n.avoid, tint: Color.caution) { avoid }
             }
-            .padding(14)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.celadon.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.celadon.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 
-    @ViewBuilder
-    private func nextColumns(_ n: StakeholderProfile.NextMeeting) -> some View {
-        if !n.talkingPoints.isEmpty { column(String(localized: "要談的"), n.talkingPoints) }
-        if !n.questions.isEmpty { column(String(localized: "要問的"), n.questions) }
-        if !n.avoid.isEmpty { column(String(localized: "避免"), n.avoid) }
-    }
-
-    /// 跟你合作：他怎麼看你、信任程度、他對你的期待、溝通方式、建立信用、要小心的地方、你們之間的互動
+    /// 跟你合作：他怎麼看你（一句）、信任程度，四張卡，你們之間的互動
     @ViewBuilder
     private var workingWithMe: some View {
         let w = profile.workingWithMe
         if !w.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Label("怎麼跟他合作", systemImage: "person.2.wave.2").font(.headline)
-                    if !w.trust.isEmpty {
-                        HStack(spacing: 4) {
-                            Text("他對你的信任").font(.callout).foregroundStyle(.secondary)
-                            LevelBadge(level: w.trust)
+            group(String(localized: "怎麼跟他合作")) {
+                if !w.relationship.isEmpty || !w.trust.isEmpty {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "person.2").foregroundStyle(Color.celadon).frame(width: 18)
+                        VStack(alignment: .leading, spacing: 4) {
+                            if !w.trust.isEmpty {
+                                HStack(spacing: 6) {
+                                    Text("他對你的信任").font(.callout.weight(.semibold))
+                                    LevelBadge(level: w.trust)
+                                }
+                            }
+                            if !w.relationship.isEmpty {
+                                Text(w.relationship).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                            }
                         }
                     }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
                 }
-                if !w.relationship.isEmpty {
-                    Text(w.relationship).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
-                }
-                twoColumns(
-                    (String(localized: "他對你的期待"), w.expectations),
-                    (String(localized: "怎麼溝通最有效"), w.communication))
-                twoColumns(
-                    (String(localized: "建立信用"), w.buildTrust),
-                    (String(localized: "要小心的地方"), w.watchOuts))
+                cards(listCard(String(localized: "他對你的期待"), "checklist", w.expectations),
+                      listCard(String(localized: "怎麼溝通最有效"), "bubble.left.and.bubble.right", w.communication))
+                cards(listCard(String(localized: "建立信用"), "hand.thumbsup", w.buildTrust),
+                      listCard(String(localized: "要小心的地方"), "exclamationmark.triangle", w.watchOuts, tint: Color.caution))
                 if !w.interactions.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("你們之間的互動").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
                         ForEach(Array(w.interactions.enumerated()), id: \.offset) { _, r in ReadingRow(reading: r) }
                     }
+                    .padding(.top, 4)
                 }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.2)))
-        } else if !profile.advice.isEmpty {
-            // 舊的分析沒有「跟你合作」：先顯示一般的互動建議
-            block(String(localized: "互動建議")) { bullets(profile.advice) }
-        }
-        if !w.isEmpty && !profile.advice.isEmpty {
-            block(String(localized: "互動建議")) { bullets(profile.advice) }
         }
     }
 
     // MARK: 讀懂他
 
+    /// 話中的意思（原話 → 意思），最新的會議在前；還要弄清楚的放最後
     @ViewBuilder
     private var read: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 26) {
             if !profile.readings.isEmpty {
-                block(String(localized: "話中的意思")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(Array(profile.readings.enumerated()), id: \.offset) { _, reading in ReadingRow(reading: reading) }
+                group(String(localized: "話中的意思")) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(Array(sortedReadings.enumerated()), id: \.offset) { _, reading in ReadingRow(reading: reading) }
                     }
                 }
             }
-            if !profile.openQuestions.isEmpty { block(String(localized: "還要弄清楚的")) { bullets(profile.openQuestions) } }
+            if let open = listCard(String(localized: "還要弄清楚的"), "magnifyingglass", profile.openQuestions) { open }
             if profile.readings.isEmpty && profile.openQuestions.isEmpty { empty }
         }
     }
 
+    /// 最近的會議在前（同一場照時間）
+    private var sortedReadings: [StakeholderProfile.Reading] {
+        let dates = Dictionary(model.meetings.map { ($0.id, $0.meeting.meetingDate) }, uniquingKeysWith: { a, _ in a })
+        return profile.readings.enumerated().sorted { a, b in
+            let da = dates[a.element.meetingId] ?? "", db = dates[b.element.meetingId] ?? ""
+            return da != db ? da > db : a.offset < b.offset
+        }.map(\.element)
+    }
+
     // MARK: 在意什麼
 
+    /// 他需要我們提供的（卡）→ 議題（每個一列：程度、議題、立場）→ 在各個案子（每個一張小卡）
     @ViewBuilder
     private var interests: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            if !profile.needs.isEmpty { block(String(localized: "他需要我們提供的")) { bullets(profile.needs) } }
+        VStack(alignment: .leading, spacing: 26) {
+            if let needs = listCard(String(localized: "他需要我們提供的"), "shippingbox", profile.needs, numberedItems: true) { needs }
             if !profile.topics.isEmpty {
-                block(String(localized: "關心的議題和立場")) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(Array(profile.topics.enumerated()), id: \.offset) { _, topic in
-                            // 議題一行、立場在下一行：並排時長的議題名稱把立場擠成很窄的一欄（UX 檢查）
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    LevelBadge(level: topic.interest)
-                                    Text(topic.topic).fontWeight(.medium).fixedSize(horizontal: false, vertical: true)
+                group(String(localized: "關心的議題和立場")) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(sortedTopics.enumerated()), id: \.offset) { i, topic in
+                            if i > 0 { Divider().padding(.vertical, 10) }
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                LevelBadge(level: topic.interest).fixedSize().frame(minWidth: 44, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(topic.topic).fontWeight(.semibold).fixedSize(horizontal: false, vertical: true)
+                                    if !topic.stance.isEmpty {
+                                        Text(topic.stance).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    EvidenceList(evidence: topic.evidence, indent: 0)
                                 }
-                                if !topic.stance.isEmpty {
-                                    Text(topic.stance).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                                }
-                                EvidenceList(evidence: topic.evidence)
                             }
                         }
                     }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.18)))
                 }
             }
             if !profile.projects.isEmpty {
-                block(String(localized: "在各個案子")) {
-                    VStack(alignment: .leading, spacing: 8) {
+                group(String(localized: "在各個案子")) {
+                    VStack(alignment: .leading, spacing: 10) {
                         ForEach(profile.projects, id: \.folder) { p in
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 8) {
                                     Button { model.openStakeholderMap(folder: p.folder) } label: {
-                                        Label(FolderPath.display(p.folder), systemImage: "folder").foregroundStyle(Color.celadon)
+                                        Label(FolderPath.display(p.folder), systemImage: "folder").fontWeight(.semibold).foregroundStyle(Color.celadon)
                                     }
                                     .buttonStyle(.plain)
                                     .help("打開這個案子的關係人地圖")
+                                    Spacer(minLength: 0)
                                     QuadrantBadge(quadrant: StakeholderProfile.Quadrant(power: p.power, interest: p.interest))
                                     if !p.attitude.isEmpty { AttitudeBadge(attitude: p.attitude, trend: "") }
                                 }
@@ -502,6 +538,9 @@ struct StakeholderDetails: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }
@@ -510,31 +549,76 @@ struct StakeholderDetails: View {
         }
     }
 
+    /// 關心程度高的在前
+    private var sortedTopics: [StakeholderProfile.Topic] {
+        func rank(_ v: String) -> Int { v == "high" ? 0 : v == "medium" ? 1 : 2 }
+        return profile.topics.enumerated().sorted { (rank($0.element.interest), $0.offset) < (rank($1.element.interest), $1.offset) }.map(\.element)
+    }
+
     // MARK: 人脈與承諾
 
+    /// 承諾在前（要追的事）：還沒做的在前，分「他答應的」「我們答應的」兩張卡；人際關係每個人一列，名字點了打開人物頁
     @ViewBuilder
     private var network: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 26) {
+            if !profile.commitments.isEmpty {
+                group(String(localized: "雙方的承諾")) {
+                    let them = profile.commitments.filter { $0.who != "us" }
+                    let us = profile.commitments.filter { $0.who == "us" }
+                    cardRow(them.isEmpty ? nil : AnyView(commitmentCard(String(localized: "他答應的"), them)),
+                            us.isEmpty ? nil : AnyView(commitmentCard(String(localized: "我們答應的"), us)))
+                }
+            }
             if !profile.relationships.isEmpty {
-                block(String(localized: "人際關係")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(profile.relationships.enumerated()), id: \.offset) { _, r in
-                            VStack(alignment: .leading, spacing: 1) {
-                                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                    Text(r.person).fontWeight(.medium)
-                                    Text(r.relation).foregroundStyle(Color.celadon)
-                                }
-                                if !r.note.isEmpty {
-                                    Text(r.note).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                group(String(localized: "人際關係")) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(profile.relationships.enumerated()), id: \.offset) { i, r in
+                            if i > 0 { Divider().padding(.vertical, 10) }
+                            HStack(alignment: .top, spacing: 10) {
+                                let id = model.peopleOverview.first { $0.name.caseInsensitiveCompare(r.person) == .orderedSame }?.id
+                                PersonAvatar(name: r.person, color: Color.person(r.person), size: 26, scales: false)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                        PersonLink(personId: id) { LinkName(name: r.person).fontWeight(.semibold) }
+                                        Tag(text: r.relation, color: Color.celadon)
+                                    }
+                                    if !r.note.isEmpty {
+                                        Text(r.note).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    }
                                 }
                             }
                         }
                     }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.18)))
                 }
             }
-            if !profile.commitments.isEmpty { block(String(localized: "雙方的承諾")) { commitments } }
             if profile.relationships.isEmpty && profile.commitments.isEmpty { empty }
         }
+    }
+
+    private func commitmentCard(_ title: String, _ list: [StakeholderProfile.Commitment]) -> some View {
+        // 還沒做的在前
+        let sorted = list.enumerated().sorted { ($0.element.status == "done" ? 1 : 0, $0.offset) < ($1.element.status == "done" ? 1 : 0, $1.offset) }.map(\.element)
+        return VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: "arrow.left.arrow.right").font(.callout.weight(.semibold))
+            ForEach(Array(sorted.enumerated()), id: \.offset) { _, c in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    let done = c.status == "done"
+                    Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(done ? Color.positive : Color.secondary)
+                        .help(done ? String(localized: "後來的會議看得出已經做了") : c.status == "open" ? String(localized: "還沒做") : String(localized: "不確定做了沒有"))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(c.text).foregroundStyle(done ? .secondary : .primary).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                        if !c.time.isEmpty { CitationLink(meetingId: c.meetingId, time: c.time) }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private var empty: some View {
@@ -543,94 +627,144 @@ struct StakeholderDetails: View {
 
     // MARK: 共用
 
-    @ViewBuilder
-    private func twoColumns(_ a: (String, [String]), _ b: (String, [String])) -> some View {
-        if !a.1.isEmpty || !b.1.isEmpty {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 24) {
-                    if !a.1.isEmpty { column(a.0, a.1) }
-                    if !b.1.isEmpty { column(b.0, b.1) }
-                }
-                VStack(alignment: .leading, spacing: 12) {
-                    if !a.1.isEmpty { column(a.0, a.1) }
-                    if !b.1.isEmpty { column(b.0, b.1) }
-                }
-            }
-        }
-    }
+    /// 這份分析是誰的（「重新分析」按鈕用）
+    private var profileOwner: Int64 { model.stakeholderPersonId ?? 0 }
 
-    /// 兩組有出處的重點：放得下並排，放不下上下
-    @ViewBuilder
-    private func pointColumns(_ a: (String, [StakeholderProfile.Point]), _ b: (String, [StakeholderProfile.Point])) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 24) {
-                if !a.1.isEmpty { pointColumn(a.0, a.1) }
-                if !b.1.isEmpty { pointColumn(b.0, b.1) }
-            }
-            VStack(alignment: .leading, spacing: 18) {
-                if !a.1.isEmpty { pointColumn(a.0, a.1) }
-                if !b.1.isEmpty { pointColumn(b.0, b.1) }
-            }
-        }
-    }
-
-    private func pointColumn(_ title: String, _ items: [StakeholderProfile.Point]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).contentTitleFont(16)
-            points(items)
-        }
-        .frame(minWidth: 240, maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func column(_ title: String, _ items: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
-            bullets(items)
-        }
-        .frame(minWidth: 200, maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var commitments: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(profile.commitments.enumerated()), id: \.offset) { _, c in
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    let ours = c.who == "us"
-                    Text(ours ? String(localized: "我們") : String(localized: "他"))
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 5).padding(.vertical, 1)
-                        .foregroundStyle(ours ? Color.celadon : Color.accent2)
-                        .background((ours ? Color.celadon : Color.accent2).opacity(0.12), in: Capsule())
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(c.text).fixedSize(horizontal: false, vertical: true)
-                        if !c.time.isEmpty { CitationLink(meetingId: c.meetingId, time: c.time) }
-                    }
-                }
-            }
-        }
-    }
-
-    private func block(_ title: String, @ViewBuilder _ content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).contentTitleFont(16)
+    /// 一組：標題（宋體）、內容
+    private func group(_ title: String, @ViewBuilder _ content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).contentTitleFont(17)
             content()
         }
     }
 
-    private func bullets(_ items: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                Text("• " + item).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+    /// 兩張卡：放得下並排（等高），放不下上下；空的那張不畫
+    @ViewBuilder
+    private func cards(_ a: AnyView?, _ b: AnyView?) -> some View {
+        cardRow(a, b)
+    }
+
+    @ViewBuilder
+    private func cardRow(_ a: AnyView?, _ b: AnyView?) -> some View {
+        switch (a, b) {
+        case let (a?, b?):
+            TwoUpLayout(minColumn: 260, spacing: 12) { a; b }
+        case let (a?, nil): a
+        case let (nil, b?): b
+        default: EmptyView()
+        }
+    }
+
+    /// 一張卡：圖示＋標題，下面是有出處的重點。沒有重點時不畫（回傳 nil）
+    private func card(_ title: String, _ symbol: String, _ items: [StakeholderProfile.Point], tint: Color = Color.celadon) -> AnyView? {
+        guard !items.isEmpty else { return nil }
+        return AnyView(cardChrome(title, symbol, tint) {
+            VStack(alignment: .leading, spacing: 9) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, point in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(point.text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        EvidenceList(evidence: point.evidence, indent: 0)
+                    }
+                }
+            }
+        })
+    }
+
+    /// 一張卡，內容是幾句字（沒有出處）
+    private func listCard(_ title: String, _ symbol: String, _ items: [String], tint: Color = Color.celadon, numberedItems: Bool = false) -> AnyView? {
+        guard !items.isEmpty else { return nil }
+        return AnyView(cardChrome(title, symbol, tint) {
+            if numberedItems { numbered(items) } else { bullets(items) }
+        })
+    }
+
+    private func cardChrome(_ title: String, _ symbol: String, _ tint: Color, @ViewBuilder _ content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label {
+                Text(title).font(.callout.weight(.semibold))
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(tint)
+            }
+            content()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(tint.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(tint.opacity(0.12)))
+    }
+
+    /// 名字標籤：認得的人點了打開人物頁
+    private func nameTags(_ names: [String]) -> some View {
+        FlowLayout(spacing: 8) {
+            ForEach(Array(names.enumerated()), id: \.offset) { _, name in
+                let id = model.peopleOverview.first { name.localizedCaseInsensitiveContains($0.name) && $0.name.count >= 2 }?.id
+                PersonLink(personId: id) {
+                    HStack(spacing: 6) {
+                        PersonAvatar(name: name, color: Color.person(name), size: 20, scales: false)
+                        Text(name).font(.callout)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Color.secondary.opacity(0.07), in: Capsule())
+                }
             }
         }
     }
 
-    private func points(_ points: [StakeholderProfile.Point]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(points.enumerated()), id: \.offset) { _, point in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("• " + point.text).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    EvidenceList(evidence: point.evidence)
+    private func bullets(_ items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("•").foregroundStyle(.secondary)
+                    Text(item).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                 }
+            }
+        }
+    }
+
+    private func numbered(_ items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text("\(i + 1)").font(.callout.weight(.bold)).monospacedDigit().foregroundStyle(Color.celadon).frame(width: 16, alignment: .trailing)
+                    Text(item).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
+/// 兩張卡：寬度夠（每欄至少 minColumn）就並排、一樣高，不夠就上下。
+/// 不用 ViewThatFits：它拿文字排成一行的寬度來比，長的句子永遠「放不下」，卡片就一直上下排（使用者截圖）
+struct TwoUpLayout: Layout {
+    var minColumn: CGFloat
+    var spacing: CGFloat
+
+    private func columns(_ width: CGFloat?) -> Bool { (width ?? 0) >= minColumn * 2 + spacing }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? minColumn * 2 + spacing
+        if columns(proposal.width) {
+            let column = (width - spacing) / 2
+            let height = subviews.map { $0.sizeThatFits(ProposedViewSize(width: column, height: nil)).height }.max() ?? 0
+            return CGSize(width: width, height: height)
+        }
+        let heights = subviews.map { $0.sizeThatFits(ProposedViewSize(width: width, height: nil)).height }
+        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(max(heights.count - 1, 0)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        if columns(bounds.width) {
+            let column = (bounds.width - spacing) / 2
+            for (i, view) in subviews.enumerated() {
+                view.place(at: CGPoint(x: bounds.minX + CGFloat(i) * (column + spacing), y: bounds.minY),
+                           proposal: ProposedViewSize(width: column, height: bounds.height))
+            }
+        } else {
+            var y = bounds.minY
+            for view in subviews {
+                let h = view.sizeThatFits(ProposedViewSize(width: bounds.width, height: nil)).height
+                view.place(at: CGPoint(x: bounds.minX, y: y), proposal: ProposedViewSize(width: bounds.width, height: h))
+                y += h + spacing
             }
         }
     }
@@ -655,6 +789,7 @@ struct ReadingRow: View {
 /// 出處預設收起來：「3 個出處 ▸」，點了展開
 struct EvidenceList: View {
     let evidence: [StakeholderProfile.Evidence]
+    var indent: CGFloat = 12
     @State private var open = false
 
     var body: some View {
@@ -676,7 +811,7 @@ struct EvidenceList: View {
                     }
                 }
             }
-            .padding(.leading, 12)
+            .padding(.leading, indent)
         }
     }
 }

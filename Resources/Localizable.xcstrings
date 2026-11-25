@@ -3471,6 +3471,23 @@
         }
       }
     },
+    "不確定做了沒有": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不确定做了没有"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not sure whether it was done"
+          }
+        }
+      }
+    },
     "不要再提醒這個 app": {
       "extractionState": "manual",
       "localizations": {
@@ -3800,23 +3817,6 @@
         }
       }
     },
-    "互動建議": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "How to work with them"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "互动建议"
-          }
-        }
-      }
-    },
     "人多、吵雜或手機放在桌上錄音時，先告訴拾音大約幾個人，說話者會分得比較準": {
       "extractionState": "manual",
       "localizations": {
@@ -3925,23 +3925,6 @@
         }
       }
     },
-    "他": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Them"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "他"
-          }
-        }
-      }
-    },
     "他對你的信任": {
       "extractionState": "manual",
       "localizations": {
@@ -3993,6 +3976,23 @@
         }
       }
     },
+    "他答應的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他答应的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They promised"
+          }
+        }
+      }
+    },
     "他聽誰的": {
       "extractionState": "manual",
       "localizations": {
@@ -4023,6 +4023,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "他说的话还不多。按“补充背景”填他的角色和你知道的事，分析会准一些。"
+          }
+        }
+      }
+    },
+    "他這個人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他这个人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The person"
           }
         }
       }
@@ -11692,6 +11709,23 @@
         }
       }
     },
+    "後來的會議看得出已經做了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "后来的会议看得出已经做了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A later meeting shows it was done"
+          }
+        }
+      }
+    },
     "後半句是": {
       "extractionState": "manual",
       "localizations": {
@@ -12299,19 +12333,19 @@
         }
       }
     },
-    "我們": {
+    "我們答應的": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Us"
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "我们"
+            "value": "我们答应的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We promised"
           }
         }
       }
@@ -15726,6 +15760,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "整理草稿"
+          }
+        }
+      }
+    },
+    "整體的策略": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整体的策略"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overall strategy"
           }
         }
       }
@@ -20243,6 +20294,23 @@
         }
       }
     },
+    "現在": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现在"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right now"
+          }
+        }
+      }
+    },
     "現在不在資料夾裡的會議也套用（%lld 場）": {
       "extractionState": "manual",
       "localizations": {
@@ -23434,6 +23502,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "要开始录音吗？"
+          }
+        }
+      }
+    },
+    "角色": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角色"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Role"
           }
         }
       }
@@ -26949,6 +27034,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没下载，第一次转录%@会议时会自动下载"
+          }
+        }
+      }
+    },
+    "還沒做": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没做"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not done yet"
           }
         }
       }
