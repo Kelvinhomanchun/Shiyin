@@ -380,7 +380,7 @@ private struct StatSheet: View {
             card(.listening).frame(width: 230)
             HStack(alignment: .center, spacing: 14) {
                 VStack(spacing: 12) { card(.curiosity); card(.room) }.frame(width: 230)
-                Radar(sums: sums).frame(width: 300, height: 300)
+                Radar(sums: sums).frame(width: 320, height: 300)
                 VStack(spacing: 12) { card(.concision); card(.dialogue) }.frame(width: 230)
             }
             card(.clarity).frame(width: 230)
@@ -391,7 +391,7 @@ private struct StatSheet: View {
     /// 窄：雷達在上，卡兩欄
     private var narrow: some View {
         VStack(spacing: 14) {
-            Radar(sums: sums).frame(width: 300, height: 300).frame(maxWidth: .infinity)
+            Radar(sums: sums).frame(width: 340, height: 300).frame(maxWidth: .infinity)
             CoachGrid(minColumn: 220, spacing: 12) {
                 ForEach(Coaching.Skill.allCases) { card($0) }
             }
@@ -446,7 +446,8 @@ private struct Radar: View {
     var body: some View {
         Canvas { context, size in
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
-            let r = min(size.width, size.height) / 2 - 34
+            // 標籤畫在圈外：左右要留出最長的標籤（「Room given」）的寬度，上下留一行
+            let r = min(size.width / 2 - 62, size.height / 2 - 26)
             func pt(_ i: Int, _ v: Double) -> CGPoint {
                 let a = -Double.pi / 2 + Double(i) * 2 * .pi / 6
                 return CGPoint(x: c.x + cos(a) * r * v / 5, y: c.y + sin(a) * r * v / 5)
@@ -480,8 +481,12 @@ private struct Radar: View {
                 let dot = Path(ellipseIn: CGRect(x: p.x - 4, y: p.y - 4, width: 8, height: 8))
                 context.fill(dot, with: .color(Color(nsColor: .textBackgroundColor)))
                 context.stroke(dot, with: .color(Color.celadon), lineWidth: 2)
-                let lp = pt(i, 5.9)
-                context.draw(Text(order[i].label).font(.callout.weight(.semibold)), at: lp)
+                // 左邊的標籤靠右對齊、右邊的靠左，貼著圈外，不會被切掉
+                let a = -Double.pi / 2 + Double(i) * 2 * .pi / 6
+                let edge = pt(i, 5)
+                let lp = CGPoint(x: edge.x + cos(a) * 10, y: edge.y + sin(a) * 14)
+                let anchor: UnitPoint = abs(cos(a)) < 0.1 ? (sin(a) < 0 ? .bottom : .top) : (cos(a) > 0 ? .leading : .trailing)
+                context.draw(Text(order[i].label).font(.callout.weight(.semibold)), at: lp, anchor: anchor)
             }
         }
         .accessibilityElement(children: .ignore)

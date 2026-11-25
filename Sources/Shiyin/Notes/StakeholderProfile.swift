@@ -183,6 +183,22 @@ struct StakeholderProfile: Codable, Hashable {
             personalWin = (try? c.decode(String.self, forKey: .personalWin)) ?? ""
             trustedVoices = (try? c.decode([String].self, forKey: .trustedVoices)) ?? []
         }
+        /// 有內容的項目數（七項清單＋個人的贏面）
+        var filledCount: Int {
+            [mandate, measuredOn, agenda, pressures, decisionStyle, workingStyle, redLines].filter { !$0.isEmpty }.count + (personalWin.isEmpty ? 0 : 1)
+        }
+        /// 空的項目用上一版的補上
+        mutating func fillGaps(from previous: Portrait) {
+            if mandate.isEmpty { mandate = previous.mandate }
+            if measuredOn.isEmpty { measuredOn = previous.measuredOn }
+            if agenda.isEmpty { agenda = previous.agenda }
+            if pressures.isEmpty { pressures = previous.pressures }
+            if personalWin.isEmpty { personalWin = previous.personalWin }
+            if decisionStyle.isEmpty { decisionStyle = previous.decisionStyle }
+            if workingStyle.isEmpty { workingStyle = previous.workingStyle }
+            if redLines.isEmpty { redLines = previous.redLines }
+            if trustedVoices.isEmpty { trustedVoices = previous.trustedVoices }
+        }
         var isEmpty: Bool {
             mandate.isEmpty && measuredOn.isEmpty && agenda.isEmpty && pressures.isEmpty && personalWin.isEmpty
                 && decisionStyle.isEmpty && workingStyle.isEmpty && redLines.isEmpty

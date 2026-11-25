@@ -860,7 +860,8 @@ final class JobRunner {
         }
         let keys = object.map { Set($0.keys) } ?? []
         // 側寫是空的也再要一次（使用者重新分析後「他是誰」還是空的：模型回了空的側寫，或格式不對）
-        if !keys.contains("nextMeeting") || !keys.contains("workingWithMe") || !keys.contains("readings") || decoded.portrait.isEmpty {
+        // 側寫只填了一兩項（Sandy：只有職責，其他八項都空）也算缺：七項清單少於四項有內容就再要一次（fork，2026-11-25）
+        if !keys.contains("nextMeeting") || !keys.contains("workingWithMe") || !keys.contains("readings") || decoded.portrait.filledCount < 4 {
             let shape = object?["portrait"].map { String(describing: type(of: $0)) } ?? "missing"
             log.info("stakeholder \(personId) answer missing sections (portrait: \(shape, privacy: .public)), asking again")
             let retry = prompt + "\n\nIMPORTANT: Return the COMPLETE JSON object with EVERY field in the schema, including portrait, changes, nextMeeting, workingWithMe, readings, topics, relationships, commitments, projects and openQuestions. Do not stop after the first fields. portrait must be an object whose lists (mandate, measuredOn, agenda, pressures, decisionStyle, workingStyle, redLines) hold objects {text, evidence}; fill every one you have any basis for."  // l10n-skip
@@ -868,10 +869,12 @@ final class JobRunner {
                 try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: retry,
                                                  format: StakeholderProfile.format, onStart: onStart)
             }), let better = try? JSONDecoder().decode(StakeholderProfile.self, from: again),
-               !better.portrait.isEmpty || decoded.portrait.isEmpty {
+               better.portrait.filledCount >= decoded.portrait.filledCount {
                 decoded = better
             }
         }
+        // 更新時模型漏了某一項：沿用上一版那一項，不要讓已經有的內容消失
+        if let previous = existing?.decoded?.portrait { decoded.portrait.fillGaps(from: previous) }
         // 出處可以指向之前分析過的會議（累積更新時保留舊的依據）
         let known = done.union(materials.map(\.id))
         // 文字裡還是寫了「Meeting 22」：換成那場會議的日期和標題（使用者看不懂會議的編號）
