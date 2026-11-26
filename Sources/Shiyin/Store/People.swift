@@ -108,6 +108,17 @@ enum SidebarMode: String {
 
 /// 人物頁（design §60、R85）
 extension AppModel {
+    /// 工作做完、列表重讀時：人物有變（新的人、改名、會議數）才換掉，不要每次都讓側欄重畫
+    func refreshPeopleIfChanged() {
+        guard let fresh = try? db.peopleOverview() else { return }
+        if fresh != peopleOverview {
+            peopleOverview = fresh
+            stakeholderRecordsCache = nil
+            personGroups = (try? db.personGroups()) ?? personGroups
+            people = (try? db.peopleSummaries()) ?? people
+        }
+    }
+
     func reloadPeopleOverview() {
         peopleOverview = (try? db.peopleOverview()) ?? []
         stakeholderRecordsCache = nil

@@ -519,6 +519,8 @@ final class AppModel {
             glossarySuggestions = try db.glossarySuggestions().filter { !CompanyGlossary.contains($0.term) }
             templates = try db.templates()
             meetingPeople = try db.meetingPeople()
+            // 人物：會議整理完對到的新的人，側欄的「人物」馬上看得到（fork：使用者要先點紀錄裡的名字才會出現）
+            refreshPeopleIfChanged()
             folderRules = try db.folderRules()
             folderNames = try db.folderNames()
             queuedCount = try db.activeJobs().filter { $0.status == .queued }.count

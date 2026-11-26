@@ -434,6 +434,7 @@ enum DebugControl {
         case "coachingreject": if let id, args.count > 2 { model.rejectCoachingFinding(id, title: args.dropFirst(2).joined(separator: " ")) }   // coachingreject <人物 id> <標題>：等於按「不對」
         case "personcite": if let id { model.openFromPersonPage(id, seconds: args.count > 2 ? TimeFormat.seconds(args[2]) : nil) }   // personcite <會議 id> [時間]：等於點人物頁的出處
         case "coachinguseful": if let id, args.count > 2 { model.toggleUsefulCoachingFinding(id, title: args.dropFirst(2).joined(separator: " ")) }   // coachinguseful <人物 id> <標題>：等於按「有用」
+        case "overviewnames": write(["names": model.peopleOverview.map(\.name)], to: args[1])   // overviewnames <輸出.json>：側欄「人物」現在列的名字（不重讀）
         case "coachingstate":   // coachingstate <輸出.json>
             write(["stats": model.coachingStats.count, "skipped": model.coachingSkipped, "running": model.coachingRunning,
                    "hasProfile": model.coaching?.decoded != nil, "strengths": model.coaching?.decoded?.strengths.map(\.title) ?? [],
