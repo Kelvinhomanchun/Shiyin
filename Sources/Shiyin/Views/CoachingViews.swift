@@ -668,7 +668,9 @@ private struct CoachingFindings: View {
                 Text(none).foregroundStyle(.secondary)
             }
             ForEach(Array(list.enumerated()), id: \.offset) { _, finding in
-                FindingCard(finding: finding) { model.rejectCoachingFinding(person.id, title: finding.title) }
+                FindingCard(finding: finding, useful: model.coaching?.usefulTitles.contains(finding.title) ?? false,
+                            markUseful: { model.toggleUsefulCoachingFinding(person.id, title: finding.title) },
+                            reject: { model.rejectCoachingFinding(person.id, title: finding.title) })
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
@@ -677,8 +679,10 @@ private struct CoachingFindings: View {
 
 private struct FindingCard: View {
     let finding: CoachingProfile.Finding
+    /// 存在資料庫：離開分頁、重新整理後還在
+    let useful: Bool
+    let markUseful: () -> Void
     let reject: () -> Void
-    @State private var useful = false
 
     var body: some View {
         CoachCard {
@@ -699,8 +703,9 @@ private struct FindingCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 12) {
-                Button(useful ? "謝謝" : "有用", systemImage: useful ? "hand.thumbsup.fill" : "hand.thumbsup") { useful = true }
-                    .disabled(useful)
+                Button(useful ? "已標為有用" : "有用", systemImage: useful ? "hand.thumbsup.fill" : "hand.thumbsup", action: markUseful)
+                    .foregroundStyle(useful ? Color.positive : Color.celadon)
+                    .help(useful ? "之後重新整理會保留這一點。再按一次取消" : "標為有用：之後重新整理會保留這一點")
                 Button("不對", systemImage: "xmark", action: reject)
                     .help("拿掉這一點，之後重新整理也不會再寫")
             }

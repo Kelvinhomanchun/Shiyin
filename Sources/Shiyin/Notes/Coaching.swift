@@ -463,6 +463,8 @@ struct CoachingRecord: SnakeCaseRecord, Hashable {
     var meetingIds: String
     /// 使用者說「不對」的建議（標題），之後不再寫
     var rejected: String = "[]"
+    /// 使用者說「有用」的建議（標題），之後重新整理盡量保留
+    var useful: String = "[]"
     var language: String = ""
     var provider: String = ""
     var model: String = ""
@@ -471,6 +473,7 @@ struct CoachingRecord: SnakeCaseRecord, Hashable {
     var decoded: CoachingProfile? { profile.isEmpty ? nil : try? JSONDecoder().decode(CoachingProfile.self, from: Data(profile.utf8)) }
     var analyzedMeetings: Set<Int64> { Set((try? JSONDecoder().decode([Int64].self, from: Data(meetingIds.utf8))) ?? []) }
     var rejectedTitles: [String] { (try? JSONDecoder().decode([String].self, from: Data(rejected.utf8))) ?? [] }
+    var usefulTitles: [String] { (try? JSONDecoder().decode([String].self, from: Data(useful.utf8))) ?? [] }
 
     var updatedLocal: String {
         guard let date = ISO8601DateFormatter().date(from: updatedAt) else { return String(updatedAt.prefix(16)).replacingOccurrences(of: "T", with: " ") }
@@ -528,6 +531,7 @@ extension AppDatabase {
             var record = record
             if let old = try CoachingRecord.fetchOne(db, sql: "SELECT * FROM coaching WHERE person_id = ?", arguments: [record.personId]) {
                 record.rejected = old.rejected
+                record.useful = old.useful
             }
             try db.execute(sql: "DELETE FROM coaching WHERE person_id = ?", arguments: [record.personId])
             try record.insert(db)
@@ -546,6 +550,17 @@ extension AppDatabase {
             record.rejected = (try? JSONEncoder().encode(titles)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
             record.profile = profile.jsonString()
             try db.execute(sql: "UPDATE coaching SET profile = ?, rejected = ? WHERE person_id = ?", arguments: [record.profile, record.rejected, personId])
+        }
+    }
+
+    /// 「有用」：記下標題（再按一次取消），之後重新整理時請整理工具保留這一點
+    func toggleUsefulCoachingFinding(_ personId: Int64, title: String) throws {
+        try pool.write { db in
+            guard let record = try CoachingRecord.fetchOne(db, sql: "SELECT * FROM coaching WHERE person_id = ?", arguments: [personId]) else { return }
+            var titles = record.usefulTitles
+            if let i = titles.firstIndex(of: title) { titles.remove(at: i) } else { titles.append(title) }
+            let json = (try? JSONEncoder().encode(titles)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            try db.execute(sql: "UPDATE coaching SET useful = ? WHERE person_id = ?", arguments: [json, personId])
         }
     }
 
@@ -608,7 +623,7 @@ enum CoachingPrompt {
     }
 
     static func prompt(me: String, role: String, org: String, summaries: [Coaching.SkillSummary], meetings: [MeetingMaterial],
-                       previous: CoachingProfile?, rebuild: Bool = false, rejected: [String]) -> String {
+                       previous: CoachingProfile?, rebuild: Bool = false, rejected: [String], useful: [String] = []) -> String {
         var out: [String] = []
         out.append("The user: \(me)" + ([role, org].contains { !$0.isEmpty } ? " (\([role, org].filter { !$0.isEmpty }.joined(separator: ", ")))" : ""))
         out.append("")
@@ -621,6 +636,10 @@ enum CoachingPrompt {
         if !rejected.isEmpty {
             out.append("")
             out.append("Points the user marked as wrong (do not repeat): " + rejected.joined(separator: "; "))
+        }
+        if !useful.isEmpty {
+            out.append("")
+            out.append("Points the user marked as useful (keep them, with the same title, while the evidence still supports them; update their trend): " + useful.joined(separator: "; "))
         }
         if let previous {
             out.append("")

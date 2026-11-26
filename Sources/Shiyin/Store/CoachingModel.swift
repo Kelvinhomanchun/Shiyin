@@ -32,6 +32,12 @@ extension AppModel {
         if let me = stakeholderMe.sorted().first { loadCoaching(me) }
     }
 
+    /// 「有用」：記下來（再按一次取消），之後重新整理時保留這一點
+    func toggleUsefulCoachingFinding(_ personId: Int64, title: String) {
+        do { try db.toggleUsefulCoachingFinding(personId, title: title) } catch { errorMessage = error.localizedDescription; return }
+        coaching = (try? db.coachingRecord(personId)).flatMap { $0 }
+    }
+
     /// 「不對」：拿掉這一點，之後不再寫
     func rejectCoachingFinding(_ personId: Int64, title: String) {
         do { try db.rejectCoachingFinding(personId, title: title) } catch { errorMessage = error.localizedDescription; return }

@@ -947,7 +947,8 @@ final class JobRunner {
         let context = try db.stakeholderProfile(personId)
         let prompt = CoachingPrompt.prompt(me: me.name, role: context?.userRole ?? "", org: context?.userOrg.nonEmpty ?? me.group ?? "",
                                            summaries: Coaching.summaries(stats), meetings: materials,
-                                           previous: stored?.decoded, rebuild: rebuild, rejected: stored?.rejectedTitles ?? [])
+                                           previous: stored?.decoded, rebuild: rebuild, rejected: stored?.rejectedTitles ?? [],
+                                           useful: stored?.usefulTitles ?? [])
         let system = CoachingPrompt.system(language)
         let data = try await callLLM(lane) { onStart in
             try await LLMClient.generateJSON(provider: provider, model: AppSettings.stakeholderModel, system: system, prompt: prompt,
@@ -972,6 +973,19 @@ final class JobRunner {
         var profile = decoded.validated(meetingIds: Set(stats.map(\.id)))
         profile.strengths.removeAll { rejected.contains($0.title) }
         profile.weaknesses.removeAll { rejected.contains($0.title) }
+        // 「有用」的點：整理工具這次沒寫到就沿用上一版（一邊最多 3 點，有用的優先）
+        let useful = stored?.usefulTitles ?? []
+        if let previous = stored?.decoded, !useful.isEmpty {
+            func keep(_ list: [CoachingProfile.Finding], _ old: [CoachingProfile.Finding]) -> [CoachingProfile.Finding] {
+                let missing = old.filter { o in useful.contains(o.title) && !list.contains(where: { $0.title == o.title }) }
+                guard !missing.isEmpty else { return list }
+                let others = list.filter { !useful.contains($0.title) }
+                let kept = list.filter { useful.contains($0.title) } + missing
+                return Array((kept + others).prefix(3))
+            }
+            profile.strengths = keep(profile.strengths, previous.strengths)
+            profile.weaknesses = keep(profile.weaknesses, previous.weaknesses)
+        }
         try db.saveCoaching(CoachingRecord(personId: personId, profile: profile.jsonString(),
                                            meetingIds: Self.idsJSON(done.union(chosen.map(\.id))),
                                            language: language.rawValue, provider: provider.rawValue, model: AppSettings.stakeholderModel))

@@ -4004,6 +4004,17 @@
         }
       }
     },
+    "之後重新整理會保留這一點。再按一次取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later refreshes keep this point. Click again to undo."
+          }
+        }
+      }
+    },
     "之後隨時可以從「輔助說明」選單（⌘?）或選單列的拾音圖示，再打開這份說明。": {
       "extractionState": "manual",
       "localizations": {
@@ -11380,6 +11391,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暂停，点一下打开录音中的会议"
+          }
+        }
+      }
+    },
+    "已標為有用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marked useful"
           }
         }
       }
@@ -18867,6 +18889,17 @@
         }
       }
     },
+    "標為有用：之後重新整理會保留這一點": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as useful: later refreshes keep this point."
+          }
+        }
+      }
+    },
     "標記這個時間點（⌘B），整理時會被當成重點": {
       "extractionState": "manual",
       "localizations": {
@@ -25680,23 +25713,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Getting to the point without long stretches"
-          }
-        }
-      }
-    },
-    "謝謝": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谢谢"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thanks"
           }
         }
       }

@@ -443,6 +443,10 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 我的表現：使用者說「有用」的建議（標題），之後重新整理時保留
+        migrator.registerMigration("fork-coaching-useful") { db in
+            try db.execute(sql: "ALTER TABLE coaching ADD COLUMN useful TEXT NOT NULL DEFAULT '[]'")
+        }
         return migrator
     }
 
