@@ -137,6 +137,10 @@ public sealed class RecorderTests : IDisposable
         Recorder.Result? result = null;
         recorder.Finished += r => result = r;
         recorder.StartSimulated(1, Wav(6), 4, both: false, MeetingLanguage.Zh, new WavDecoder());
+        // 只錄麥克風時不能單獨暫停麥克風（R116.1，用「暫停」）
+        Assert.False(recorder.CanPauseMic);
+        recorder.SetMicPaused(true);
+        Assert.False(recorder.MicPaused);
         await Until(() => recorder.Elapsed >= 1);
         recorder.Pause();
         Assert.True(recorder.IsPaused);
@@ -150,6 +154,32 @@ public sealed class RecorderTests : IDisposable
         recorder.Stop();
         Assert.InRange(result!.Duration, 2.5, 4.5);
         Assert.Equal((long)Math.Round(result.Duration * 16000), Read(result.File!).Frames);
+    }
+
+    [Fact]
+    public async Task MicPauseWritesSilenceOnMicChannelOnly()
+    {
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        Recorder.Result? result = null;
+        recorder.Finished += r => result = r;
+        // 兩聲道是同一個音檔（同 Mac 的 record-sim）：沒暫停的地方兩邊一樣
+        recorder.StartSimulated(1, Wav(8), 4, both: true, MeetingLanguage.Zh, new WavDecoder());
+        Assert.True(recorder.CanPauseMic);
+        await Until(() => recorder.Elapsed >= 2);
+        recorder.SetMicPaused(true);
+        Assert.True(recorder.MicPaused);
+        await Until(() => recorder.Elapsed >= 5);
+        recorder.SetMicPaused(false);
+        await Until(() => recorder.Elapsed >= 7.95);
+        recorder.Stop();
+        var (_, frames, data) = Read(result!.File!);
+        // 長度不變：暫停麥克風時那一聲道寫 0，不是丟掉（R116.1）
+        Assert.Equal(8 * 16000, frames);
+        // 暫停的那段（3～4 秒，離切換的時間點遠一點）麥克風全是 0、電腦聲音照常
+        Assert.All(data[0][(3 * 16000)..(4 * 16000)], s => Assert.Equal(0f, s));
+        Assert.Contains(data[1][(3 * 16000)..(4 * 16000)], s => s != 0);
+        Assert.Equal(data[1][..16000], data[0][..16000]);
+        Assert.Equal(data[1][^8000..], data[0][^8000..]);
     }
 
     [Fact]
@@ -313,10 +343,14 @@ public sealed class RecorderTests : IDisposable
         public Action<float[]>? OnSamples { get; set; }
         public Action? OnInterruption { get; set; }
         public volatile bool Loud;
+        /// <summary>開始了幾次（第一次開始＋重新連接）</summary>
+        public int Starts => Volatile.Read(ref starts);
+        int starts;
         CancellationTokenSource? cancel;
 
         public void Start()
         {
+            Interlocked.Increment(ref starts);
             var cts = cancel = new CancellationTokenSource();
             new Thread(() =>
             {
@@ -363,6 +397,43 @@ public sealed class RecorderTests : IDisposable
         system.Loud = true;
         await Until(() => recorder.Hint is null);
         recorder.Stop();
+    }
+
+    /// <summary>
+    /// R18.8：麥克風收到過聲音後一直送完全是 0：重新連接；還是 0 隔一段時間再試；暫停麥克風時、一開始就是 0 的不重新連接
+    /// （秒數改短：1 秒是 0 就重新連接、隔 2 秒再試）
+    /// </summary>
+    [Fact]
+    public async Task MicSendingZerosReconnects()
+    {
+        var mic = new ToneSource { Loud = true };
+        var recorder = MakeBoth(Quiet(), mic, new ToneSource { Loud = true }, () => []);
+        (recorder.ZeroRestartSeconds, recorder.ZeroRetrySeconds) = (1, 2);
+        recorder.Start(14, MeetingLanguage.Zh, "both");
+        await Task.Delay(500);
+        mic.Loud = false;
+        await Until(() => mic.Starts >= 2, 5);
+        // 還是 0：2 秒內不再重新連接，之後再試一次
+        var first = mic.Starts;
+        await Task.Delay(800);
+        Assert.Equal(first, mic.Starts);
+        await Until(() => mic.Starts > first, 5);
+        // 自己暫停麥克風：寫進去的 0 不算，不重新連接
+        recorder.SetMicPaused(true);
+        await Task.Delay(300);
+        var paused = mic.Starts;
+        await Task.Delay(3500);
+        Assert.Equal(paused, mic.Starts);
+        recorder.Stop();
+
+        // 一開始就是 0（硬體靜音）：不重新連接
+        var muted = new ToneSource();
+        var quiet = MakeBoth(Quiet(), muted, new ToneSource { Loud = true }, () => []);
+        (quiet.ZeroRestartSeconds, quiet.ZeroRetrySeconds) = (1, 2);
+        quiet.Start(15, MeetingLanguage.Zh, "both");
+        await Task.Delay(3500);
+        Assert.Equal(1, muted.Starts);
+        quiet.Stop();
     }
 
     /// <summary>R75.3：app 就在預設裝置上還是錄不到 → SystemMissing；沒有 app 在出聲 → 不提示</summary>
@@ -509,6 +580,66 @@ public sealed class RecorderTests : IDisposable
         Assert.False(recorder.IsRecording);
         Assert.InRange(result!.IdleSince!.Value, 1, 3);
         Assert.InRange(result.Duration, result.IdleSince.Value + 7.5, result.IdleSince.Value + 9.5);
+    }
+
+    [Fact]
+    public async Task StopTimerCountsDownThenStopsEvenWhilePaused()
+    {
+        // 定時停止（R110、M§84）：跟著時鐘走；時間到先倒數（R110.3），倒數完才停，暫停中也停；停止就取消，下一場沒有定時
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        recorder.StopCountdownSeconds = 1.5;
+        Recorder.Result? result = null;
+        var due = 0;
+        recorder.Finished += r => result = r;
+        recorder.StopTimerDue += () => Interlocked.Increment(ref due);
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(1));
+        Assert.Null(recorder.StopAt);   // 沒在錄音：沒作用
+        recorder.StartSimulated(9, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(30));
+        recorder.SetStopTimer(null);
+        Assert.Null(recorder.StopAt);
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(0.5));
+        recorder.Pause();
+        // StopTimerDue 在鎖外面、倒數設好之後才發：等事件，不是等 StopCountdown（CI 的機器慢時兩者之間有空檔，win-v5.1.0 第一次建置失敗在這裡）
+        await Until(() => Volatile.Read(ref due) == 1, 10);
+        Assert.NotNull(recorder.StopCountdown);
+        Assert.True(recorder.IsRecording);   // 倒數中還在錄
+        await Until(() => result is not null, 10);
+        Assert.True(result!.Scheduled);
+        Assert.Null(result.IdleSince);
+        Assert.Equal(1, due);
+        Assert.False(recorder.IsRecording);
+        Assert.Null(recorder.StopAt);
+        Assert.Null(recorder.StopCountdown);
+        result = null;
+        recorder.StartSimulated(10, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
+        Assert.Null(recorder.StopAt);
+        recorder.Stop();
+        Assert.False(result!.Scheduled);
+    }
+
+    [Fact]
+    public async Task ContinueDuringStopTimerCountdownKeepsRecording()
+    {
+        // 倒數中按「繼續錄」（R110.3）：定時取消、照常錄下去，倒數過了也不停
+        var recorder = Make(AppSettings.InMemory(new Dictionary<string, string> { ["liveTranscription"] = "NO", ["autoDetectLanguage"] = "NO" }));
+        recorder.StopCountdownSeconds = 1;
+        recorder.StartSimulated(11, Wav(30), 1, both: false, MeetingLanguage.Zh, new WavDecoder());
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(0.3));
+        await Until(() => recorder.StopCountdown is not null, 10);
+        recorder.SetStopTimer(null);
+        Assert.Null(recorder.StopCountdown);
+        Assert.Null(recorder.StopAt);
+        await Task.Delay(1800);
+        Assert.True(recorder.IsRecording);
+        // 倒數中換成新的時間：倒數收起、等新的時間
+        recorder.SetStopTimer(DateTime.Now.AddSeconds(0.3));
+        await Until(() => recorder.StopCountdown is not null, 10);
+        recorder.SetStopTimer(DateTime.Now.AddMinutes(30));
+        Assert.Null(recorder.StopCountdown);
+        await Task.Delay(1500);
+        Assert.True(recorder.IsRecording);
+        recorder.Stop();
     }
 
     [Fact]

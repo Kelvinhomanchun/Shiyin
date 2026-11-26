@@ -12,6 +12,8 @@ struct ExportBundle {
     var notes: MeetingNotes?
     /// 參考文件（design §39.5）：只有 .shiyin 封包用到
     var documents: [MeetingDocument] = []
+    /// 會議中的畫面（design §83.6）：匯出的會議紀錄最後一節、逐字稿插在時間點、封包
+    var screens: [MeetingDocument] = []
 
     func speakerName(_ idx: Int?) -> String? { idx.map { speakers[$0] ?? text.speaker($0) } }
 
@@ -34,6 +36,7 @@ struct ExportText {
     var noNotes: String { language.text(zh: "（尚未整理成會議紀錄）", en: "(No meeting notes yet)", ja: "（議事録はまだありません）") }
     var details: String { language.text(zh: "詳細", en: "Details", ja: "詳細") }
     var review: String { language.text(zh: "待確認", en: "To confirm", ja: "要確認") }
+    var screens: String { language.text(zh: "會議中的畫面", en: "Screens shown during the meeting", ja: "会議中の画面") }
     /// 本地 MCP 的會議紀錄接在後面的「我的筆記」（design §44.2）
     /// 議題：同畫面上的段落名稱
     var topics: String { language.text(zh: "議題", en: "Topics", ja: "議題") }
@@ -90,7 +93,8 @@ enum ExportError: LocalizedError {
 // MARK: - 逐字稿（R7.2）
 
 enum TranscriptExporter {
-    static func text(_ b: ExportBundle, format: String, times: Bool, speakers: Bool) -> String {
+    /// screenFolder：md 旁邊放畫面的資料夾（design §83.6）；nil 時不放畫面（跟以前一字不差）
+    static func text(_ b: ExportBundle, format: String, times: Bool, speakers: Bool, screenFolder: String? = nil) -> String {
         switch format {
         case "srt":
             return b.segments.enumerated().map { i, s in
@@ -102,8 +106,14 @@ enum TranscriptExporter {
             }.joined(separator: "\n")
         case "md":
             let x = b.text
+            var blocks = b.segments.map { line(b, $0, times: times, speakers: speakers, markdown: true) }
+            if let screenFolder, !b.screens.isEmpty {
+                blocks = interleave(blocks, starts: b.segments.map(\.start), b.screens) { index, screen in
+                    "![\(TimeFormat.string(screen.at ?? 0))](\(markdownPath(screenFolder, ScreenExport.fileNames(b.screens)[index])))"
+                }
+            }
             return "# \(b.meeting.displayTitle)\(x.transcriptSuffix)\n\n- \(x.date)\(x.colon)\(x.dateLine(b.meeting.meetingDate))\n\n"
-                + b.segments.map { line(b, $0, times: times, speakers: speakers, markdown: true) }.joined(separator: "\n\n") + "\n"
+                + blocks.joined(separator: "\n\n") + "\n"
         default:
             return b.segments.map { line(b, $0, times: times, speakers: speakers) }.joined(separator: "\n") + "\n"
         }
@@ -116,18 +126,49 @@ enum TranscriptExporter {
         return prefix + s.text
     }
 
-    static func html(_ b: ExportBundle, times: Bool, speakers: Bool) -> String {
-        let body = b.segments.map { s -> String in
+    /// screens：畫面在時間點放一段位置標記（design §83.6），簡繁轉換之後才換成圖片
+    static func html(_ b: ExportBundle, times: Bool, speakers: Bool, screens: Bool = false) -> String {
+        var paragraphs = b.segments.map { s -> String in
             var prefix = ""
             if times { prefix += "<span class=\"time\">\(TimeFormat.string(s.start))</span> " }
             if speakers, let name = b.speakerName(s.speaker) { prefix += "<b>\(HTML.escape(name))</b>\(b.text.colon)" }
             return "<p>\(prefix)\(HTML.escape(s.text))</p>"
-        }.joined(separator: "\n")
+        }
+        if screens && !b.screens.isEmpty {
+            paragraphs = interleave(paragraphs, starts: b.segments.map(\.start), b.screens) { index, screen in
+                "<p><span class=\"time\">\(TimeFormat.string(screen.at ?? 0))</span></p>\n<p class=\"screen\">\(ScreenExport.marker(index))</p>"
+            }
+        }
+        let body = paragraphs.joined(separator: "\n")
         let x = b.text
         return HTML.document(title: b.meeting.displayTitle + x.transcriptSuffix,
                              body: "<h1>\(HTML.escape(b.meeting.displayTitle + x.transcriptSuffix))</h1>\n<p class=\"meta\">\(b.meeting.meetingDate)</p>\n" + body,
                              language: x.language)
     }
+}
+
+extension TranscriptExporter {
+    /// 畫面放在第一個「開始時間不早於它」的段落前面，比最後一段晚的放最後（同畫面上的逐字稿，design §83.4）
+    static func interleave(_ blocks: [String], starts: [Double], _ screens: [MeetingDocument],
+                           render: (Int, MeetingDocument) -> String) -> [String] {
+        var out: [String] = []
+        var next = 0
+        for (i, block) in blocks.enumerated() {
+            while next < screens.count, (screens[next].at ?? 0) <= starts[i] {
+                out.append(render(next, screens[next]))
+                next += 1
+            }
+            out.append(block)
+        }
+        while next < screens.count {
+            out.append(render(next, screens[next]))
+            next += 1
+        }
+        return out
+    }
+
+    /// md 的圖片路徑：資料夾名稱有空白，用 <…> 包起來
+    static func markdownPath(_ folder: String, _ name: String) -> String { "<\(folder)/\(name)>" }
 }
 
 // MARK: - 會議紀錄（R7.3）
@@ -171,10 +212,19 @@ enum NotesExporter {
         return out
     }
 
-    static func markdown(_ b: ExportBundle) -> String {
+    /// screenFolder：md 旁邊放畫面的資料夾（design §83.6），最後加一節；nil 時不放
+    static func markdown(_ b: ExportBundle, screenFolder: String? = nil) -> String {
         let m = b.meeting
         let x = b.notesText
         var out = ["# \(m.displayTitle)", "", "*\(kicker(b))*", ""]
+        func screens() {
+            guard let screenFolder, !b.screens.isEmpty else { return }
+            out += ["", "## \(x.screens)"]
+            for (screen, name) in zip(b.screens, ScreenExport.fileNames(b.screens)) {
+                let time = TimeFormat.string(screen.at ?? 0)
+                out += ["", "### \(time)", "", "![\(time)](\(TranscriptExporter.markdownPath(screenFolder, name)))"]
+            }
+        }
         var meta = ["| \(x.date) | \(reportDate(m.meetingDate, x)) |", "|---|---|"]
         if m.durationSeconds != nil { meta.append("| \(x.duration) | \(TimeFormat.duration(m.durationSeconds, language: x.language)) |") }
         if !m.participantList.isEmpty { meta.append("| \(x.participants) | \(cell(m.participantList.joined(separator: x.listSeparator))) |") }
@@ -182,7 +232,9 @@ enum NotesExporter {
         if !speakerNames.isEmpty { meta.append("| \(x.speakers) | \(cell(speakerNames.joined(separator: x.listSeparator))) |") }
         out += meta
         guard let notes = b.notes, !notes.isEmpty else {
-            out += ["", x.noNotes, "", "---", "", "*\(x.footer)*"]
+            out += ["", x.noNotes]
+            screens()
+            out += ["", "---", "", "*\(x.footer)*"]
             return out.joined(separator: "\n") + "\n"
         }
         func t(_ time: String) -> String { time.isEmpty ? "" : " `\(time)`" }
@@ -211,6 +263,7 @@ enum NotesExporter {
                 out += ["", "## \(n) · \(title)", ""] + items.map { "- [ ] \($0.question)\(t($0.time))" }
             }
         }
+        screens()
         out += ["", "---", "", "*\(x.footer)*"]
         return out.joined(separator: "\n") + "\n"
     }
@@ -246,16 +299,24 @@ enum NotesExporter {
     }
 
     /// 給 Word、剪貼簿：NSAttributedString 不認得 flex 等版面，用表格和簡單的樣式，但同一套字型、顏色、編號
-    static func html(_ b: ExportBundle) -> String {
+    /// screens：最後一節放畫面的位置標記（design §83.6），簡繁轉換之後才換成圖片
+    static func html(_ b: ExportBundle, screens: Bool = false) -> String {
         let m = b.meeting
         let x = b.notesText
+        func screenSection() -> String {
+            guard screens, !b.screens.isEmpty else { return "" }
+            return "<h2>\(x.screens)</h2>\n" + b.screens.enumerated().map { index, screen in
+                "<h3><span class=\"time\">\(TimeFormat.string(screen.at ?? 0))</span></h3>\n<p class=\"screen\">\(ScreenExport.marker(index))</p>\n"
+            }.joined()
+        }
         var body = "<p class=\"kicker\">\(HTML.escape(kicker(b)))</p>\n<h1>\(HTML.escape(m.displayTitle))</h1>\n"
         var meta = ["\(x.date)\(x.colon)<b>\(HTML.escape(reportDate(m.meetingDate, x)))</b>"]
         if m.durationSeconds != nil { meta.append("\(x.duration)\(x.colon)<b>\(TimeFormat.duration(m.durationSeconds, language: x.language))</b>") }
         if !m.participantList.isEmpty { meta.append("\(x.participants)\(x.colon)<b>\(HTML.escape(m.participantList.joined(separator: x.listSeparator)))</b>") }
         body += "<p class=\"meta\">" + meta.joined(separator: "&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;") + "</p>\n<hr>\n"
         guard let notes = b.notes, !notes.isEmpty else {
-            return HTML.document(title: m.displayTitle, body: body + "<p>\(x.noNotes)</p>", language: x.language)
+            let section = screenSection()
+            return HTML.document(title: m.displayTitle, body: body + "<p>\(x.noNotes)</p>" + (section.isEmpty ? "" : "\n" + section), language: x.language)
         }
         func t(_ time: String) -> String { time.isEmpty ? "" : "&nbsp;&nbsp;<span class=\"time\">\(time)</span>" }
         // Word 的清單縮排很寬：改成方塊符號加懸掛縮排的段落（同 PDF 的樣子）
@@ -281,12 +342,12 @@ enum NotesExporter {
                 body += h2(title) + list.map { bullet($0.question, $0.time, "□") }.joined() + "\n"
             }
         }
-        body += "<hr>\n<p class=\"foot\">\(HTML.escape(x.footer))</p>\n"
+        body += screenSection() + "<hr>\n<p class=\"foot\">\(HTML.escape(x.footer))</p>\n"
         return HTML.document(title: m.displayTitle, body: body, language: x.language)
     }
 
     /// PDF：用 WebKit 排版，CSS 完整生效（IBM 簡報的樣子：白底、Plex、藍 60 的重點、細線、編號段落）
-    static func report(_ b: ExportBundle) -> String {
+    static func report(_ b: ExportBundle, screens: Bool = false) -> String {
         let m = b.meeting
         let x = b.notesText
         var body = "<header class=\"cover\"><div class=\"kicker\">\(HTML.escape(kicker(b)))</div><h1>\(HTML.escape(m.displayTitle))</h1><div class=\"meta\">"
@@ -339,6 +400,12 @@ enum NotesExporter {
                 let (first, rest) = list(items.map { li($0.question, $0.time) }, "q")
                 body += section(title, i + 1, first: first, rest: rest)
             }
+        }
+        if screens, !b.screens.isEmpty {
+            let cards = b.screens.enumerated().map { index, screen in
+                "<div class=\"topic\"><h3><span class=\"start\">\(TimeFormat.string(screen.at ?? 0))</span></h3><p class=\"screen\">\(ScreenExport.marker(index))</p></div>"
+            }
+            body += section(x.screens, blocks(notes, x).count + 1, first: cards[0], rest: cards.dropFirst().joined())
         }
         return HTML.report(title: m.displayTitle, body: body, footer: x.footer, language: x.language)
     }
@@ -582,7 +649,8 @@ enum HTML {
         info.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
         let width = info.paperSize.width - info.leftMargin - info.rightMargin
         let view = NSTextView(frame: NSRect(x: 0, y: 0, width: width, height: 100))
-        view.textStorage?.setAttributedString(string)
+        // 會議中的畫面（design §83.6）：HTML 讀進來的圖片是原本的像素大小，縮到版面寬度、不超過半頁高
+        view.textStorage?.setAttributedString(fitImages(string, width: width, height: (info.paperSize.height - info.topMargin - info.bottomMargin) / 2))
         view.isVerticallyResizable = true
         view.sizeToFit()
         view.layoutManager?.ensureLayout(for: view.textContainer!)
@@ -631,6 +699,22 @@ enum HTML {
             context.endPage()
         }
         context.closePDF()
+    }
+
+    /// 圖片縮到 width × height 以內（等比例），換成新的附件（HTML 讀進來的附件不一定照 bounds 畫）
+    static func fitImages(_ string: NSAttributedString, width: CGFloat, height: CGFloat) -> NSAttributedString {
+        let out = NSMutableAttributedString(attributedString: string)
+        out.enumerateAttribute(.attachment, in: NSRange(location: 0, length: out.length)) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment,
+                  let image = attachment.image ?? attachment.fileWrapper?.regularFileContents.flatMap(NSImage.init(data:)),
+                  let rep = image.representations.first, rep.pixelsWide > 0, rep.pixelsHigh > 0 else { return }
+            let ratio = min(width / CGFloat(rep.pixelsWide), height / CGFloat(rep.pixelsHigh), 1)
+            let fitted = NSTextAttachment()
+            fitted.image = image
+            fitted.bounds = CGRect(x: 0, y: 0, width: (CGFloat(rep.pixelsWide) * ratio).rounded(), height: (CGFloat(rep.pixelsHigh) * ratio).rounded())
+            out.addAttribute(.attachment, value: fitted, range: range)
+        }
+        return out
     }
 
     /// 同時放純文字、HTML、RTF，貼到哪裡都有合適的格式（R7.3）

@@ -27,6 +27,8 @@ struct Meeting: SnakeCaseRecord, Identifiable, Hashable {
     var durationSeconds: Int?
     var notes: String?
     var notesBy: String?
+    /// 目前的會議紀錄是用哪個範本整理的（migration v17、design §89）：整理、草稿時記下，舊的紀錄是 nil
+    var notesTemplate: String?
     var createdAt: String = Clock.now()
     var updatedAt: String = Clock.now()
     // v2（design §4）
@@ -190,13 +192,26 @@ struct TemplateRecord: SnakeCaseRecord, Identifiable, Hashable {
     var updatedAt: String = Clock.now()
 }
 
+/// 版本紀錄的一版（R115、design §89）：versionId 是 nil 的是目前的紀錄；origin、time 是這一版怎麼來的、什麼時候（最舊的一版不知道）
+struct NotesHistoryEntry: Equatable {
+    var versionId: Int64?
+    var notes: MeetingNotes
+    var templateId: String?
+    var origin: String?
+    var time: String?
+    var isCurrent: Bool { versionId == nil }
+}
+
 struct NotesVersion: SnakeCaseRecord, Identifiable {
     static let databaseTableName = "notes_versions"
     var id: Int64?
     var meetingId: Int64
     var notes: String
+    /// 換掉這一版的那次存檔是什麼（重新整理、校稿、手動編輯…）
     var reason: String
     var createdAt: String = Clock.now()
+    /// 這一版是用哪個範本整理的（migration v17、design §89）；不知道是 nil
+    var templateId: String?
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 }
@@ -280,9 +295,15 @@ struct MeetingDocument: SnakeCaseRecord, Identifiable, Hashable {
     var pages: String                    // JSON 字串陣列
     var ocr: Bool = false
     var createdAt: String = Clock.now()
+    /// 會議中的畫面（design §83.1、R109）：錄音時間（秒）；nil 是一般的參考文件
+    var at: Double?
 
     mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 
+    var isScreen: Bool { at != nil }
+    static let screenFileName = "screen.jpg"
+    /// 畫面辨識出的文字（沒有字是空字串）
+    var screenText: String { pageTexts.joined(separator: "\n") }
     var documentKind: DocumentKind { DocumentKind(rawValue: kind) ?? .text }
     var pageTexts: [String] { (try? JSONDecoder().decode([String].self, from: Data(pages.utf8))) ?? [] }
     var fileURL: URL { Paths.documentsDir.appendingPathComponent(file) }

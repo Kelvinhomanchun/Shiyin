@@ -13,6 +13,8 @@ final class Recorder {
         var error: String?
         /// 沒人說話太久而自動停止（R48.2）：最後有人說話的秒數
         var idleSince: Double? = nil
+        /// 到了定時停止的時間（R110.3）
+        var scheduled = false
     }
 
     struct LiveLine: Identifiable, Hashable {
@@ -24,6 +26,8 @@ final class Recorder {
 
     private(set) var isRecording = false
     private(set) var isPaused = false
+    /// 單獨暫停麥克風、電腦聲音照錄（design §90、R116）：只在麥克風＋電腦聲音時
+    private(set) var micPaused = false
     private(set) var meetingId: Int64?
     private(set) var startedAt: Date?
     /// 精確的錄音秒數（筆記的時間點、標記重點用）。每 0.05 秒變一次，畫面不要讀這個，讀 elapsedSeconds（design §25）
@@ -83,13 +87,19 @@ final class Recorder {
             }
             return String(localized: "麥克風幾乎收不到聲音：\(user.name) 可能正在用這支麥克風做回音消除，拾音收不到你的聲音。請讓 \(user.name) 和拾音用不同的麥克風。")
         }
+
+        /// Mac 上的通話佔住麥克風（design §45.5、R57.7）：沒有收到聲音、幾乎收不到聲音都換成這句
+        static var callText: String {
+            String(localized: "麥克風被 Mac 上的通話（iPhone 轉接的電話、FaceTime）佔住，拾音收不到你的聲音。請讓通話用 AirPods 或其他耳機的麥克風，或在 iPhone 上接聽。")
+        }
     }
     private(set) var levelHint: LevelHint?
     /// 提示的文字（錄音畫面、選單列、通知共用，R42）
     func text(for hint: LevelHint) -> String {
-        hint == .suppressed ? LevelHint.suppressedText(suppressedBy) : hint.text
+        if hint == .silent || hint == .suppressed, suppressedBy?.isCall == true { return LevelHint.callText }
+        return hint == .suppressed ? LevelHint.suppressedText(suppressedBy) : hint.text
     }
-    /// 被佔住的提示出現時，正在用麥克風的 app（design §45.2）；AppModel 接到 MeetingDetector
+    /// 沒有收到聲音、被佔住的提示出現時，正在用麥克風的 app（design §45.2、§45.5）；AppModel 接到 MeetingDetector
     @ObservationIgnored var microphoneUser: (() -> MeetingDetector.MicrophoneUser?)?
     @ObservationIgnored private var suppressedBy: MeetingDetector.MicrophoneUser?
     /// 這場錄音稍早的背景音量（最低值）；晚 10 秒才算數，還沒算數的放 pendingFloor（design §45.1）
@@ -136,6 +146,14 @@ final class Recorder {
     private(set) var idlePrompt = false
     /// 提醒出現（AppModel 送通知）
     @ObservationIgnored var onIdlePrompt: (() -> Void)?
+    /// 定時停止（design §84、R110）：到這個時間就停止錄音；跟著時鐘走，暫停也照算
+    private(set) var stopAt: Date?
+    /// 時間到了先倒數（R110.3、D192）：到這個時間才停止；nil 是沒在倒數
+    private(set) var stopCountdown: Date?
+    /// 倒數開始了（AppModel 顯示提醒）
+    @ObservationIgnored var onStopTimerDue: (() -> Void)?
+    /// 倒數 30 秒；DEBUG 可以用啟動參數縮短
+    static var stopCountdownSeconds: Double { debugSeconds("stopTimerCountdownSeconds") ?? 30 }
     /// 15 分鐘提醒、30 分鐘自動停止；DEBUG 可以用啟動參數縮短（design §35.2）
     static var idleRemindSeconds: Double { debugSeconds("idleRemindSeconds") ?? 900 }
     static var idleStopSeconds: Double { debugSeconds("idleStopSeconds") ?? 1800 }
@@ -153,6 +171,11 @@ final class Recorder {
     var idleInfo: [String: Any] {
         ["idleSeconds": isRecording ? elapsed - lastSpeechAt : 0, "lastSpeechAt": lastSpeechAt, "prompt": idlePrompt,
          "liveActive": liveActive, "remindAfter": Self.idleRemindSeconds, "stopAfter": Self.idleStopSeconds]
+    }
+    /// 定時停止（design §84）：shiyinctl state 的 recorder.stopTimer
+    var stopTimerInfo: [String: Any] {
+        ["remaining": stopAt.map { max(0, $0.timeIntervalSinceNow) } ?? -1, "label": stopAt.map { StopTimer.label($0) } ?? "",
+         "countdown": stopCountdown.map { max(0, $0.timeIntervalSinceNow) } ?? -1]
     }
     #endif
 
@@ -182,6 +205,8 @@ final class Recorder {
     /// 重新連接在背景佇列做（design §50.2）：正在做的聲道、做完要再做一次的聲道（中途換了麥克風）
     @ObservationIgnored private var restarting: Set<Int> = []
     @ObservationIgnored private var restartAgain: Set<Int> = []
+    /// 麥克風還在送資料、但一直完全是 0：上次因為這樣重新連接的時間
+    @ObservationIgnored private var zeroRestartAt: Date?
     @ObservationIgnored private let deviceQueue = DispatchQueue(label: "com.weiwei.shiyin.devices", qos: .userInitiated)
     /// 磁碟空間（design §20.3）：上次檢查的時間；錄音中不到 300 MB 只提醒一次
     @ObservationIgnored private var lastDiskCheck = Date.distantPast
@@ -199,6 +224,8 @@ final class Recorder {
 
     var hasMic: Bool { source != "system" }
     var hasSystem: Bool { source != "mic" }
+    /// 可以單獨暫停麥克風：麥克風＋電腦聲音的錄音（design §90）
+    var canPauseMic: Bool { isRecording && source == "both" }
 
     func start(meetingId: Int64, source: String = AppSettings.recordSource, language: MeetingLanguage) {
         guard !isRecording else { return }
@@ -224,6 +251,12 @@ final class Recorder {
     }
 
     #if DEBUG
+    /// 只在 DEBUG：直接塞假的即時文字，壓力測試即時逐字稿的捲動（design §25）。final 是定稿的一行，volatile 是還沒定稿的字
+    func injectLive(final text: String?, volatile: String) {
+        if let text { liveLines.append(LiveLine(start: elapsed, end: elapsed, text: text)) }
+        volatileText = volatile
+    }
+
     /// 只在 DEBUG：用音訊檔當麥克風，驗證錄音流程（speed 是倍速）
     func startSimulated(meetingId: Int64, file: URL, speed: Double, both: Bool, systemSilent: Bool = false, language: MeetingLanguage) {
         guard !isRecording else { return }
@@ -248,6 +281,11 @@ final class Recorder {
     /// 只在 DEBUG：recordstall，某個聲道停止送資料幾秒，nil 是馬上恢復（design §20.2）
     func simulateStall(channel: Int, seconds: Double?) {
         (sources[0] as? FileSource)?.stall(channel: channel, seconds: seconds)
+    }
+
+    /// 只在 DEBUG：recordzero，麥克風那一聲道照常送資料但全是 0，重新連接才恢復
+    func simulateZeros() {
+        (sources[0] as? FileSource)?.sendZeros()
     }
 
     /// 只在 DEBUG：recordinterrupt，等於音源發現裝置變了。連續送幾次，驗證只會重新開始一次
@@ -284,10 +322,30 @@ final class Recorder {
         isPaused = false
     }
 
+    /// 單獨暫停、繼續錄麥克風（design §90、R116）：麥克風那一聲道寫 0，電腦聲音照錄
+    func setMicPaused(_ value: Bool) {
+        guard canPauseMic, value != micPaused else { return }
+        writer?.setMicMuted(value)
+        micPaused = value
+        if !value {
+            resetMicFloor()
+            (noisySeconds, quietSeconds) = (0, 0)
+        }
+        log.info("microphone \(value ? "paused" : "resumed", privacy: .public)")
+    }
+
     /// 「繼續錄」：人還在，重新計時（R48.1）
     func continueAfterIdle() {
         guard isRecording else { return }
         markSpeech()
+    }
+
+    /// 定時停止（R110.1）：錄音中才有作用；nil 是取消（倒數中的「繼續錄」也是）。選了新的時間就取代原本的，倒數也收起
+    func setStopTimer(_ date: Date?) {
+        guard isRecording, date != stopAt else { return }
+        stopAt = date
+        if stopCountdown != nil { stopCountdown = nil }
+        if let date { log.info("stop timer set, \(Int(date.timeIntervalSinceNow))s from now") } else { log.info("stop timer cancelled") }
     }
 
     /// 有人在說話：重新計時，提醒收掉
@@ -317,7 +375,8 @@ final class Recorder {
     /// 最近 1 秒有 30% 以上的音框像說話（design §35.1）：比背景（最近 30 秒的第 10 百分位）大 12 dB 而且高於 -50 dBFS，
     /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）
     private func soundsLikeSpeech(_ writer: RecordingWriter) -> Bool {
-        for channel in 0..<(source == "both" ? 2 : 1) {
+        // 暫停麥克風時只看電腦聲音：麥克風最近的音量停在暫停前（design §90）
+        for channel in source != "both" ? [0] : micPaused ? [1] : [0, 1] {
             let levels = writer.recentLevels(channel)
             guard levels.count >= 20 else { continue }
             let background = levels.sorted()[Int(Double(levels.count - 1) * 0.1)]
@@ -380,7 +439,7 @@ final class Recorder {
         self.levelHint = nil
     }
 
-    func stop(idleSince: Double? = nil) {
+    func stop(idleSince: Double? = nil, scheduled: Bool = false) {
         guard isRecording, let meetingId else { return }
         // 在重新連接的佇列上停：等正在進行的重新連接做完，不會同時動 AVAudioEngine（design §50.2）
         let stopping = Array(sources.values)
@@ -408,7 +467,7 @@ final class Recorder {
         }
         cleanup()
         log.info("recording stopped, \(Int(duration))s")
-        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil, idleSince: idleSince))
+        onFinished?(Result(meetingId: meetingId, file: file, duration: duration, error: nil, idleSince: idleSince, scheduled: scheduled))
     }
 
     /// 錄音中加上電腦聲音（fork）：使用者開始時忘了選「麥克風＋電腦聲音」。麥克風那一聲道接著錄（同一個音源），
@@ -546,6 +605,7 @@ final class Recorder {
             volatileText = ""
             systemSilent = false
             isPaused = false
+            micPaused = false
             isRecording = true
             activity = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .userInitiated],
                                                              reason: String(localized: "拾音正在錄音"))
@@ -667,6 +727,20 @@ final class Recorder {
             stop()
             return
         }
+        // 定時停止（design §84）：放在整秒的判斷外面，暫停時 elapsed 不走也要停。時間到先倒數，倒數完才停（R110.3）
+        if let stopAt, Date() >= stopAt {
+            if let stopCountdown {
+                if Date() >= stopCountdown {
+                    log.info("recording stopped at the scheduled time")
+                    stop(scheduled: true)
+                    return
+                }
+            } else {
+                stopCountdown = Date().addingTimeInterval(Self.stopCountdownSeconds)
+                log.info("stop timer reached, counting down")
+                onStopTimerDue?()
+            }
+        }
         // 觀察的屬性只在值真的變了才設（@Observable 設成同樣的值也會讓畫面重算，design §25）
         elapsed = writer.recordedSeconds
         let seconds = Int(elapsed)
@@ -697,11 +771,13 @@ final class Recorder {
     private func checkLevels(_ writer: RecordingWriter) {
         guard !isPaused else { return }
         let systemDenied = checkSystemPermission(writer)
-        guard hasMic else {
+        // 暫停麥克風時也走這條：麥克風的提醒都不出現（design §90）
+        guard hasMic, !micPaused else {
             updateLevelHint(systemDenied ? .systemDenied : nil)
             #if DEBUG
             levelCheck = ["hint": levelHint?.rawValue ?? "", "systemPermission": systemPermission?.rawValue ?? "",
-                          "systemSilentSeconds": writer.silence(0), "text": levelHint.map { text(for: $0) } ?? ""]
+                          "systemSilentSeconds": writer.silence(source == "both" ? 1 : 0), "micPaused": micPaused,
+                          "text": levelHint.map { text(for: $0) } ?? ""]
             #endif
             return
         }
@@ -753,8 +829,8 @@ final class Recorder {
     private func updateLevelHint(_ hint: LevelHint?) {
         let shown = hint.flatMap { dismissedLevelHints.contains($0) ? nil : $0 }
         guard shown != levelHint else { return }
-        // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）
-        if shown == .suppressed { suppressedBy = microphoneUser?() }
+        // 是哪個 app 在提示出現時決定，之後不跟著變（design §45.2）；沒有收到聲音時也看是不是 Mac 上的通話（§45.5）
+        if shown == .suppressed || shown == .silent { suppressedBy = microphoneUser?() }
         levelHint = shown
         // 第一次出現才通知（R42.1）；提示消失又出現不再通知
         if let shown, notifiedLevelHints.insert(shown).inserted { onLevelHint?(shown) }
@@ -953,6 +1029,30 @@ final class Recorder {
                 updateDeviceWarning()
             }
         }
+        restartIfMicSendsZeros(writer, now: now)
+    }
+
+    /// 麥克風超過幾秒完全是 0 就重新連接
+    nonisolated static let zeroRestartSeconds: Double = 10
+
+    /// 麥克風還在送資料、但送的完全是 0（這場稍早有過聲音）：重新連接一次。真的麥克風一定有底噪，
+    /// 完全是 0 是裝置那頭斷了（藍牙耳機換協定、別的 app 搶走、裝置睡著）但 engine 沒停、看門狗看不到。
+    /// 收音提醒（R24.3）照舊出現；還是 0 就至少隔 30 秒再試，一開始就是 0 的（硬體靜音）不重試
+    private func restartIfMicSendsZeros(_ writer: RecordingWriter, now: Date) {
+        // 自己暫停麥克風時寫的 0 不算（design §90；寫檔那邊也不累計無聲的秒數）
+        guard hasMic, !isPaused, !micPaused, sources[0] != nil, writer.hasHeard(0),
+              writer.silence(0) > Self.zeroRestartSeconds else {
+            zeroRestartAt = nil
+            return
+        }
+        guard !restarting.contains(0), pendingRestarts[0] == nil, reconnecting[0] == nil else { return }
+        if let last = zeroRestartAt,
+           now.timeIntervalSince(last) < max(30, Self.restartDelay(recentRestarts(0, now: now))) { return }
+        zeroRestartAt = now
+        // Mac 上的通話佔著麥克風（design §45.5）：重新連接也一樣是 0，提示會說是通話；隔 30 秒再看
+        if microphoneUser?()?.isCall == true { return }
+        log.info("microphone sent only zeros for \(Int(writer.silence(0)), privacy: .public) s, reconnecting")
+        restartSource(0)
     }
 
     /// 提示列（design §50.1）：重新連接失敗的原因 ＞ 一直在重新連接（60 秒內 3 次以上）＞ 正在重新連接…
@@ -992,6 +1092,7 @@ final class Recorder {
         restartedAt = [:]
         restarting = []
         restartAgain = []
+        zeroRestartAt = nil
         reconnecting = [:]
         reconnectErrors = [:]
         micFailures = 0
@@ -1008,6 +1109,8 @@ final class Recorder {
         micHint = nil
         micDevice = nil
         idlePrompt = false
+        stopAt = nil
+        stopCountdown = nil
         liveActive = false
         meetingId = nil
         startedAt = nil

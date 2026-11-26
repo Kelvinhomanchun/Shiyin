@@ -7,6 +7,8 @@ struct RecordingPanel: View {
     @Environment(\.textScale) private var scale
     let detail: MeetingDetail
     @State private var followLatest = true
+    @State private var liveFollow = LiveFollow()
+    @State private var screenDropTargeted = false
 
     var body: some View {
         #if DEBUG
@@ -35,6 +37,41 @@ struct RecordingPanel: View {
                     Spacer()
                     Button("繼續錄") { recorder.continueAfterIdle() }
                     Button("停止錄音") { recorder.stop() }
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
+            if let countdown = recorder.stopCountdown {
+                // 定時停止的時間到了、倒數中（design §84、R110.3）
+                HStack(spacing: 12) {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Label(String(localized: "已到設定的時間，\(StopTimer.secondsLeft(countdown, now: context.date)) 秒後停止錄音"),
+                              systemImage: "timer")
+                    }
+                    Spacer()
+                    Button("繼續錄") { model.continueAfterStopTimer() }
+                        .help("取消定時停止，照常錄下去")
+                    Button("停止並轉錄") { recorder.stop() }
+                }
+                .font(.callout)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.signal.opacity(0.12))
+            }
+            if let problem = model.screenshotProblem {
+                // 截不到圖（design §83.2、R109.3）
+                HStack(spacing: 12) {
+                    Label(problem == .denied ? "要允許拾音「錄製螢幕」才能截圖。貼上、拖進來的圖片不需要這個權限。"
+                                             : "剛允許的權限要重新打開拾音才會生效，錄完這場再重新打開。",
+                          systemImage: "camera.viewfinder")
+                    Spacer()
+                    if problem == .denied {
+                        Button("打開系統設定") { Recorder.openPrivacySettings("Privacy_ScreenCapture") }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    Button("知道了") { model.screenshotProblem = nil }
                 }
                 .font(.callout)
                 .padding(.horizontal, 16)
@@ -84,6 +121,29 @@ struct RecordingPanel: View {
             HStack(spacing: 0) {
                 Isolated { liveTranscript(recorder) }
                     .frame(minWidth: 300, maxWidth: .infinity)
+                    // 拖進來的圖片是這個時間點的畫面（design §83.3）；其他檔案照主視窗的規則（參考文件、匯入）
+                    .dropDestination(for: URL.self) { urls, _ in
+                        let images = urls.filter { DocumentReader.kind(of: $0) == .image }
+                        let others = urls.filter { DocumentReader.kind(of: $0) != .image }
+                        if !images.isEmpty { model.addScreensHere(images.compactMap(ScreenImages.load)) }
+                        if !others.isEmpty { model.requestImport(others) }
+                        return true
+                    } isTargeted: { screenDropTargeted = $0 }
+                    .overlay {
+                        if screenDropTargeted {
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.celadon, style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+                                .overlay(alignment: .bottom) {
+                                    Label("放開就加到 \(TimeFormat.string(model.recorder.elapsed)) 的畫面", systemImage: "photo.badge.plus")
+                                        .font(.callout)
+                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                        .background(.regularMaterial, in: Capsule())
+                                        .padding(16)
+                                }
+                                .padding(6)
+                                .allowsHitTesting(false)
+                        }
+                    }
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
                     Text("我的筆記").font(.songti(16))
@@ -107,9 +167,11 @@ struct RecordingPanel: View {
                 RecorderClock(recorder: recorder).foregroundStyle(.secondary)
             }
             .font(.title3)
+            // 定時停止（design §84、R110）：跟麥克風選單一起先縮（放不下時只留圖示），按鈕的字留到最後
+            StopTimerMenu()
+                .layoutPriority(-1)
             if recorder.hasMic {
-                Label { RecorderMeter(recorder: recorder, system: false) } icon: { Image(systemName: "mic") }
-                    .help("麥克風音量")
+                micStatus(recorder)
                 // 正在用哪一支麥克風，點一下可以換（design §38.3、R58.2）；視窗窄的時候先縮這個
                 MicrophoneMenu(recorder: recorder)
                     .frame(maxWidth: 180, alignment: .leading)
@@ -131,7 +193,7 @@ struct RecordingPanel: View {
             ViewThatFits(in: .horizontal) {
                 actionButtons(recorder).labelStyle(.titleAndIcon)
                 HStack(spacing: 14) {
-                    HStack(spacing: 14) { pauseButton(recorder); bookmarkButton(recorder) }.labelStyle(.iconOnly)
+                    HStack(spacing: 14) { pauseButton(recorder); bookmarkButton(recorder); screenshotButton }.labelStyle(.iconOnly)
                     stopButton(recorder).labelStyle(.titleAndIcon)
                 }
                 .fixedSize()
@@ -151,10 +213,34 @@ struct RecordingPanel: View {
         }
     }
 
+    /// 麥克風的音量；麥克風＋電腦聲音時麥克風圖示可以單獨暫停、繼續錄麥克風（design §90、R116）
+    @ViewBuilder
+    private func micStatus(_ recorder: Recorder) -> some View {
+        if recorder.canPauseMic {
+            HStack(spacing: 6) {
+                Button { recorder.setMicPaused(!recorder.micPaused) } label: {
+                    Image(systemName: recorder.micPaused ? "mic.slash" : "mic").frame(minWidth: 20, minHeight: 20).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(recorder.micPaused ? "繼續錄麥克風（⇧⌘M）" : "暫停麥克風：只錄電腦聲音（⇧⌘M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到")
+                .accessibilityLabel(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風")
+                if recorder.micPaused {
+                    Text("麥克風已暫停").foregroundStyle(.secondary).lineLimit(1)
+                } else {
+                    RecorderMeter(recorder: recorder, system: false).help("麥克風音量")
+                }
+            }
+        } else {
+            Label { RecorderMeter(recorder: recorder, system: false) } icon: { Image(systemName: "mic") }
+                .help("麥克風音量")
+        }
+    }
+
     private func actionButtons(_ recorder: Recorder) -> some View {
         HStack(spacing: 14) {
             pauseButton(recorder)
             bookmarkButton(recorder)
+            screenshotButton
             stopButton(recorder)
         }
         .fixedSize()
@@ -173,6 +259,12 @@ struct RecordingPanel: View {
             model.noticeMessage = String(localized: "已標記 \(TimeFormat.string(recorder.elapsed)) 為重點")
         }
         .help("標記這個時間點（⌘B），整理時會被當成重點")
+    }
+
+    /// 會議中的畫面（R109.1）：截游標所在的螢幕，拾音自己的視窗不會進去
+    private var screenshotButton: some View {
+        Button("截圖", systemImage: "camera.viewfinder") { model.captureScreen() }
+            .help("截下游標所在的螢幕（⇧⌘S；在其他 app 裡按 \(GlobalHotKey.screenshotDisplay)），整理時會一起參考")
     }
 
     private func stopButton(_ recorder: Recorder) -> some View {
@@ -197,6 +289,8 @@ struct RecordingPanel: View {
         #endif
         // 每個重點只標在一段上：開始時間不晚於它的最後一段
         let starred = Set(detail.bookmarks.compactMap { mark in recorder.liveLines.last(where: { $0.start <= mark.time })?.id })
+        // 截好的畫面插在當下的位置（選了「插在即時逐字稿裡」，design §83.4）
+        let placement = ScreenPlacement.place(detail.screens, starts: recorder.liveLines.map(\.start))
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 8) {
@@ -204,7 +298,10 @@ struct RecordingPanel: View {
                         Text(AppSettings.liveTranscription ? "開始說話後，逐字稿會即時出現在這裡。" : "即時逐字稿已在設定中關閉，錄音結束後會正式轉錄。")
                             .foregroundStyle(.secondary)
                     }
-                    ForEach(recorder.liveLines) { line in
+                    ForEach(Array(recorder.liveLines.enumerated()), id: \.element.id) { index, line in
+                        if let screens = placement.before[index] {
+                            ForEach(screens) { ScreenRow(screen: $0, compact: true) }
+                        }
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text(TimeFormat.string(line.start)).contentFont(.callout, monospacedDigit: true).foregroundStyle(Color.celadon)
                                 .frame(width: 52 * scale, alignment: .trailing)
@@ -215,6 +312,7 @@ struct RecordingPanel: View {
                         }
                         .id(line.id)
                     }
+                    ForEach(placement.trailing) { ScreenRow(screen: $0, compact: true) }
                     // 還沒定稿的文字一直在變，只讓這一行重算，不拖著整份即時逐字稿（design §21.12）
                     Isolated {
                         if !recorder.volatileText.isEmpty {
@@ -236,18 +334,21 @@ struct RecordingPanel: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             // 使用者往回看時不要自動捲動（R2.2）：看捲動的位置。往上捲（內容沒有變短）就不跟了，回到底部再跟。
-            // 不用「底部的標記出現／消失」改狀態：那是在排版途中改，可能讓排版一直重來（design §25）
-            .onScrollGeometryChange(for: LivePosition.self) { geometry in
-                LivePosition(offset: geometry.contentOffset.y, content: geometry.contentSize.height,
-                             bottom: geometry.visibleRect.maxY)
-            } action: { old, new in
-                if new.bottom >= new.content - 40 {
-                    if !followLatest { followLatest = true }
-                } else if new.offset < old.offset - 1 && new.content >= old.content {
-                    if followLatest { followLatest = false }
-                }
+            // 位置每一點變化都在排版途中算，只有「跟不跟」變了才觸發動作，狀態等這一輪排版結束再改：
+            // 每次都觸發、當下改狀態，長逐字稿的排版會一直重來，AppKit 丟例外整個 app 結束（design §25.4）
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                #if DEBUG
+                DebugMetrics.bump("liveScrollTransform")
+                #endif
+                return liveFollow.update(offset: geometry.contentOffset.y, content: geometry.contentSize.height,
+                                         bottom: geometry.visibleRect.maxY)
+            } action: { _, follow in
+                #if DEBUG
+                DebugMetrics.bump("liveScrollAction")
+                #endif
+                DispatchQueue.main.async { if followLatest != follow { followLatest = follow } }
             }
-            .onChange(of: recorder.liveLines.count) { _, _ in
+            .onChange(of: recorder.liveLines.count + detail.screens.count) { _, _ in
                 guard followLatest else { return }
                 if reduceMotion { proxy.scrollTo("bottom", anchor: .bottom) }
                 else { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) } }
@@ -256,6 +357,7 @@ struct RecordingPanel: View {
                 if !followLatest {
                     Button("回到最新", systemImage: "arrow.down") {
                         proxy.scrollTo("bottom", anchor: .bottom)
+                        liveFollow.following = true
                         followLatest = true
                     }
                     .padding(12)
@@ -387,11 +489,22 @@ struct UserNotesDisclosure: View {
     }
 }
 
-/// 即時逐字稿捲動的位置：捲了多少、內容多高、看得到的底部在哪
-struct LivePosition: Equatable {
-    var offset: CGFloat
-    var content: CGFloat
-    var bottom: CGFloat
+/// 即時逐字稿要不要跟著最新（R2.2、design §25）：捲動的位置一變就算一次，記著上一次的位置；
+/// 不是 @Observable，在排版途中改它不會讓畫面重算
+final class LiveFollow {
+    var following = true
+    private var last: (offset: CGFloat, content: CGFloat)?
+
+    /// offset 捲了多少、content 內容多高、bottom 看得到的底部在哪
+    func update(offset: CGFloat, content: CGFloat, bottom: CGFloat) -> Bool {
+        defer { last = (offset, content) }
+        if bottom >= content - 40 {
+            following = true
+        } else if let last, offset < last.offset - 1, content >= last.content {
+            following = false
+        }
+        return following
+    }
 }
 
 /// 錄音的經過時間：在自己的 body 裡讀，整秒變了只重算這一個 Text（design §25）
@@ -433,6 +546,11 @@ struct MicrophoneMenu: View {
         let monitor = MicrophoneMonitor.shared
         let current = recorder.micDevice
         Menu {
+            // 單獨暫停麥克風、電腦聲音照錄（design §90、R116）
+            if recorder.canPauseMic {
+                Button(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風（只錄電腦聲音）") { recorder.setMicPaused(!recorder.micPaused) }
+                Divider()
+            }
             Button {
                 model.switchMicrophone("")
             } label: {
@@ -452,5 +570,116 @@ struct MicrophoneMenu: View {
         .menuStyle(.borderlessButton)
         .help(current.map { String(localized: "正在用「\($0.name)」收音，點一下可以換") } ?? String(localized: "點一下可以換麥克風"))
         .accessibilityLabel(String(localized: "麥克風：\(current?.name ?? "")"))
+    }
+}
+
+// MARK: - 定時停止（design §84、R110）
+
+/// 定時停止的選單內容：錄音畫面、「檔案」選單、選單列的小視窗共用
+struct StopTimerMenuItems: View {
+    let model: AppModel
+    /// 「指定時間…」要先打開主視窗（從選單列、「檔案」選單）；錄音畫面本來就在主視窗裡，不用（也不搶前景）
+    var opensWindow = true
+
+    var body: some View {
+        let recorder = model.recorder
+        if let stopAt = recorder.stopAt {
+            Text("\(StopTimer.label(stopAt)) 自動停止錄音")
+            Divider()
+        }
+        ForEach(StopTimer.presets, id: \.minutes) { preset in
+            Button(preset.title) { model.setStopTimer(minutes: preset.minutes) }
+        }
+        Button("指定時間…") {
+            if opensWindow { model.openStopTimerSheet() } else { model.showStopTimerSheet = true }
+        }
+        if recorder.stopAt != nil {
+            Divider()
+            Button("取消定時停止") { model.setStopTimer(nil) }
+        }
+    }
+}
+
+/// 錄音畫面計時旁邊的選單：沒設定時寫「定時停止」，設定了寫「15:30 停止」；放不下時只留圖示（說明在滑過提示）
+struct StopTimerMenu: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            menu.labelStyle(.titleAndIcon)
+            menu.labelStyle(.iconOnly)
+        }
+    }
+
+    private var menu: some View {
+        let stopAt = model.recorder.stopAt
+        return Menu {
+            StopTimerMenuItems(model: model, opensWindow: false)
+        } label: {
+            Label {
+                if let stopAt { Text("\(StopTimer.label(stopAt)) 停止") } else { Text("定時停止") }
+            } icon: {
+                Image(systemName: "timer")
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(stopAt.map { String(localized: "\(StopTimer.label($0)) 自動停止錄音（還有 \(StopTimer.remaining($0))），點一下可以改或取消") }
+              ?? String(localized: "時間到自動停止錄音並轉錄"))
+        .accessibilityLabel(stopAt.map { String(localized: "\(StopTimer.label($0)) 自動停止錄音") } ?? String(localized: "定時停止"))
+    }
+}
+
+/// 「指定時間…」：輸入幾點幾分（共用的彈窗，design §80）
+struct StopTimerSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+
+    var body: some View {
+        let time = StopTimer.parse(text)
+        VStack(alignment: .leading, spacing: 18) {
+            // 說明行寫還有多久，跟著時間走
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                SheetHeader(title: String(localized: "定時停止錄音"), subtitle: hint(time, now: context.date))
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(String(localized: "停止的時間"))
+                SheetTextField(placeholder: "15:30", text: $text, focusOnAppear: true) { if let time { save(time) } }
+            }
+            HStack(spacing: 10) {
+                Spacer()
+                Button("取消") { dismiss() }
+                    .buttonStyle(SheetPillButtonStyle(.secondary))
+                    .keyboardShortcut(.cancelAction)
+                // 「設定」在別處是名詞（Settings），這裡是動詞
+                Button(MeetingLanguage.ui(zh: "設定", en: "Set")) { if let time { save(time) } }
+                    .buttonStyle(SheetPillButtonStyle(.primary))
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(time == nil)
+            }
+        }
+        .sheetChrome()
+        .onAppear { text = model.recorder.stopAt.map { StopTimer.clock($0) } ?? StopTimer.defaultTime() }
+        // 彈窗開著時錄音停了（按了停止、時間到）：不用設了
+        .onChange(of: model.recorder.isRecording) { _, recording in if !recording { dismiss() } }
+    }
+
+    /// 說明行：幾點停、還有多久；格式不對時說要怎麼寫
+    private func hint(_ time: (hour: Int, minute: Int)?, now: Date) -> String {
+        guard let time else {
+            return text.trimmingCharacters(in: .whitespaces).isEmpty
+                ? String(localized: "輸入幾點幾分，到時間自動停止錄音並轉錄。") : String(localized: "請輸入像 15:30 的時間。")
+        }
+        let date = StopTimer.next(hour: time.hour, minute: time.minute, after: now)
+        let clock = StopTimer.clock(date), remaining = StopTimer.remaining(date, now: now)
+        return Calendar.current.isDate(date, inSameDayAs: now)
+            ? String(localized: "今天 \(clock) 自動停止錄音並轉錄（\(remaining)後）。")
+            : String(localized: "明天 \(clock) 自動停止錄音並轉錄（\(remaining)後）。")
+    }
+
+    private func save(_ time: (hour: Int, minute: Int)) {
+        model.setStopTimer(StopTimer.next(hour: time.hour, minute: time.minute, after: Date()))
+        dismiss()
     }
 }

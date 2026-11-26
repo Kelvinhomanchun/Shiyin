@@ -93,6 +93,8 @@ enum GoldenDump {
         var knownPeople: [String]
         /// 參考文件（design §39.7）：fixtures 的 meetingDocuments，name 含副檔名，直接給每頁的文字
         var documents: [MeetingDocument]
+        /// 會議中的畫面（design §83.5）：fixtures 的 meetingScreens，直接給時間和辨識出的文字
+        var screens: [ScreenText] = []
         var language: MeetingLanguage { meeting.meetingLanguage }
 
         /// 資料庫裡的說話者表：1 到最大編號，沒改名的是預設名稱（跟 saveTranscript 一樣）
@@ -114,9 +116,11 @@ enum GoldenDump {
             self.root = root
             // 參考文件放在 meetingDocuments（會議的 key → 文件），不動原本的會議資料
             let documents = root["meetingDocuments"] as? Object ?? [:]
+            let screens = root["meetingScreens"] as? Object ?? [:]
             meetings = (root["meetings"] as? [Object] ?? []).map { o in
                 var fx = GoldenDump.meetingFixture(o)
                 fx.documents = (documents[fx.key] as? [Object] ?? []).map(GoldenDump.documentFixture)
+                fx.screens = (screens[fx.key] as? [Object] ?? []).map { ScreenText(at: GoldenDump.double($0["at"]), text: $0["text"] as? String ?? "") }
                 return fx
             }
         }
@@ -205,6 +209,11 @@ enum GoldenDump {
             let general = TemplateRecord(id: "general", name: "", builtin: true, definition: BuiltinTemplates.all[0].definition.jsonString())
             if let notes = fx.notes {
                 w.text(dir + "revise.txt", NotesPrompt.revise(context(general.definition(for: l)), notes: notes, answers: fx.answers))
+                // 再找不確定的地方（design §88）：範本只剩說明和額外指示，問過的題目用 answers 的題目
+                let base = general.definition(for: l)
+                w.text(dir + "review-more.txt", NotesPrompt.moreReview(
+                    context(TemplateDefinition(description: base.description, sections: [], custom: [], instruction: base.instruction)),
+                    notes: notes, asked: fx.answers.map(\.question)))
             }
 
             // 逐字稿校正：跟 JobRunner.correct 一樣組 Context
@@ -268,6 +277,25 @@ enum GoldenDump {
                     meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: Array(fx.history.suffix(3)), question: fx.question,
                     documents: texts))
             }
+            // 有會議中的畫面時（design §83.5）：沒有畫面的檔案不變（R109.6）；跟參考文件同時有時規則的編號接下去
+            if !fx.screens.isEmpty {
+                var withScreens = context(general.definition(for: l))
+                withScreens.screens = fx.screens
+                w.text(dir + "notes-system-screens.txt", NotesPrompt.system(l, screens: true))
+                w.text(dir + "summarize-general-screens.txt", NotesPrompt.summarize(withScreens))
+                if !fx.documents.isEmpty {
+                    var both = withScreens
+                    both.documents = fx.documents.map(DocumentText.init)
+                    w.text(dir + "notes-system-documents-screens.txt", NotesPrompt.system(l, documents: true, screens: true))
+                    w.text(dir + "summarize-general-documents-screens.txt", NotesPrompt.summarize(both))
+                    w.text(dir + "ask-meeting-system-documents-screens.txt", AskPrompt.meetingSystem(l, documents: true, screens: true))
+                }
+                w.text(dir + "ask-meeting-system-screens.txt", AskPrompt.meetingSystem(l, screens: true))
+                w.text(dir + "ask-meeting-prompt-screens.txt", AskPrompt.meetingPrompt(
+                    meeting: meeting, notes: meeting.decodedNotes, lines: lines, history: Array(fx.history.suffix(3)), question: fx.question,
+                    screens: fx.screens))
+                w.json(dir + "screen-image-labels.json", fx.screens.map { ScreenPrompt.imageLabel($0.at, language: l) })
+            }
         }
 
         w.text("schemas/notes.json", MeetingNotes.jsonSchema)
@@ -320,6 +348,18 @@ enum GoldenDump {
         let pasted = ["Redis", "Redis、Kubernetes、拾音", "Redis, kubernetes\nKubernetes；SendGrid;  \n\n  拾音 ", "  ", "A，B，a",  // l10n-skip
                       "Claude Code\r\nCodex", "第一行\n第二行、第三行"]  // l10n-skip
         w.json("util/glossary-split.json", pasted.map { ["input": $0, "terms": GlossaryInput.split($0)] as Object })
+        // 詞彙表的檔案（R117、§91）：匯入的分法、匯出的格式、文字編碼
+        let files = ["Redis\nKubernetes\n", "\u{FEFF}拾音\r\nClaude Code\r\n", "\"產品名\",\"客戶名\"\n\"Redis\",\"拾音\"", "甲\t乙\t丙\n丁", "", "  \n\n", "A；B、a，\"b\""]  // l10n-skip
+        let exports: [[String]] = [[], ["Redis"], ["拾音", "Claude Code", "SendGrid"]]  // l10n-skip
+        let big5 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.big5.rawValue)))
+        let encoded: [Data] = [Data("Redis\n拾音\n".utf8), Data([0xEF, 0xBB, 0xBF]) + Data("拾音\n".utf8),  // l10n-skip
+                               Data([0xFF, 0xFE]) + "拾音、詞彙表".data(using: .utf16LittleEndian)!, Data([0xFE, 0xFF]) + "拾音".data(using: .utf16BigEndian)!,  // l10n-skip
+                               "拾音、詞彙表,Redis".data(using: big5)!, Data([0xA4])]  // l10n-skip
+        w.json("util/glossary-file.json", [
+            "parse": files.map { ["input": $0, "terms": GlossaryFile.terms(fromFile: $0)] as Object },
+            "export": exports.map { ["terms": $0, "text": GlossaryFile.export($0)] as Object },
+            "decode": encoded.map { ["base64": $0.base64EncodedString(), "text": GlossaryFile.decode($0).map { $0 as Any } ?? NSNull()] as Object },
+        ] as Object)
         let abc = ["甲", "乙", "丙"], redis = glossaries.count > 1 ? glossaries[1] : [], claude = ["Claude", "Claude Code"]  // l10n-skip
         let echoes: [(String, [String], MeetingLanguage)] = [
             ("甲、乙、丙。", abc, .zh), ("詞彙：甲、乙、丙。", abc, .zh), ("甲。", abc, .zh), ("乙、丙", abc, .zh), ("丙、甲", abc, .zh),  // l10n-skip
@@ -399,6 +439,22 @@ enum GoldenDump {
             empty.notes = MeetingNotes(title: "x")
             w.text(dir + "notes-empty.md", NotesExporter.markdown(empty))
             w.text(dir + "notes-empty.html", NotesExporter.html(empty))
+            // 會議中的畫面（design §83.6）：會議紀錄最後一節、逐字稿插在時間點；HTML 是換成圖片之前的位置標記
+            let screens = fx.screens.enumerated().map { i, screen in
+                MeetingDocument(id: Int64(i + 1), meetingId: 0, name: MeetingDocument.screenFileName, file: "\(i + 1)/\(MeetingDocument.screenFileName)",
+                                kind: DocumentKind.image.rawValue, pages: MeetingDocument.encodePages(screen.text.isEmpty ? [] : [screen.text]),
+                                ocr: true, at: screen.at)
+            }
+            if !screens.isEmpty {
+                var withScreens = bundle
+                withScreens.screens = screens
+                let folder = ScreenExport.folderName(for: URL(fileURLWithPath: "/tmp/notes.md"), language: fx.language)
+                w.text(dir + "notes-screens.md", NotesExporter.markdown(withScreens, screenFolder: folder))
+                w.text(dir + "notes-screens.html", NotesExporter.html(withScreens, screens: true))
+                w.text(dir + "transcript-screens.md", TranscriptExporter.text(withScreens, format: "md", times: true, speakers: true, screenFolder: folder))
+                w.text(dir + "transcript-screens.html", TranscriptExporter.html(withScreens, times: true, speakers: true, screens: true))
+                w.json(dir + "screen-files.json", ScreenExport.fileNames(screens))
+            }
 
             // .shiyin 封包的 JSON（design §10）：跟 MeetingPackage.export 一樣的編碼
             let encoder = JSONEncoder()
@@ -422,6 +478,10 @@ enum GoldenDump {
             if !fx.documents.isEmpty, let data = try? encoder.encode(MeetingPackage.documentEntries(fx.documents)) {
                 w.text("package/\(fx.key)/documents.json", String(decoding: data, as: UTF8.self))
             }
+            // 會議中的畫面跟參考文件一起放，多一個 at（design §83.6）
+            if !screens.isEmpty, let data = try? encoder.encode(MeetingPackage.documentEntries(fx.documents + screens)) {
+                w.text("package/\(fx.key)/documents-screens.json", String(decoding: data, as: UTF8.self))
+            }
         }
     }
 
@@ -435,6 +495,10 @@ enum GoldenDump {
             }
         }
         // 長度分配和組好的區塊
+        // 會議中的畫面一次最多送幾張圖片、超過時挑哪幾張（design §83.5）
+        w.json("screens/pick.json", (f["screenPickCounts"] as? [Int] ?? []).map { n -> Object in
+            ["count": n, "picked": ScreenPrompt.pick((0..<n).map { ScreenText(at: Double($0), text: "") }).map { Int($0.at) }]
+        })
         w.json("documents/budget.json", (f["documentBudget"] as? [Object] ?? []).map { c -> Object in
             let limit = c["limit"] as? Int ?? DocumentPrompt.limit
             let docs = texts(c["documents"])

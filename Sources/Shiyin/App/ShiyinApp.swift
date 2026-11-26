@@ -110,12 +110,25 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
             .disabled(!model.recorder.isRecording)
+            // 單獨暫停麥克風、電腦聲音照錄（design §90、R116）
+            Button(model.recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風") {
+                model.recorder.setMicPaused(!model.recorder.micPaused)
+            }
+            .keyboardShortcut("m", modifiers: [.command, .shift])
+            .disabled(!model.recorder.canPauseMic)
             Button("標記重點") {
                 model.addBookmark(at: model.recorder.elapsed, meetingId: model.recorder.meetingId)
                 model.noticeMessage = String(localized: "已標記 \(TimeFormat.string(model.recorder.elapsed)) 為重點")
             }
             .keyboardShortcut("b")
             .disabled(!model.recorder.isRecording)
+            // 會議中的畫面（R109.1、design §83.2）
+            Button("截圖") { model.captureScreen() }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(!model.recorder.isRecording)
+            // 定時停止（design §84、R110）
+            Menu("定時停止") { StopTimerMenuItems(model: model) }
+                .disabled(!model.recorder.isRecording)
             Divider()
             Button("匯出…") { model.openMainWindow?(); model.openExportSheet() }
                 .keyboardShortcut("e")

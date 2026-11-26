@@ -292,18 +292,26 @@ struct NotesPage: View {
     /// 提示條和編輯列：條列、心智圖共用
     @ViewBuilder private func header(_ notes: MeetingNotes) -> some View {
         // 加入、移除文件之後還沒重新整理（R61.8）：提示列不跟著文字大小（R59.2）
-        if let id = detail.meeting.id, model.documentsChanged.contains(id) {
+        if let id = detail.meeting.id, model.documentsChanged.contains(id) || model.screensChanged.contains(id) {
             DocumentsBanner().environment(\.textScale, 1)
         }
         // 這場很像某個資料夾裡的會議（R98.3）
         if let id = detail.meeting.id, let suggestion = model.folderSuggestion(for: detail.meeting) {
             FolderSuggestionBanner(meetingId: id, suggestion: suggestion).environment(\.textScale, 1)
         }
-        if detail.reviewCount > 0 { ReviewBanner(detail: detail) }
+        if let viewing = model.viewingNotes {
+            NotesVersionBanner(entry: viewing).environment(\.textScale, 1)
+        } else if detail.reviewCount > 0 {
+            ReviewBanner(detail: detail)
+        } else if let id = detail.meeting.id, model.reviewFinished.contains(id), model.detailStatus?.isActive != true {
+            ReviewDoneBanner(meetingId: id).environment(\.textScale, 1)
+        }
         AttendeeLens(detail: detail)
-        EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true,
-                onUndo: detail.canUndoNotes ? { model.undoNotes() } : nil,
-                onRefine: detail.meeting.deletedAt == nil ? { model.requestRefine() } : nil) {
+        // 看以前的版本時不能編輯、復原、修正（R115.2）；版本紀錄一直可以換
+        EditBar(viewMode: $notesView, disabled: model.detailStatus?.isActive == true || model.viewingNotes != nil,
+                onUndo: detail.canUndoNotes && model.viewingNotes == nil ? { model.undoNotes() } : nil,
+                onRefine: detail.meeting.deletedAt == nil && model.viewingNotes == nil ? { model.requestRefine() } : nil,
+                versions: detail.canUndoNotes ? { model.notesVersionMenu() } : nil) {
             base = notes; editing = notes
         }
     }
@@ -382,6 +390,63 @@ struct ReviewBanner: View {
             }
         }
         .background(Color.signal.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+/// 正在看以前的版本（R115.2、design §89）：哪一版、什麼時候；「回到目前的版本」「改用這一版」
+struct NotesVersionBanner: View {
+    @Environment(AppModel.self) private var model
+    let entry: NotesHistoryEntry
+
+    /// 哪一版，後面接灰字的時間
+    private var title: AttributedString {
+        var text = AttributedString(String(localized: "正在看以前的版本：\(model.notesVersionLabel(entry))"))
+        if let time = model.notesVersionTime(entry) {
+            var suffix = AttributedString("　" + time)   // l10n-skip：全形空白加時間
+            suffix.foregroundColor = .secondary
+            text += suffix
+        }
+        return text
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Label { Text(title) } icon: { Image(systemName: "clock.arrow.circlepath") }
+                .lineLimit(2)
+            Spacer(minLength: 8)
+            Button("回到目前的版本") { model.viewingNotes = nil }
+            Button("改用這一版") { model.useViewedNotesVersion() }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.detailStatus?.isActive == true)
+                .help("這一版變成目前的會議紀錄，原本的留在版本紀錄裡，可以再換回來")
+        }
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.celadon.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// 待確認都處理完了（R114.5、design §88）：可以接著再找不確定的地方；✕ 收起
+struct ReviewDoneBanner: View {
+    @Environment(AppModel.self) private var model
+    let meetingId: Int64
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Label("待確認都處理完了", systemImage: "checkmark.circle")
+            Spacer(minLength: 8)
+            Button("再找不確定的地方") { model.findMoreReview() }
+            Button { model.reviewFinished.remove(meetingId) } label: { Image(systemName: "xmark") }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("不用了")
+                .accessibilityLabel("不用了")
+        }
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.celadon.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -483,6 +548,8 @@ struct EditBar: View {
     var onUndo: (() -> Void)? = nil
     /// fork：用 AI 修正；nil 不顯示
     var onRefine: (() -> Void)? = nil
+    /// 版本紀錄的選單（R115.1）；nil：沒有以前的版本，不顯示
+    var versions: (() -> [MenuEntry])? = nil
     let onEdit: () -> Void
 
     var body: some View {
@@ -513,6 +580,10 @@ struct EditBar: View {
 
     private func actions(compact: Bool) -> some View {
         HStack(spacing: 14) {
+            if let versions {
+                FloatingMenuLabelButton(title: String(localized: "版本紀錄"), systemImage: "clock.arrow.circlepath",
+                                        help: String(localized: "看以前的版本、改用某一版（換範本整理前的紀錄都在這裡）"), compact: compact, entries: versions)
+            }
             if let onUndo {
                 Button(action: onUndo) {
                     if compact { Image(systemName: "arrow.uturn.backward") }

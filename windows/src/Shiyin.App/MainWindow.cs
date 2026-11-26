@@ -187,6 +187,8 @@ public sealed class MainWindow : Window
         host.Controller.Notice += m => host.Post(() => ShowNotice(m));
         host.Controller.Error += m => host.Post(() => ShowError(m));
         host.Controller.Reveal += id => host.Post(() => Reveal(id));
+        // 再找不確定的地方找到了（M§88）：選取中的那場展開待確認（紀錄存檔後畫面會跟著重畫）
+        host.Controller.MoreReviewFound += (id, count) => host.Post(() => { if (count > 0 && State.Selection == id) State.ReviewExpanded = true; });
         // 一次還原好幾場（R88）：回到會議列表、選取那幾場
         host.Controller.RevealMany += ids => host.Post(() => State.RevealMany(ids));
         host.Recorder.Changed += () => host.Post(ShowRecorderAlerts);
@@ -354,12 +356,17 @@ public sealed class MainWindow : Window
         {
             if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause();
         });
+        // 單獨暫停麥克風（R116、M§90）
+        Accelerator(VirtualKey.M, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => host.Recorder.SetMicPaused(!host.Recorder.MicPaused));
         Accelerator(VirtualKey.B, VirtualKeyModifiers.Control, () =>
         {
             if (host.Controller.BookmarkRecording()) ShowNotice(L.F("已標記 %@ 為重點", TimeFormat.String(host.Recorder.Elapsed)));
         });
         Accelerator(VirtualKey.E, VirtualKeyModifiers.Control, () => { if (State.Detail is { } d) _ = Dialogs.Export(this, d.Meeting.Id!.Value); });
         Accelerator(VirtualKey.F, VirtualKeyModifiers.Control, () => detailView.FocusSearch());
+        // F3、Shift+F3：逐字稿搜尋的下一個、上一個（R111.2），在逐字稿分頁才有作用
+        Accelerator(VirtualKey.F3, VirtualKeyModifiers.None, () => { if (State.Detail is not null && State.Tab == DetailTab.Transcript) detailView.StepSearch(1); });
+        Accelerator(VirtualKey.F3, VirtualKeyModifiers.Shift, () => { if (State.Detail is not null && State.Tab == DetailTab.Transcript) detailView.StepSearch(-1); });
         foreach (var tab in Enum.GetValues<DetailTab>())
         {
             var i = (int)tab;

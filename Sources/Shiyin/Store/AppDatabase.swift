@@ -16,10 +16,10 @@ struct ReplaceResult {
 
 /// 全文搜尋的一筆結果（R9.1）
 struct SearchHit: Identifiable, Hashable {
-    enum Kind: String { case title, segment, notes, userNotes = "user_notes" }
+    enum Kind: String { case title, segment, notes, userNotes = "user_notes", screen }
     var meetingId: Int64
     var kind: Kind
-    var ref: Int64            // segment 的 id；其他種類是 0
+    var ref: Int64            // segment 的 id；screen 是文件 id；其他種類是 0
     var snippet: String
     var id: String { "\(meetingId)-\(kind.rawValue)-\(ref)" }
 }
@@ -447,6 +447,15 @@ final class AppDatabase: @unchecked Sendable {
         migrator.registerMigration("fork-coaching-useful") { db in
             try db.execute(sql: "ALTER TABLE coaching ADD COLUMN useful TEXT NOT NULL DEFAULT '[]'")
         }
+        // 會議中的畫面（R109、design §83.1）：有錄音時間的文件
+        migrator.registerMigration("v16") { db in
+            try db.execute(sql: "ALTER TABLE documents ADD COLUMN at REAL")
+        }
+        // 版本紀錄記下用的範本（R115、design §89）
+        migrator.registerMigration("v17") { db in
+            try db.execute(sql: "ALTER TABLE meetings ADD COLUMN notes_template TEXT")
+            try db.execute(sql: "ALTER TABLE notes_versions ADD COLUMN template_id TEXT")
+        }
         return migrator
     }
 
@@ -618,10 +627,14 @@ final class AppDatabase: @unchecked Sendable {
     /// 永久刪除（垃圾桶清除或使用者確認）；參考文件的原始檔一起刪（design §39.1）
     func deleteMeeting(_ id: Int64) throws {
         let files = try pool.write { db -> [String] in
-            let files = try MeetingDocument.filter(Column("meeting_id") == id).fetchAll(db).map(\.file)
-            // 段落會跟著會議刪掉（ON DELETE CASCADE），所以先刪索引
+            let documents = try MeetingDocument.filter(Column("meeting_id") == id).fetchAll(db)
+            let files = documents.map(\.file)
+            // 段落、畫面會跟著會議刪掉（ON DELETE CASCADE），所以先刪索引
             try Self.unindexSegments(db, meetingId: id)
             try Self.unindexMeeting(db, meetingId: id)
+            for screen in documents where screen.isScreen {
+                try db.execute(sql: "DELETE FROM search WHERE rowid = ?", arguments: [Self.screenRowidBase + screen.id!])
+            }
             _ = try Meeting.deleteOne(db, key: id)
             return files
         }
@@ -671,6 +684,11 @@ final class AppDatabase: @unchecked Sendable {
         }
         try db.execute(sql: "UPDATE bookmarks SET meeting_id = ?, time = MAX(0, time - ?) WHERE meeting_id = ? AND time >= ?",
                        arguments: [newId, cut, id, cut])
+        // 會議中的畫面（design §83.7）：切點之後的搬到新的一場（檔案在 documents/<id>/，id 不變不用搬）
+        try db.execute(sql: "UPDATE documents SET meeting_id = ?, at = MAX(0, at - ?) WHERE meeting_id = ? AND at IS NOT NULL AND at >= ?",
+                       arguments: [newId, cut, id, cut])
+        try db.execute(sql: "UPDATE search SET meeting_id = ? WHERE rowid IN (SELECT ? + id FROM documents WHERE meeting_id = ? AND at IS NOT NULL)",
+                       arguments: [newId, screenRowidBase, newId])
 
         func speaks(_ meetingId: Int64, _ idx: Int) throws -> Bool {
             try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM segments WHERE meeting_id = ? AND speaker = ?)", arguments: [meetingId, idx]) ?? false
@@ -990,8 +1008,50 @@ final class AppDatabase: @unchecked Sendable {
         try pool.read { db in try MeetingDocument.fetchOne(db, key: id) }
     }
 
+    /// 一般的參考文件（不含會議中的畫面，design §83.1）
     func documents(_ meetingId: Int64) throws -> [MeetingDocument] {
-        try pool.read { db in try MeetingDocument.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db) }
+        try pool.read { db in
+            try MeetingDocument.filter(Column("meeting_id") == meetingId && Column("at") == nil).order(Column("id")).fetchAll(db)
+        }
+    }
+
+    // MARK: 會議中的畫面（design §83.1、R109）
+
+    /// 照時間排，同一個時間照加入的順序
+    func screens(_ meetingId: Int64) throws -> [MeetingDocument] {
+        try pool.read { db in
+            try MeetingDocument.filter(Column("meeting_id") == meetingId && Column("at") != nil)
+                .order(Column("at"), Column("id")).fetchAll(db)
+        }
+    }
+
+    /// 先插入、再用 id 填 file（documents/<id>/screen.jpg）；文字辨識之後用 setScreenText 補上。
+    /// 畫面上的名稱照時間現算（「畫面 12:34」），時間改了檔名不用跟著改
+    func addScreen(_ meetingId: Int64, at: Double) throws -> MeetingDocument {
+        try pool.write { db in
+            var screen = MeetingDocument(meetingId: meetingId, name: MeetingDocument.screenFileName, kind: DocumentKind.image.rawValue,
+                                         pages: MeetingDocument.encodePages([]), ocr: true, at: max(0, at))
+            try screen.insert(db)
+            screen.file = "\(screen.id!)/\(MeetingDocument.screenFileName)"
+            try screen.update(db)
+            return screen
+        }
+    }
+
+    /// 辨識出的文字：寫回 pages、更新搜尋索引
+    func setScreenText(_ id: Int64, text: String) throws {
+        try pool.write { db in
+            guard var screen = try MeetingDocument.fetchOne(db, key: id) else { return }
+            screen.pages = MeetingDocument.encodePages(text.isEmpty ? [] : [text])
+            try screen.update(db)
+            try Self.indexScreen(db, screen)
+        }
+    }
+
+    func setScreenTime(_ id: Int64, at: Double) throws {
+        try pool.write { db in
+            try db.execute(sql: "UPDATE documents SET at = ? WHERE id = ? AND at IS NOT NULL", arguments: [max(0, at), id])
+        }
     }
 
     /// 先插入、再用 id 填 file（documents/<id>/<檔名>），同一個交易
@@ -1012,6 +1072,7 @@ final class AppDatabase: @unchecked Sendable {
         let document = try pool.write { db -> MeetingDocument? in
             guard let document = try MeetingDocument.fetchOne(db, key: id) else { return nil }
             _ = try MeetingDocument.deleteOne(db, key: id)
+            try db.execute(sql: "DELETE FROM search WHERE rowid = ?", arguments: [Self.screenRowidBase + id])
             return document
         }
         if let document { removeDocumentFile(document.file) }
@@ -1064,13 +1125,15 @@ final class AppDatabase: @unchecked Sendable {
 
     /// 回傳是否取代了使用者改過的草稿（畫面要提示，design §21.3）
     @discardableResult
-    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String, source: NotesSource = .edit) throws -> Bool {
-        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason, source: source) }
+    func saveNotes(_ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String, source: NotesSource = .edit,
+                   template: String? = nil) throws -> Bool {
+        try pool.write { db in try Self.saveNotes(db, meetingId, notes: notes, by: provider, reason: reason, source: source, template: template) }
     }
 
+    /// template：整理、草稿用的範本（design §89），記在會議上；舊的那一版帶著它原本的範本存進版本紀錄
     @discardableResult
     static func saveNotes(_ db: Database, _ meetingId: Int64, notes: MeetingNotes, by provider: String?, reason: String,
-                                  source: NotesSource = .edit) throws -> Bool {
+                                  source: NotesSource = .edit, template: String? = nil) throws -> Bool {
         guard var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
         let wasDraft = m.notesDraft
         var keepVersion = true
@@ -1087,9 +1150,10 @@ final class AppDatabase: @unchecked Sendable {
         case .revised: if wasDraft != 0 { m.notesDraft = 2 }
         }
         if keepVersion, let old = m.notes {
-            var version = NotesVersion(meetingId: meetingId, notes: old, reason: versionReason)
+            var version = NotesVersion(meetingId: meetingId, notes: old, reason: versionReason, templateId: m.notesTemplate)
             try version.insert(db)
         }
+        if source == .generated || source == .draft { m.notesTemplate = template }
         m.notes = notes.jsonString()
         if let provider { m.notesBy = provider }
         if !m.titleLocked && !notes.title.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -1102,6 +1166,66 @@ final class AppDatabase: @unchecked Sendable {
         return source == .generated && wasDraft == 2
     }
 
+    /// 版本紀錄（R115、design §89）：目前的在最前面，再來由新到舊。
+    /// notes_versions 的一列是「被換掉的那一版」，reason、created_at 是換掉它的那次存檔，
+    /// 所以每一版怎麼來的、什麼時候，看比它舊的那一列；最舊的一版不知道（nil）
+    func notesHistory(_ meetingId: Int64) throws -> [NotesHistoryEntry] {
+        try pool.read { db in
+            guard let meeting = try Meeting.fetchOne(db, key: meetingId), let current = meeting.decodedNotes else { return [] }
+            let rows = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db)
+            var entries: [NotesHistoryEntry] = []
+            for (k, row) in rows.enumerated() {
+                guard let notes = try? JSONDecoder().decode(MeetingNotes.self, from: Data(row.notes.utf8)) else { continue }
+                entries.append(NotesHistoryEntry(versionId: row.id, notes: notes, templateId: row.templateId,
+                                                 origin: k > 0 ? rows[k - 1].reason : nil, time: k > 0 ? rows[k - 1].createdAt : nil))
+            }
+            entries.append(NotesHistoryEntry(versionId: nil, notes: current, templateId: meeting.notesTemplate,
+                                             origin: rows.last?.reason, time: rows.last?.createdAt))
+            return entries.reversed()
+        }
+    }
+
+    /// 改用以前的某一版（R115.3）：目前的存成一版（原因「改用以前的版本」），那一版變成目前的紀錄（不刪，可以再換回來）；
+    /// 會議的範本換成那一版的範本（範本還在的話）。回傳是否換了
+    @discardableResult
+    func useNotesVersion(_ meetingId: Int64, versionId: Int64) throws -> Bool {
+        try pool.write { db in
+            guard let version = try NotesVersion.fetchOne(db, key: versionId), version.meetingId == meetingId,
+                  var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
+            if let old = m.notes {
+                var archived = NotesVersion(meetingId: meetingId, notes: old, reason: String(localized: "改用以前的版本"), templateId: m.notesTemplate)
+                try archived.insert(db)
+            }
+            m.notes = version.notes
+            m.notesTemplate = version.templateId
+            m.notesDraft = 0
+            if let template = version.templateId, try TemplateRecord.fetchOne(db, key: template) != nil { m.templateId = template }
+            if !m.titleLocked, let title = m.decodedNotes?.title.trimmingCharacters(in: .whitespaces), !title.isEmpty { m.title = title }
+            m.updatedAt = Clock.now()
+            try m.update(db)
+            try Self.index(db, meetingId: meetingId, kind: .notes, ref: 0, text: m.decodedNotes?.plainText ?? "")
+            try Self.index(db, meetingId: meetingId, kind: .title, ref: 0, text: m.displayTitle)
+            return true
+        }
+    }
+
+    /// 已經問過的待確認題目（design §88）：版本紀錄（舊到新）和目前紀錄的題目，去掉前後空白、去重複，最多最近的 60 題
+    func askedReviewQuestions(_ meetingId: Int64) throws -> [String] {
+        try pool.read { db in
+            let versions = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id")).fetchAll(db)
+            let current = try Meeting.fetchOne(db, key: meetingId)?.decodedNotes
+            var seen = Set<String>()
+            var asked: [String] = []
+            for notes in versions.compactMap({ try? JSONDecoder().decode(MeetingNotes.self, from: Data($0.notes.utf8)) }) + [current].compactMap({ $0 }) {
+                for item in notes.reviewItems {
+                    let question = item.question.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !question.isEmpty, seen.insert(MeetingNotes.questionKey(question)).inserted { asked.append(question) }
+                }
+            }
+            return Array(asked.suffix(60))
+        }
+    }
+
     /// 復原上一版：成功回傳 true
     func undoNotes(_ meetingId: Int64) throws -> Bool {
         try pool.write { db in try Self.undoNotes(db, meetingId) }
@@ -1111,6 +1235,7 @@ final class AppDatabase: @unchecked Sendable {
         guard let version = try NotesVersion.filter(Column("meeting_id") == meetingId).order(Column("id").desc).fetchOne(db),
               var m = try Meeting.fetchOne(db, key: meetingId) else { return false }
         m.notes = version.notes
+        m.notesTemplate = version.templateId
         m.notesDraft = 0   // 復原的是之前的某一版，不再當草稿自動更新
         if !m.titleLocked, let title = m.decodedNotes?.title, !title.isEmpty { m.title = title }
         m.updatedAt = Clock.now()
@@ -1164,16 +1289,17 @@ final class AppDatabase: @unchecked Sendable {
     // MARK: 搜尋（R9.1）
 
     /// 搜尋表的 rowid（design §20.11、D27）：段落用段落的 id；標題、會議紀錄、筆記用 2^50 + 會議 id × 4 + 種類，
-    /// 不會跟段落重疊。FTS5 只能用 MATCH 或 rowid 找列，用其他欄位刪改每次都要掃整張表，所以一律用 rowid。
+    /// 會議中的畫面用 2^51 + 文件 id（design §83.1），不會跟段落重疊。FTS5 只能用 MATCH 或 rowid 找列，用其他欄位刪改每次都要掃整張表，所以一律用 rowid。
     /// 新增時一定要指定 rowid：自動編號會接在最大的 rowid 後面，之後可能跟推算出來的值撞在一起
     private static let metaRowidBase: Int64 = 1 << 50
+    static let screenRowidBase: Int64 = 1 << 51
 
     private static func searchRowid(meetingId: Int64, kind: SearchHit.Kind) -> Int64 {
         let code: Int64 = switch kind {
         case .title: 1
         case .notes: 2
         case .userNotes: 3
-        case .segment: preconditionFailure("段落的 rowid 就是段落的 id")   // l10n-skip
+        case .segment, .screen: preconditionFailure("段落、畫面的 rowid 用自己的 id")   // l10n-skip
         }
         return metaRowidBase + meetingId * 4 + code
     }
@@ -1192,6 +1318,16 @@ final class AppDatabase: @unchecked Sendable {
     static func unindexMeeting(_ db: Database, meetingId: Int64) throws {
         let ids = [SearchHit.Kind.title, .notes, .userNotes].map { searchRowid(meetingId: meetingId, kind: $0) }
         try db.execute(sql: "DELETE FROM search WHERE rowid IN (?, ?, ?)", arguments: StatementArguments(ids))
+    }
+
+    /// 畫面辨識出的文字（ref 是文件 id）；沒有字時只刪掉舊的
+    static func indexScreen(_ db: Database, _ screen: MeetingDocument) throws {
+        guard let id = screen.id else { return }
+        try db.execute(sql: "DELETE FROM search WHERE rowid = ?", arguments: [screenRowidBase + id])
+        let text = screen.screenText
+        guard screen.isScreen, !text.isEmpty else { return }
+        try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) VALUES (?, ?, 'screen', ?, ?)",
+                       arguments: [screenRowidBase + id, screen.meetingId, id, text])
     }
 
     /// 標題、會議紀錄、筆記（ref 是 0）
@@ -1214,6 +1350,18 @@ final class AppDatabase: @unchecked Sendable {
             try index(db, meetingId: m.id!, kind: .title, ref: 0, text: m.displayTitle)
             try index(db, meetingId: m.id!, kind: .userNotes, ref: 0, text: m.userNotes)
             if let notes = m.decodedNotes { try index(db, meetingId: m.id!, kind: .notes, ref: 0, text: notes.plainText) }
+        }
+        // 畫面（v16 起才有 at 欄位；更早的 migration 裡重建時還沒有）
+        if try db.tableExists("documents"), try db.columns(in: "documents").contains(where: { $0.name == "at" }) {
+            let rows = try Row.fetchAll(db, sql: "SELECT id, meeting_id, pages FROM documents WHERE at IS NOT NULL")
+            for row in rows {
+                let id: Int64 = row["id"]
+                let pages: String = row["pages"]
+                let text = ((try? JSONDecoder().decode([String].self, from: Data(pages.utf8))) ?? []).joined(separator: "\n")
+                guard !text.isEmpty else { continue }
+                try db.execute(sql: "INSERT INTO search (rowid, meeting_id, kind, ref, text) VALUES (?, ?, 'screen', ?, ?)",
+                               arguments: [screenRowidBase + id, row["meeting_id"], id, text])
+            }
         }
     }
 

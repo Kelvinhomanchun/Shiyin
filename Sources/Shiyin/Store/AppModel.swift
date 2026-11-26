@@ -77,6 +77,8 @@ struct MeetingDetail: Equatable {
     /// 會議的參考文件（design §39.1）和照長度分配後每一份用了多少（§39.3，選單顯示「太長，只用前 N 頁」）
     var documents: [MeetingDocument] = []
     var documentUse: [Int64: DocumentPrompt.Allocated] = [:]
+    /// 會議中的畫面（design §83.1），照時間排
+    var screens: [MeetingDocument] = []
     /// 逐字稿分頁用的索引，載入時算一次，不要每次畫面更新都重算（design §21.12）：
     /// 每段的校正（不含已忽略的）、依開始時間排好的段落
     var correctionsBySegment: [Int64: [Correction]] = [:]
@@ -112,6 +114,15 @@ struct MeetingDetail: Equatable {
         guard !trimmed.isEmpty else { return nil }
         return speakers.first { $0.value.caseInsensitiveCompare(trimmed) == .orderedSame }?.key
     }
+    /// 看以前的某一版會議紀錄時，畫面用的副本（R115.2、design §89）：紀錄換成那一版，不帶待確認的標記、說話者的建議
+    func showingNotesVersion(_ notes: MeetingNotes) -> MeetingDetail {
+        var copy = self
+        copy.notes = notes
+        copy.reviewLinks = [:]
+        copy.speakerSuggestions = [:]
+        return copy
+    }
+
     /// 待確認的題數：會議紀錄的待確認＋說話者的建議（R33.3）
     var reviewCount: Int { (notes?.reviewItems.count ?? 0) + speakerSuggestions.count }
     /// 可以復原的說話者調整（合併、改句子）的說明，沒有就是 nil；顯示在改名小視窗和逐字稿右鍵選單（R44.4）
@@ -222,6 +233,8 @@ final class AppModel {
             if oldValue != selection {
                 reviewExpanded = false
                 userNotesExpanded = false
+                reviewFinished = []
+                viewingNotes = nil
                 reloadDetailAfterMouseUp()
             }
         }
@@ -230,6 +243,8 @@ final class AppModel {
     #if DEBUG
     /// 驗證用：當成左鍵按著（`mousehold on|off`）
     @ObservationIgnored var debugMouseHeld = false
+    /// 驗證用：當成滑過議題帶的第幾段（`topichover <第幾段|off>`，design §87）
+    var debugTopicHover: Int?
     #endif
 
     /// 側欄的列按下去就選取，接著可能是拖曳：按著滑鼠時先不換右邊的會議頁，放開才載入（design §77）。
@@ -278,10 +293,30 @@ final class AppModel {
     /// 紀錄頂部「還有 N 題待確認」、逐字稿頂部「我的筆記」展開了沒（design §33.1）：只記這次選取期間，換會議就收起
     var reviewExpanded = false
     var userNotesExpanded = false
+    /// 這次選取期間送出過待確認的會議（R114.5、design §88）：題目都處理完時紀錄頂部顯示「再找不確定的地方」，換會議就清掉
+    var reviewFinished: Set<Int64> = []
+    /// 正在看以前的哪一版會議紀錄（R115.2、design §89）：nil 是目前的；換會議、紀錄變了就回到目前的
+    var viewingNotes: NotesHistoryEntry?
     /// 正在讀取的參考文件：會議 id → 檔名（design §39.4）
     var readingDocuments: [Int64: [String]] = [:]
     /// 已經有會議紀錄、之後才加入或移除文件的會議（R61.8）：紀錄分頁頂部提示重新整理。只記在記憶體
     var documentsChanged: Set<Int64> = []
+    /// 會議中的畫面（design §83）：同上，畫面加入、刪除、改時間後
+    var screensChanged: Set<Int64> = []
+    /// 正在文字辨識的畫面（文件 id）
+    var readingScreens: Set<Int64> = []
+    /// 用快捷鍵截圖後，選單列圖示換成相機 1 秒
+    var screenFlash = false
+    /// 截圖失敗的原因（沒有權限、要重新打開拾音）：錄音畫面的提示列、錄音島顯示；下次截成功就清掉
+    var screenshotProblem: ScreenShot.Failure?
+    /// 搜尋結果點到的畫面：逐字稿捲過去、亮一下
+    var highlightScreen: Int64?
+    /// 要刪除的畫面（確認彈窗）、要改時間的畫面（彈窗）
+    var confirmDeleteScreen: Int64?
+    var movingScreen: Int64?
+    /// 放大（Quick Look）：目前這張、可以 ← → 的全部
+    var screenPreview: URL?
+    var screenPreviewItems: [URL] = []
     var filter = ""
     /// 列表的排序、分組（R97、design §71）：記住；篩選只記這次，換篩選時取消多選
     var meetingSort = MeetingSort(rawValue: UserDefaults.standard.string(forKey: AppSettings.meetingSortKey) ?? "") ?? .dateDesc {
@@ -406,6 +441,15 @@ final class AppModel {
                 if !(error is CancellationError) { self.errorMessage = String(localized: "重新辨識說話者失敗：\(error.localizedDescription)") }
             }
         }
+        runner.onMoreReview = { [weak self] id, count in
+            guard let self, self.selection == id else { return }
+            if count > 0 {
+                self.noticeMessage = String(localized: "多找到 \(count) 個不確定的地方")
+                self.reviewExpanded = true
+            } else {
+                self.noticeMessage = String(localized: "沒有找到其他不確定的地方")
+            }
+        }
         runner.onEditedDraftReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             self.noticeMessage = String(localized: "正式版的會議紀錄好了；你改過的草稿留在版本紀錄裡，按紀錄分頁「編輯」旁的「復原上一版」可以找回")
@@ -450,6 +494,11 @@ final class AppModel {
             guard let self else { return }
             if action == "stop" { self.recorder.stop() } else if action == "continue" { self.recorder.continueAfterIdle() }
         }
+        // 定時停止倒數的通知按鈕（R110.3）
+        notifier.onStopTimerAction = { [weak self] action in
+            guard let self else { return }
+            if action == "stop" { self.recorder.stop() } else if action == "continue" { self.continueAfterStopTimer() }
+        }
         meetingDetector.start()
         BuiltinTemplates.seed(db)
         // 本地 MCP 的啟動檔指到目前這份拾音（design §44.3）：搬家、更新後 AI 工具的設定不用動
@@ -485,7 +534,11 @@ final class AppModel {
         if AppSettings.autoDetectLanguage { models.autoStart(.languageDetection) }
         GlobalHotKey.shared.onPress = { [weak self] in self?.toggleRecording() }
         GlobalHotKey.shared.onBookmark = { [weak self] in self?.bookmarkFromHotKey() }
-        recorder.onStarted = { GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey) }
+        GlobalHotKey.shared.onScreenshot = { [weak self] in self?.captureScreen() }
+        recorder.onStarted = {
+            GlobalHotKey.shared.setBookmarkEnabled(AppSettings.bookmarkHotKey)
+            GlobalHotKey.shared.setScreenshotEnabled(AppSettings.screenshotHotKey)
+        }
         recorder.onLevelHint = { [weak self] hint in self?.levelHintAppeared(hint) }
         recorder.microphoneUser = { [weak self] in self?.meetingDetector.microphoneUser() }
         recorder.onMicHint = { [weak self] hint in self?.micHintAppeared(hint) }
@@ -494,6 +547,8 @@ final class AppModel {
             guard let self, let id = self.recorder.meetingId, !RecordingIsland.isEnabled else { return }
             self.notifier.idlePrompt(meetingId: id)
         }
+        // 定時停止的時間到了，開始倒數（R110.3）
+        recorder.onStopTimerDue = { [weak self] in self?.showStopTimerPrompt() }
         GlobalHotKey.shared.setEnabled(AppSettings.globalHotKey)
         updater.scheduleAutomaticChecks()
         UsageStats.shared.touch()
@@ -698,6 +753,7 @@ final class AppModel {
             bookmarks: (try? db.bookmarks(id)) ?? [], corrections: (try? db.corrections(id)) ?? [])
         loaded.loadSpeakers(speakerRows)
         loaded.loadDocuments((try? db.documents(id)) ?? [])
+        loaded.screens = (try? db.screens(id)) ?? []
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
         loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
@@ -709,6 +765,8 @@ final class AppModel {
         }
         loaded.buildIndexes()
         loaded.linkReviewItems()
+        // 紀錄變了（整理完、改用某一版、編輯）：回到目前的版本（R115.6）
+        if viewingNotes != nil, previous?.id != meeting.id || detail?.notes != loaded.notes { viewingNotes = nil }
         detail = loaded
         syncReviewDraft()
         if previous?.id != meeting.id { refreshReminderStatus() }
@@ -770,6 +828,7 @@ final class AppModel {
 
     var menuBarSymbol: String {
         if bookmarkFlash { return "star.circle.fill" }
+        if screenFlash { return "camera.circle.fill" }
         // 收音提醒還在時換成警示的樣子（R42.2），按「知道了」或提示消失就換回來。
         // 圖示同提示列（mic.badge.exclamationmark 不是系統有的 SF Symbol，4.1～4.8.1 選單列在這時是空白的）
         if recorder.isRecording {
@@ -936,6 +995,58 @@ final class AppModel {
         }
     }
 
+    /// 定時停止（design §84、R110）：從現在起幾分鐘後
+    func setStopTimer(minutes: Int) {
+        setStopTimer(Date().addingTimeInterval(TimeInterval(minutes * 60)))
+    }
+
+    /// 設定、取消（nil）定時停止；倒數中改了時間也收起倒數的提醒
+    func setStopTimer(_ date: Date?) {
+        recorder.setStopTimer(date)
+        closeStopTimerPrompt()
+    }
+
+    /// 倒數中的「繼續錄」（R110.3）：取消定時，照常錄下去
+    func continueAfterStopTimer() { setStopTimer(nil) }
+
+    /// 時間到了、開始倒數（R110.3、design §84）：分流同 showMeetingPrompt。錄音島打開時由島倒數；
+    /// 島關掉時有通知權限用通知（帶按鈕），沒有用右上角的小視窗（不倒數）
+    private func showStopTimerPrompt() {
+        guard let deadline = recorder.stopCountdown, let meetingId = recorder.meetingId else { return }
+        let actions: [(id: String, title: String, action: () -> Void)] = [
+            ("continue", String(localized: "繼續錄"), { [weak self] in self?.continueAfterStopTimer() }),
+            ("stop", String(localized: "停止並轉錄"), { [weak self] in self?.recorder.stop() }),
+        ]
+        let countdown: (Int) -> String = { String(localized: "已到設定的時間，\($0) 秒後停止錄音") }
+        let seconds = Int(Recorder.stopCountdownSeconds)
+        if RecordingIsland.isEnabled {
+            RecordingIsland.shared.showPrompt(nil, actions: actions, message: countdown(seconds), deadline: deadline, countdown: countdown)
+            return
+        }
+        Task {
+            if await notifier.isAuthorized() {
+                notifier.stopTimerPrompt(meetingId: meetingId, seconds: seconds)
+            } else if recorder.stopCountdown != nil {
+                MeetingPromptPanel.shared.show(nil, actions: actions, message: countdown(seconds))
+            }
+        }
+    }
+
+    /// 收起島上、小視窗裡定時停止的提醒（會議 app 的提醒不動）
+    private func closeStopTimerPrompt() {
+        if let prompt = RecordingIsland.shared.state.prompt, prompt.prompt == nil { RecordingIsland.shared.closePrompt() }
+        if MeetingPromptPanel.shared.showsStopTimer { MeetingPromptPanel.shared.close() }
+    }
+
+    /// 「指定時間…」的彈窗（design §84）：從選單列、「檔案」選單打開時先打開主視窗
+    var showStopTimerSheet = false
+
+    func openStopTimerSheet() {
+        guard recorder.isRecording else { return }
+        openMainWindow?()
+        showStopTimerSheet = true
+    }
+
     #if DEBUG
     /// 只在 DEBUG：用音訊檔模擬錄音（shiyinctl record-sim）
     func startSimulatedRecording(file: URL, speed: Double, both: Bool, systemSilent: Bool = false) {
@@ -958,7 +1069,9 @@ final class AppModel {
 
     private func recordingFinished(_ result: Recorder.Result) {
         MeetingPromptPanel.shared.close()   // 還開著的「要停止錄音嗎？」不用了
-        GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B
+        closeStopTimerPrompt()   // 定時停止的倒數（按了停止、倒數完）
+        GlobalHotKey.shared.setBookmarkEnabled(false)   // 不錄音時不佔用 ⌃⌥⌘B、⌃⌥⌘S
+        GlobalHotKey.shared.setScreenshotEnabled(false)
         do {
             if let error = result.error {
                 errorMessage = error
@@ -987,6 +1100,7 @@ final class AppModel {
                 let payload = until.flatMap { try? JSONEncoder().encode(TranscribePayload(until: $0)) }.map { String(decoding: $0, as: UTF8.self) }
                 try db.enqueue(result.meetingId, kind: .transcribe, payload: payload)
                 if result.idleSince != nil { notifier.idleStopped(meetingId: result.meetingId, title: meeting.displayTitle) }
+                if result.scheduled { notifier.timerStopped(meetingId: result.meetingId, title: meeting.displayTitle) }
                 UsageStats.shared.recorded(seconds: result.duration)
             } catch {
                 // 資料庫寫不進去（磁碟滿時常一起發生）：搬回 recording/，下次開啟由復原流程接回（design §20.3）。
@@ -1406,6 +1520,7 @@ final class AppModel {
         // 沒登入、沒有 key…：不排，說原因（R45.4、design §34.2）
         if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
         documentsChanged.remove(id)
+        screensChanged.remove(id)
         perform { try db.enqueue(id, kind: .summarize) }
         runner.wake()
     }
@@ -1445,6 +1560,62 @@ final class AppModel {
         let payload = String(decoding: (try? JSONEncoder().encode(SummarizePayload(people: true))) ?? Data(), as: UTF8.self)
         perform { try db.enqueue(id, kind: .summarize, payload: payload) }
         runner.wake()
+    }
+
+    /// 「再找不確定的地方」（R114、design §88）：整理工具再找一次要確認的地方，只加待確認，其他段落不動
+    func findMoreReview() {
+        guard let id = selection, readyForAction(id) else { return }
+        guard detail?.notes != nil else {
+            noticeMessage = String(localized: "還沒有會議紀錄，整理完才能再找不確定的地方")
+            return
+        }
+        guard AppSettings.provider != .none else {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        reviewFinished.remove(id)
+        let payload = String(decoding: (try? JSONEncoder().encode(SummarizePayload(review: true))) ?? Data(), as: UTF8.self)
+        perform { try db.enqueue(id, kind: .summarize, payload: payload) }
+        runner.wake()
+    }
+
+    // MARK: 版本紀錄（R115、design §89）
+
+    /// 「版本紀錄」選單：目前的在最上面，再來由新到舊；正在看的那一版打勾
+    func notesVersionMenu() -> [MenuEntry] {
+        guard let id = selection else { return [] }
+        return ((try? db.notesHistory(id)) ?? []).map { entry in
+            let shown = viewingNotes.map { $0.versionId == entry.versionId } ?? entry.isCurrent
+            let label = entry.isCurrent ? String(localized: "\(notesVersionLabel(entry))（目前）") : notesVersionLabel(entry)
+            return MenuEntry.action(label, icon: shown ? "checkmark" : nil, shortcut: notesVersionTime(entry)) { [weak self] in
+                self?.viewingNotes = entry.isCurrent ? nil : entry
+            }
+        }
+    }
+
+    /// 一版的說明：用的範本（知道的話）・怎麼來的（最舊的一版寫「第一版」）。
+    /// 怎麼來的是存檔當時的文字（資料庫裡的原因）：簡體介面轉成簡體（design §48.2）
+    func notesVersionLabel(_ entry: NotesHistoryEntry) -> String {
+        let template = entry.templateId.map { id in templates.first { $0.id == id }?.displayName ?? String(localized: "已刪除的範本") }
+        let origin = entry.origin.map { MeetingLanguage.simplifiedInterface ? ChineseScript.toSimplifiedUI($0) : $0 } ?? String(localized: "第一版")
+        return [template, origin].compactMap { $0 }.joined(separator: "・")
+    }
+
+    /// 一版是什麼時候的：「11月24日 下午3:30」這類（系統的格式），最舊的一版不知道
+    func notesVersionTime(_ entry: NotesHistoryEntry) -> String? {
+        entry.time.flatMap { try? Date($0, strategy: .iso8601) }?.formatted(.dateTime.month().day().hour().minute())
+    }
+
+    /// 「改用這一版」（R115.3）：那一版變成目前的紀錄，原本的留成一版
+    func useViewedNotesVersion() {
+        guard let id = selection, let versionId = viewingNotes?.versionId, readyForAction(id) else { return }
+        viewingNotes = nil
+        perform {
+            if try db.useNotesVersion(id, versionId: versionId) { noticeMessage = String(localized: "已改用這一版，原本的版本留在版本紀錄裡") }
+        }
     }
 
     func undoNotes() {
@@ -1513,6 +1684,8 @@ final class AppModel {
             }
         }
         runner.wake()
+        // 題目都處理完時紀錄頂部可以接著再找（R114.5）；還有題目、校稿還沒好時畫面不顯示
+        reviewFinished.insert(id)
         // 匿名統計（R41.7）：只記題數
         UsageStats.shared.reviewed(answered: answered.count, confirmed: confirmed.count,
                                    skipped: dismissed.filter { notes.reviewItems.indices.contains($0) }.count)
@@ -1950,6 +2123,47 @@ final class AppModel {
         }
     }
 
+    /// 詞彙表匯出成文字檔（R117.1、design §91）：只有自己的詞，順序同畫面
+    func exportGlossary(to url: URL) {
+        let terms = glossary.map(\.term)
+        do {
+            try GlossaryFile.export(terms).write(to: url, atomically: true, encoding: .utf8)
+            noticeMessage = String(localized: "已匯出 \(terms.count) 個詞彙")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 從文字檔匯入詞彙（R117.2、R117.3）：一律合併，已經有的跳過，不刪原本的
+    func importGlossary(from url: URL) {
+        let data: Data
+        do {
+            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+            guard size <= GlossaryFile.maxBytes else {
+                errorMessage = String(localized: "檔案太大：詞彙表的文字檔通常只有幾 KB")
+                return
+            }
+            data = try Data(contentsOf: url)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        guard let text = GlossaryFile.decode(data) else {
+            errorMessage = String(localized: "讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入")
+            return
+        }
+        let terms = GlossaryFile.terms(fromFile: text)
+        guard !terms.isEmpty else {
+            errorMessage = String(localized: "檔案裡沒有詞彙")
+            return
+        }
+        var added = 0
+        perform { added = try db.addTerms(terms) }
+        noticeMessage = added == 0 ? String(localized: "檔案裡的 \(terms.count) 個詞彙都已經在詞彙表裡了")
+            : added == terms.count ? String(localized: "已從檔案加入 \(added) 個詞彙")
+            : String(localized: "已從檔案加入 \(added) 個詞彙，\(terms.count - added) 個已經有了")
+    }
+
     func deleteTerms(_ ids: [Int64]) { perform { try db.deleteTerms(ids) } }
 
     func saveTemplate(_ template: TemplateRecord) { perform { try db.saveTemplate(template) } }
@@ -2044,13 +2258,14 @@ final class AppModel {
         guard let meeting = try db.meeting(meetingId) else { throw ExportError.meetingGone }
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
-                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId))
+                            bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId),
+                            screens: try db.screens(meetingId))
     }
 
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
         return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes,
-                            documents: d.documents)
+                            documents: d.documents, screens: d.screens)
     }
 
     /// 寫出檔案
@@ -2058,10 +2273,14 @@ final class AppModel {
         let b = try exportBundle(meetingId: meetingId)
         switch item {
         case .notes:
+            // 會議中的畫面（design §83.6）：最後一節；沒有畫面時跟以前一字不差
             switch format {
-            case "pdf": try await HTML.reportPDF(ExportScript.html(NotesExporter.report(b), b), title: b.meeting.displayTitle, to: url)
-            case "docx": try await HTML.docx(ExportScript.html(NotesExporter.html(b), b)).write(to: url)
-            default: try ExportScript.text(NotesExporter.markdown(b), b).write(to: url, atomically: true, encoding: .utf8)
+            case "pdf": try await HTML.reportPDF(ScreenExport.inlineImages(ExportScript.html(NotesExporter.report(b, screens: true), b), b.screens), title: b.meeting.displayTitle, to: url)
+            case "docx": try await Self.docxWithScreens(ExportScript.html(NotesExporter.html(b, screens: true), b), b.screens).write(to: url)
+            default:
+                let folder = ScreenExport.folderName(for: url, language: b.meeting.meetingLanguage)
+                try ExportScript.text(NotesExporter.markdown(b, screenFolder: folder), b).write(to: url, atomically: true, encoding: .utf8)
+                try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
             }
         case .mindMap:
             // 心智圖（design §42.4）：段落名稱跟著會議語言，同其他匯出
@@ -2075,12 +2294,17 @@ final class AppModel {
                 try data.write(to: url)
             }
         case .transcript:
-            if format == "docx" { try await HTML.docx(ExportScript.html(TranscriptExporter.html(b, times: times, speakers: speakers), b)).write(to: url) }
-            else {
-                // 文字格式、封包在背景寫，長會議不卡住畫面（design §21.13）；Word、PDF 用非同步的 HTML 轉換
+            if format == "docx" {
+                try await Self.docxWithScreens(ExportScript.html(TranscriptExporter.html(b, times: times, speakers: speakers, screens: true), b), b.screens)
+                    .write(to: url)
+            } else {
+                // 文字格式、封包在背景寫，長會議不卡住畫面（design §21.13）；Word、PDF 用非同步的 HTML 轉換。
+                // md 在時間點插畫面、圖片放旁邊的資料夾（design §83.6）；txt、srt、vtt 不放
+                let folder = format == "md" ? ScreenExport.folderName(for: url, language: b.meeting.meetingLanguage) : nil
                 try await Task.detached(priority: .userInitiated) {
-                    try ExportScript.text(TranscriptExporter.text(b, format: format, times: times, speakers: speakers), b)
+                    try ExportScript.text(TranscriptExporter.text(b, format: format, times: times, speakers: speakers, screenFolder: folder), b)
                         .write(to: url, atomically: true, encoding: .utf8)
+                    if folder != nil { try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage) }
                 }.value
             }
         case .audio:
@@ -2088,6 +2312,16 @@ final class AppModel {
         case .package:
             try await Task.detached(priority: .userInitiated) { try MeetingPackage.export(b, to: url) }.value
         }
+    }
+
+    /// Word：照常轉，有畫面時再把位置標記換成圖片（DocxImages，design §83.6）
+    private static func docxWithScreens(_ html: String, _ screens: [MeetingDocument]) async throws -> Data {
+        let data = try await HTML.docx(html)
+        guard !screens.isEmpty else { return data }
+        let markers = screens.indices.map(ScreenExport.marker)
+        return try await Task.detached(priority: .userInitiated) {
+            try DocxImages.embed(data, markers: markers, images: screens.map { (try? Data(contentsOf: $0.fileURL)) ?? Data() })
+        }.value
     }
 
     func suggestedFilename(_ item: ExportItem, format: String, meeting: Meeting?) -> String {
@@ -2161,6 +2395,11 @@ final class AppModel {
             if let segment = detail?.segments.first(where: { $0.id == hit.ref }) { player.seek(to: segment.start, play: false) }
         case .notes, .title: tab = .summary
         case .userNotes: tab = .transcript; userNotesExpanded = true
+        case .screen:
+            // 會議中的畫面（design §83.1）：逐字稿捲到那張、跳到那個時間
+            tab = .transcript
+            flashScreen(hit.ref)
+            if let screen = detail?.screens.first(where: { $0.id == hit.ref }), let at = screen.at { player.seek(to: at, play: false) }
         }
     }
 
@@ -2238,7 +2477,10 @@ final class AppModel {
             updated.cleanLines = (try? db.cleanLines(id)) ?? [:]
         }
         if parts.contains(.corrections) { updated.corrections = (try? db.corrections(id)) ?? [] }
-        if parts.contains(.documents) { updated.loadDocuments((try? db.documents(id)) ?? []) }
+        if parts.contains(.documents) {
+            updated.loadDocuments((try? db.documents(id)) ?? [])
+            updated.screens = (try? db.screens(id)) ?? []
+        }
         if parts.contains(.meeting), let meeting = try? db.meeting(id) {
             updated.meeting = meeting
             updated.notes = meeting.decodedNotes

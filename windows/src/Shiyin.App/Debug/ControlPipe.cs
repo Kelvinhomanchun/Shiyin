@@ -93,6 +93,11 @@ public static partial class ControlPipe
             // addterm <文字>：新增詞彙（R94.1，同 Mac 的 addterm：「\n」當換行、一次好幾個），回傳說明（沒有要說的是空的）
             case "addterm" when args.Length > 1:
                 return new JsonObject { ["message"] = host.Controller.AddTerms(args[1].Replace("\\n", "\n")) ?? "" };
+            // glossaryexport <路徑>、glossaryimport <路徑>：詞彙表匯出、匯入（R117，同 Mac），不開挑選器，回傳說明
+            case "glossaryexport" when args.Length > 1:
+                return new JsonObject { ["message"] = host.Controller.ExportGlossary(args[1]) };
+            case "glossaryimport" when args.Length > 1:
+                return new JsonObject { ["message"] = host.Controller.ImportGlossary(args[1]) };
             // seek <秒> [play]、toggle：播放（同 Mac）
             case "seek" when args.Length > 1 && double.TryParse(args[1], System.Globalization.CultureInfo.InvariantCulture, out var seekTo):
                 host.Player.Seek(seekTo, args.Length > 2 && args[2] == "play");
@@ -192,7 +197,13 @@ public static partial class ControlPipe
                 var both = args.Length > 3 && args[3] is "1" or "2";
                 return new JsonObject { ["meetingId"] = host.Controller.StartSimulatedRecording(args[1], speed, both, main?.State.CurrentFolder ?? "", args.Length > 3 && args[3] == "2") };
             case "recordstop": host.Recorder.Stop(); return Ok;
+            // stoptimer <秒數|off>：從現在起幾秒後定時停止（M§84）
+            case "stoptimer" when args.Length > 1:
+                host.Recorder.SetStopTimer(args[1] != "off" && double.TryParse(args[1], out var after) ? DateTime.Now.AddSeconds(after) : null);
+                return Ok;
             case "recordpause": if (host.Recorder.IsPaused) host.Recorder.Resume(); else host.Recorder.Pause(); return Ok;
+            // micpause on|off：等於按錄音畫面的麥克風圖示（R116、M§90）
+            case "micpause": host.Recorder.SetMicPaused(args.Length > 1 && args[1] == "on"); return Ok;
             case "recordstall" when args.Length > 1 && int.TryParse(args[1], out var channel):
                 host.Recorder.SimulateStall(channel, args.Length > 2 && double.TryParse(args[2], out var seconds) ? seconds : null);
                 return Ok;
@@ -673,7 +684,7 @@ public static partial class ControlPipe
             ["selfPerson"] = host.Db.Enrollment() is { } me ? new JsonObject { ["id"] = me.PersonId, ["name"] = me.Name, ["createdAt"] = me.CreatedAt } : null,
             ["recorder"] = new JsonObject
             {
-                ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
+                ["isRecording"] = r.IsRecording, ["isPaused"] = r.IsPaused, ["micPaused"] = r.MicPaused, ["meetingId"] = r.MeetingId, ["elapsed"] = r.Elapsed, ["source"] = r.Source,
                 ["language"] = r.Language.Code(), ["liveLines"] = r.LiveLines.Count, ["volatile"] = r.VolatileText, ["liveStatus"] = r.LiveStatus,
                 ["deviceWarning"] = r.DeviceWarning, ["hint"] = r.Hint?.ToString(), ["systemSilent"] = r.SystemSilent,
                 ["hintText"] = r.Hint is { } shown ? r.HintText(shown) : null, ["systemCulprit"] = r.SystemCulprit?.Name,
@@ -687,6 +698,13 @@ public static partial class ControlPipe
                 {
                     ["idleSeconds"] = r.IdleSeconds, ["lastSpeechAt"] = r.LastSpeechAt, ["prompt"] = r.IdlePrompt, ["liveActive"] = r.LiveActive,
                     ["remindAfter"] = r.IdleRemindSeconds, ["stopAfter"] = r.IdleStopSeconds,
+                },
+                // 定時停止（M§84）：剩幾秒，沒設定是 -1
+                ["stopTimer"] = new JsonObject
+                {
+                    ["remaining"] = r.StopAt is DateTime stopAt ? Math.Max(0, (stopAt - DateTime.Now).TotalSeconds) : -1,
+                    ["label"] = r.StopAt is DateTime stopLabel ? StopTimer.Label(stopLabel, DateTime.Now) : "",
+                    ["countdown"] = r.StopCountdown is DateTime stopCountdown ? Math.Max(0, (stopCountdown - DateTime.Now).TotalSeconds) : -1,
                 },
             },
             ["hotKeyError"] = host.HotKeyError,

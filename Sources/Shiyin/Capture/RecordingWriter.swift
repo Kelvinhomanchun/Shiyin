@@ -13,7 +13,9 @@ final class RecordingWriter: @unchecked Sendable {
     private var pending: [[Float]]
     private var levels: [Float]
     private var silentSeconds: [Double]
+    private var heard: [Bool]           // 各聲道這場錄音收到過不是 0 的聲音（麥克風一直是 0 時重新連接用）
     private var paused = false
+    private var micMuted = false        // 單獨暫停麥克風（design §90）：左聲道寫 0
     private var acceptedFrames: [Int] // 各聲道累計收到的音框（不含暫停）
     private var lastReceived: [Double]  // 各聲道最後一次收到音訊的時間（systemUptime），看門狗用（design §20.2）
     private var timer: DispatchSourceTimer?
@@ -35,6 +37,7 @@ final class RecordingWriter: @unchecked Sendable {
         pending = Array(repeating: [], count: channels)
         levels = Array(repeating: 0, count: channels)
         silentSeconds = Array(repeating: 0, count: channels)
+        heard = Array(repeating: false, count: channels)
         acceptedFrames = Array(repeating: 0, count: channels)
         frameEnergy = Array(repeating: 0, count: channels)
         frameSamples = Array(repeating: 0, count: channels)
@@ -68,11 +71,15 @@ final class RecordingWriter: @unchecked Sendable {
         let now = ProcessInfo.processInfo.systemUptime
         lock.withLock {
             lastReceived[channel] = now
-            levels[channel] = rms
-            silentSeconds[channel] = rms == 0 ? silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate : 0
+            // 暫停麥克風：照樣收（看門狗用），寫進去的是同樣長度的 0，音量、無聲的秒數、最近的音量都不算
+            let muted = micMuted && channel == 0
+            levels[channel] = muted ? 0 : rms
+            silentSeconds[channel] = muted || rms != 0 ? 0 : silentSeconds[channel] + Double(samples.count) / CaptureFormat.sampleRate
+            if rms > 0 { heard[channel] = true }
             guard !paused else { return }
-            pending[channel].append(contentsOf: samples)
+            pending[channel].append(contentsOf: muted ? [Float](repeating: 0, count: samples.count) : samples)
             acceptedFrames[channel] += samples.count
+            guard !muted else { return }
             frameEnergy[channel] += sum
             frameSamples[channel] += samples.count
             if frameSamples[channel] >= Int(CaptureFormat.sampleRate / 10) {
@@ -92,6 +99,15 @@ final class RecordingWriter: @unchecked Sendable {
         }
     }
 
+    /// 單獨暫停麥克風（design §90）：兩個音源時才有用。繼續時麥克風之前的音量不算
+    func setMicMuted(_ value: Bool) {
+        lock.withLock {
+            guard channels == 2, value != micMuted else { return }
+            micMuted = value
+            if !value { recent[0].removeAll(); frameEnergy[0] = 0; frameSamples[0] = 0 }
+        }
+    }
+
     /// 目前錄到的秒數（不含暫停），給計時、筆記和重點標記的時間點用
     var recordedSeconds: Double {
         offset + lock.withLock { Double(acceptedFrames.max() ?? 0) / CaptureFormat.sampleRate }
@@ -108,6 +124,9 @@ final class RecordingWriter: @unchecked Sendable {
     var writeFailed: Bool { lock.withLock { failed } }
 
     func silence(_ channel: Int) -> Double { lock.withLock { channel < channels ? silentSeconds[channel] : 0 } }
+
+    /// 這場錄音這個聲道收到過不是 0 的聲音
+    func hasHeard(_ channel: Int) -> Bool { lock.withLock { channel < channels ? heard[channel] : false } }
 
     /// 最近 30 秒（不含暫停）每 100 毫秒的音量，dBFS（design §26.1）
     func recentLevels(_ channel: Int) -> [Float] { lock.withLock { channel < channels ? recent[channel] : [] } }

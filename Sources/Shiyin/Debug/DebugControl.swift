@@ -301,6 +301,13 @@ enum DebugControl {
             let dismissed = Set(args[3].split(separator: ",").compactMap { Int($0) })
             model.submitReview(answers: Dictionary(uniqueKeysWithValues: answers.compactMap { k, v in Int(k).map { ($0, v) } }),
                                dismissed: dismissed)
+        // notesversion <會議 id> <版本 id|current>：等於在「版本紀錄」選那一版；usenotesversion：等於按「改用這一版」（design §89）
+        case "notesversion":
+            model.selection = id
+            let versionId = args.count > 2 ? Int64(args[2]) : nil
+            model.viewingNotes = versionId.flatMap { v in ((try? model.db.notesHistory(id ?? 0)) ?? []).first { $0.versionId == v } }
+        case "usenotesversion": model.useViewedNotesVersion()
+        case "morereview": model.selection = id; model.findMoreReview()   // morereview <會議 id>：等於按「再找不確定的地方」（design §88）
         case "replace":
             model.selection = id
             let result = model.replace(find: args[2], with: args[3], addToGlossary: args[4] == "1")
@@ -341,7 +348,10 @@ enum DebugControl {
             switch current {
             case .start(let app): text = "start:\(app.bundleID)"
             case .stop(let app): text = "stop:\(app.bundleID)"
-            case nil: text = ""
+            case nil:
+                // 會議的提醒以外，開著的是定時停止的倒數（R110.3）
+                let stopTimer = RecordingIsland.isEnabled ? RecordingIsland.shared.state.prompt != nil : MeetingPromptPanel.shared.showsStopTimer
+                text = stopTimer ? "stoptimer" : ""
             }
             let actions = RecordingIsland.isEnabled ? (RecordingIsland.shared.state.prompt?.actions.map(\.id) ?? []).sorted()
                 : MeetingPromptPanel.shared.actions.keys.sorted()
@@ -529,7 +539,19 @@ enum DebugControl {
             guard let textView = notesTextView() else { break }
             textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
             textView.insertText(args[1], replacementRange: textView.selectedRange())
+        case "topichover": model.debugTopicHover = args.count > 1 ? Int(args[1]) : nil   // topichover <第幾段|off>：當成滑過議題帶的那一段（design §87）
         case "notesvalue": write(["found": notesTextView() != nil, "text": notesTextView()?.string ?? ""], to: args[1])
+        // fieldtype <提示字> <文字>：提示字相符的單行輸入框（例如「搜尋逐字稿」）換成這段文字。走欄位編輯器的 insertText，
+        // 不經過輸入法（逐字稿搜尋的上一個、下一個，design §85）
+        case "fieldtype":
+            func find(_ view: NSView) -> NSTextField? {
+                if let field = view as? NSTextField, field.isEditable, field.placeholderString == args[1] { return field }
+                return view.subviews.lazy.compactMap(find).first
+            }
+            guard args.count > 2, let field = NSApp.windows.lazy.filter(\.isVisible).compactMap({ $0.contentView.flatMap(find) }).first,
+                  field.window?.makeFirstResponder(field) == true, let editor = field.currentEditor() as? NSTextView else { break }
+            editor.selectAll(nil)
+            editor.insertText(args[2], replacementRange: editor.selectedRange())
         // press <標籤> [第幾個，從 0 開始] [結果.json]：在 app 內走輔助使用的元件樹，按下標籤相符的按鈕。
         // 跟從外面用 AX 按的是同一條路，螢幕上鎖、視窗在別的桌面時也能用
         case "metrics":   // metrics <輸出.json> [reset]：效能計數（design §21.12）；加 reset 讀完歸零
@@ -650,6 +672,38 @@ enum DebugControl {
                     scroll.reflectScrolledClipView(scroll.contentView)
                 }
             }
+        case "micpause": model.recorder.setMicPaused(args.count > 1 && args[1] == "on")   // micpause on|off：等於按錄音畫面的麥克風圖示（design §90）
+        case "livestress":   // livestress <秒> <每秒幾行>：錄音中一直塞長短不一（4～300 字）的假即時文字、偶爾一次好幾行，未定稿的字每秒變 20 次，偶爾往上捲再回到底部（design §25）
+            let seconds = Double(args[1]) ?? 60, perSecond = max(Double(args.count > 2 ? args[2] : "") ?? 3, 0.5)
+            let recorder = model.recorder
+            Task { @MainActor in
+                let words = Array("今天的會議先確認上週的進度然後討論下一季的預算分配和人力安排還有新產品的上市時間表")
+                func sentence() -> String {
+                    let length = Bool.random() ? Int.random(in: 4...30) : Int.random(in: 30...300)
+                    return String((0..<length).map { _ in words.randomElement()! })
+                }
+                let start = Date()
+                var nextLine = Date(), nextScroll = Date().addingTimeInterval(7), volatile = ""
+                while Date().timeIntervalSince(start) < seconds && recorder.isRecording {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    if Date() >= nextLine {
+                        for _ in 0..<(Int.random(in: 0..<6) == 0 ? Int.random(in: 2...5) : 1) {
+                            recorder.injectLive(final: volatile + sentence(), volatile: "")
+                        }
+                        volatile = ""
+                        nextLine = Date().addingTimeInterval(1 / perSecond)
+                    } else {
+                        volatile += String((0..<Int.random(in: 1...8)).map { _ in words.randomElement()! })
+                        recorder.injectLive(final: nil, volatile: volatile)
+                    }
+                    if Date() >= nextScroll {   // 往上捲一點，2 秒後回到底部（同「回到最新」前使用者自己捲回去）
+                        Self.handle(["livescroll", String(Double.random(in: 0.3...0.95))])
+                        try? await Task.sleep(for: .seconds(2))
+                        Self.handle(["livescroll", "1"])
+                        nextScroll = Date().addingTimeInterval(Double.random(in: 3...9))
+                    }
+                }
+            }
         case "axdump":   // axdump <輸出.txt>：倒出輔助使用的元件樹（角色、標籤），找 press 要用的標籤
             var lines: [String] = []
             func dump(_ element: NSAccessibilityProtocol, depth: Int) {
@@ -716,6 +770,16 @@ enum DebugControl {
                         NSApp.postEvent(event, atStart: false)
                     }
                 }
+            case "doubleq":
+                // 雙擊排進事件佇列（clickCount 1、2）：經過 app 的事件監看（逐字稿雙擊進編輯，design §79）
+                for clicks in [1, 2] {
+                    for (type, pressure) in [(NSEvent.EventType.leftMouseDown, Float(1)), (.leftMouseUp, 0)] {
+                        if let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                          windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: clicks, pressure: pressure) {
+                            NSApp.postEvent(event, atStart: false)
+                        }
+                    }
+                }
             case "clickq", "clickqcmd", "clickqshift":
                 // 按下、放開都排進事件佇列，同真的點一下：經過手勢辨識、NSApp.currentEvent 是這一下，
                 // 表格按下後自己從佇列拿放開（直接 sendEvent 的話這些都不一樣，2026-11-17 驗側欄點擊卡住時發現）
@@ -770,11 +834,25 @@ enum DebugControl {
         case "appearance":   // appearance light|dark|system：只改這個 app 的外觀（巡檢淺色、深色用，不動系統設定）
             NSApp.appearance = args[1] == "light" ? NSAppearance(named: .aqua) : args[1] == "dark" ? NSAppearance(named: .darkAqua) : nil
         case "capturemenu": captureNextMenu(to: args[1])   // capturemenu <輸出.json>：接下來打開的選單寫出項目後關掉（配合外面送的真的滑鼠事件）
-        // keyat <return|delete|escape|f2> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
+        // keyat [shift+|cmd+…]<return|delete|escape|f2|…|g> <視窗 id 或編號>：按鍵直接交給那個視窗（給第一回應者，同真的按鍵）
         case "keyat":
             guard args.count > 2, let window = NSApp.windows.first(where: { $0.isVisible && ($0.identifier?.rawValue == args[2] || "\($0.windowNumber)" == args[2]) })
             else { break }
-            let (code, chars): (UInt16, String) = switch args[1] {
+            // 修飾鍵寫在前面：shift+return、cmd+g、cmd+shift+g（逐字稿搜尋的上一個、下一個，design §85）
+            var keyName = Substring(args[1])
+            var flags: NSEvent.ModifierFlags = []
+            while let plus = keyName.firstIndex(of: "+"), plus != keyName.startIndex {
+                switch keyName[..<plus] {
+                case "shift": flags.insert(.shift)
+                case "cmd": flags.insert(.command)
+                case "option": flags.insert(.option)
+                case "ctrl": flags.insert(.control)
+                default: break
+                }
+                keyName = keyName[keyName.index(after: plus)...]
+            }
+            let (code, chars): (UInt16, String) = switch keyName {
+            case "g": (5, flags.contains(.shift) ? "G" : "g")   // 真的 ⇧⌘G 送的字元是大寫
             case "delete": (51, "\u{7f}")
             case "space": (49, " ")
             case "escape": (53, "\u{1b}")
@@ -785,13 +863,34 @@ enum DebugControl {
             case "left": (123, String(UnicodeScalar(NSLeftArrowFunctionKey)!))
             default: (36, "\r")
             }
-            // 第四個參數 app：走 NSApp.sendEvent（會經過 app 的事件監看，自己畫的選單的鍵盤靠它）
+            // 第四個參數 app：走 NSApp.sendEvent（會經過 app 的事件監看，自己畫的選單的鍵盤靠它）；
+            // queue：排進事件佇列，NSApp.currentEvent 是這一下（同 mouseat clickq；onSubmit 看 ⇧ 要這個）；
+            // equiv：當成快捷鍵交給視窗（performKeyEquivalent，⌘G 這類；背景的 app 沒有 key window，排進佇列也收不到）
             let throughApp = args.count > 3 && args[3] == "app"
+            let queued = args.count > 3 && args[3] == "queue"
+            let equivalent = args.count > 3 && args[3] == "equiv"
+            // equivcg：同 equiv，但事件由 CGEvent 做（字元照目前的鍵盤配置和修飾鍵轉出來，同實體按鍵）
+            if args.count > 3, args[3] == "equivcg" {
+                if let cg = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(code), keyDown: true) {
+                    var cgFlags: CGEventFlags = []
+                    if flags.contains(.command) { cgFlags.insert(.maskCommand) }
+                    if flags.contains(.shift) { cgFlags.insert(.maskShift) }
+                    if flags.contains(.option) { cgFlags.insert(.maskAlternate) }
+                    if flags.contains(.control) { cgFlags.insert(.maskControl) }
+                    cg.flags = cgFlags
+                    if let event = NSEvent(cgEvent: cg) {
+                        log.info("keyat equivcg chars=\(event.characters ?? "", privacy: .public) ignoring=\(event.charactersIgnoringModifiers ?? "", privacy: .public)")
+                        _ = window.performKeyEquivalent(with: event)
+                    }
+                }
+                break
+            }
             for type in [NSEvent.EventType.keyDown, .keyUp] {
-                if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                                                 windowNumber: window.windowNumber, context: nil, characters: chars, charactersIgnoringModifiers: chars,
                                                 isARepeat: false, keyCode: code) {
-                    if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
+                    if equivalent { if type == .keyDown { _ = window.performKeyEquivalent(with: event) } }
+                    else if queued { NSApp.postEvent(event, atStart: false) } else if throughApp { NSApp.sendEvent(event) } else { window.sendEvent(event) }
                 }
             }
         // pressbutton <按鈕的字> [視窗編號]：按 AppKit 的按鈕（確認對話框的 NSAlert 在桌面層時 AX 看不到、clickat 點不到）
@@ -805,6 +904,8 @@ enum DebugControl {
         case "bookmark": model.addBookmark(at: Double(args[2]) ?? 0, meetingId: id)
         case "addterm": model.addTerms(args[1].replacingOccurrences(of: "\\n", with: "\n"))   // 一次好幾個（R94.1）：「\n」當換行
         case "dismissterm": model.dismissGlossarySuggestion(args[1])
+        case "glossaryexport": model.exportGlossary(to: URL(fileURLWithPath: args[1]))   // 詞彙表匯出、匯入（R117），不開面板
+        case "glossaryimport": model.importGlossary(from: URL(fileURLWithPath: args[1]))
         case "record":
             switch args[1] {
             case "start": model.startRecording()
@@ -815,12 +916,16 @@ enum DebugControl {
         case "importsheet": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) })   // 只打開匯入對話框
         case "recordstall":   // recordstall <秒數|off> [聲道]：模擬錄音的音源停止送資料（design §20.2）
             model.recorder.simulateStall(channel: args.count > 2 ? Int(args[2]) ?? 0 : 0, seconds: args[1] == "off" ? nil : Double(args[1]) ?? 5)
+        case "recordzero":   // recordzero：麥克風那一聲道照常送資料但全是 0，重新連接才恢復（看門狗看不到，靠全是 0 的重新連接）
+            model.recorder.simulateZeros()
         case "recordinterrupt":   // recordinterrupt [聲道]：等於音源發現裝置變了，Recorder 會重新開始這個音源
             model.recorder.simulateInterruption(channel: args.count > 1 ? Int(args[1]) ?? 0 : 0)
         case "recordflap":   // recordflap <次數> [秒數]：麥克風接下來幾次開始收音後都說裝置變了，每次重新開始花幾秒（design §50.4）
             model.recorder.simulateFlapping(times: Int(args[1]) ?? 0, seconds: args.count > 2 ? Double(args[2]) ?? 0 : 0)
         case "recordlang":   // recordlang <語言代碼>：錄音中換會議語言（等於按「改回」；zh、en、ja、yue、ko…）
             if let language = MeetingLanguage(rawValue: args[1]) { model.recorder.switchLanguage(to: language) }
+        case "stoptimer":   // stoptimer <秒數|off>：從現在起幾秒後定時停止（design §84）
+            model.setStopTimer(args.count > 1 && args[1] != "off" ? Date().addingTimeInterval(Double(args[1]) ?? 0) : nil)
         case "record-sim":
             // record-sim <音檔> <倍速> <both: 1/0/2>：2 是雙聲道、電腦聲音那一聲道全是 0（design §51.1）
             let channels = args.count > 3 ? args[3] : "0"
@@ -884,6 +989,22 @@ enum DebugControl {
         // docread <檔案> <zh|en|ja> <輸出.json>（只讀出文字，不寫資料庫）；docbanner <會議 id> dismiss|resummarize（文件有變動的提示條）
         case "adddoc": if let id { model.addDocuments(args.dropFirst(2).map { URL(fileURLWithPath: $0) }, to: id) }
         case "drop": model.requestImport(args.dropFirst().map { URL(fileURLWithPath: $0) })
+        // 會議中的畫面（design §83.8）：screenadd <圖檔> [秒數]：同貼上（錄音中用當下時間；給秒數時加到選取的會議的那個時間）
+        case "screenadd":
+            guard args.count > 1, let image = ScreenImages.load(URL(fileURLWithPath: args[1])) else { break }
+            if args.count > 2, let seconds = Double(args[2]), let id = model.selection { model.addScreens([image], at: seconds, to: id) }
+            else { model.addScreensHere([image]) }
+        case "screenshot": GlobalHotKey.shared.fireScreenshot()   // 同按 ⌃⌥⌘S
+        case "screenmove": if args.count > 2, let screen = Int64(args[1]), let seconds = Double(args[2]) { model.moveScreen(screen, to: seconds) }
+        case "screendelete": if args.count > 1, let screen = Int64(args[1]) { model.deleteScreen(screen) }
+        case "screenpreview":   // screenpreview <id>：放大（Quick Look）；screenpreview off 關掉
+            if args.count > 1, args[1] == "off" { model.screenPreview = nil }
+            else if args.count > 1, let screen = Int64(args[1]), let document = model.detail?.screens.first(where: { $0.id == screen }) {
+                model.previewScreen(document)
+            }
+        case "screenmenu":   // screenmenu <id> <項目>：選單的某一項（改時間…、刪除…會開彈窗）
+            if args.count > 2, let screen = Int64(args[1]), let document = model.detail?.screens.first(where: { $0.id == screen }),
+               let entry = model.screenMenu(document).first(where: { $0.title == args[2] }), case .action(let action) = entry.kind { action() }
         case "removedoc":
             if let docId = Int64(args[1]), let document = try? model.db.document(docId) { model.removeDocument(document) }
         case "docread":
@@ -1113,7 +1234,7 @@ enum DebugControl {
         case "setkey": try? Keychain.set(args[1], args[2])          // setkey anthropic|openai <key>
         case "delkey": Keychain.delete(args[1])
         case "settings": model.openWindowById?(SettingsPage.windowID)
-        case "preview":   // preview <settings|onboarding [步驟]|import|rename> [front] [height=<點>]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
+        case "preview":   // preview <settings|onboarding [步驟]|import|rename|stoptimer|menubar> [front] [height=<點>]（import：匯入對話框；rename：說話者的改名小視窗，design §26.2、§24.2）
             // 設定視窗要 app 在前景才打得開；這裡把畫面放進桌面層的無邊框視窗（被所有視窗蓋住；
             // 螢幕外的視窗截不到），不搶前景，再用 screencapture -l 截（closewindow <settings|onboarding>-preview 關掉）。
             // preview detail：目前選取的會議頁（量長會議的效能用，design §21.12：不在畫面上的視窗 SwiftUI 不更新）
@@ -1141,7 +1262,7 @@ enum DebugControl {
             window.title = window.identifier!.rawValue
             window.isReleasedWhenClosed = false
             // editinfo、replace：會議頁裡自己打開的彈窗（編輯會議資訊、用詞修正，design §80），用目前選取的會議
-            if args.count > 1, ["import", "rename", "editinfo", "replace", "rediarize", "noteseditor"].contains(args[1]) {
+            if args.count > 1, ["import", "rename", "editinfo", "replace", "rediarize", "noteseditor", "stoptimer", "menubar"].contains(args[1]) {
                 window.identifier = NSUserInterfaceItemIdentifier("\(args[1])-preview")
                 window.title = window.identifier!.rawValue
                 let view: AnyView = switch args[1] {
@@ -1149,6 +1270,8 @@ enum DebugControl {
                 case "editinfo":
                     if let meeting = model.detail?.meeting { AnyView(EditInfoForm(meeting: meeting) {}.environment(model)) } else { AnyView(EmptyView()) }
                 case "replace": AnyView(ReplaceSheet(initialFind: "Lumeo").environment(model))
+                case "stoptimer": AnyView(StopTimerSheet().environment(model))   // 定時停止的「指定時間…」（design §84）
+                case "menubar": AnyView(MenuBarContent().environment(model).tint(.celadon))   // 選單列的小視窗（snapshot 畫不出裡面的 Menu）
                 case "noteseditor":   // 編輯會議紀錄（紀錄分頁的「編輯」，R6.6）
                     if let notes = model.detail?.notes {
                         AnyView(NotesEditor(notes: .constant(notes)) { _ in }.frame(width: 900, height: 560).environment(model))
@@ -1212,6 +1335,7 @@ enum DebugControl {
                 d.notes.map { MindMap.topicRanges(notes: $0, duration: max(model.player.duration, Double(d.meeting.durationSeconds ?? 0)),
                                                   untitled: MindMap.topicLabel(.interface)) }
             }.map { $0.map { ["branch": $0.branch, "title": $0.title, "start": $0.start, "end": $0.end] } } ?? [],
+            "topicHover": model.debugTopicHover ?? -1,   // 當成滑過的議題帶那一段（design §87），沒有是 -1
             // 會議的參考文件（design §39.7）：選取中的會議
             "documents": (model.detail?.documents ?? []).map { d -> [String: Any] in
                 let use = model.detail?.documentUse[d.id ?? 0]
@@ -1221,6 +1345,17 @@ enum DebugControl {
             },
             "readingDocuments": Dictionary(uniqueKeysWithValues: model.readingDocuments.map { (String($0.key), $0.value) }),
             "documentsChanged": model.documentsChanged.sorted(),
+            // 會議中的畫面（design §83.8）：選取中的會議
+            "screens": (model.detail?.screens ?? []).map { s -> [String: Any] in
+                ["id": s.id ?? 0, "at": s.at ?? 0, "file": s.file, "reading": model.readingScreens.contains(s.id ?? 0),
+                 "chars": s.screenText.count, "text": String(s.screenText.prefix(80)),
+                 "exists": FileManager.default.fileExists(atPath: s.fileURL.path)]
+            },
+            "screensChanged": model.screensChanged.sorted(),
+            "screenshotProblem": model.screenshotProblem.map { "\($0)" } ?? "",
+            "screenPreview": model.screenPreview?.lastPathComponent ?? "",
+            "movingScreen": model.movingScreen ?? 0,
+            "screenshotHotKey": GlobalHotKey.shared.isScreenshotRegistered,
             // 選中的會議：說話者的名字、來源、建議、最像的幾位認識的人（R33，「自動」名字的選單）
             "speakers": (model.detail?.speakers ?? [:]).keys.sorted().map { idx -> [String: Any] in
                 ["idx": idx, "name": model.detail?.speakers[idx] ?? "", "source": model.detail?.speakerSources[idx] ?? "",
@@ -1285,7 +1420,7 @@ enum DebugControl {
                        "time": model.player.currentTime, "duration": model.player.duration, "rate": model.player.rate,
                        "mixing": model.player.isMixing,
                        "mix": ChannelMix.stats.withLock { ["frames": $0.frames, "sourcePeaks": $0.sourcePeaks, "mixedPeak": $0.mixedPeak] }],
-            "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused,
+            "recorder": ["recording": model.recorder.isRecording, "paused": model.recorder.isPaused, "micPaused": model.recorder.micPaused,
                          "meetingId": model.recorder.meetingId ?? -1, "elapsed": model.recorder.elapsed,
                          "micLevel": model.recorder.micLevel, "systemLevel": model.recorder.systemLevel,
                          "liveLines": model.recorder.liveLines.count, "volatile": model.recorder.volatileText,
@@ -1294,6 +1429,7 @@ enum DebugControl {
                          "permissionRestarts": model.recorder.permissionRestarts,   // 允許了權限而重新接上電腦聲音（design §51.1）
                          "systemSilent": model.recorder.systemSilent,
                          "idle": model.recorder.idleInfo,   // 忘了停止錄音（design §35）
+                         "stopTimer": model.recorder.stopTimerInfo,   // 定時停止（design §84）
                          "failure": model.recorder.failureMessage ?? "", "language": model.recorder.language.rawValue,
                          "languageSwitch": model.recorder.languageSwitch.map { "\($0.from.rawValue)→\($0.to.rawValue)" } ?? "",
                          "deviceWarning": model.recorder.deviceWarning ?? "",
@@ -1334,6 +1470,13 @@ enum DebugControl {
             "refineDraft": model.refineRequest.flatMap { model.refineDraft[$0.id] } ?? model.selection.flatMap { model.refineDraft["\($0)-all"] } ?? "",
             "refineDrafts": model.refineDraft,
             "canUndoNotes": model.detail?.canUndoNotes ?? false, "versionCount": model.detail?.versionCount ?? -1,
+            "reviewFinished": model.reviewFinished.sorted(),
+            // 版本紀錄（design §89）：選取中的會議，目前的在最前面；viewingNotesVersion 是正在看的那一版（-1 是目前的）
+            "notesHistory": model.selection.flatMap { try? model.db.notesHistory($0) }.map { $0.map { e -> [String: Any] in
+                ["versionId": e.versionId ?? -1, "templateId": e.templateId ?? "", "label": model.notesVersionLabel(e),
+                 "time": e.time ?? "", "title": e.notes.title]
+            } } ?? [],
+            "viewingNotesVersion": model.viewingNotes?.versionId ?? -1,   // 紀錄頂部可以顯示「待確認都處理完了」的會議（design §88）
             // 視窗的最小尺寸（SwiftUI 依內容算的）：錄音中卡住的調查用；sharing 是分享畫面時藏不藏（0 none、1 readOnly，design §53）
             "windows": NSApp.windows.map { ["id": $0.identifier?.rawValue ?? "", "title": $0.title, "visible": $0.isVisible,
                                             "minWidth": $0.contentMinSize.width, "minHeight": $0.contentMinSize.height,

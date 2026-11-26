@@ -165,6 +165,7 @@ Mac 改完重跑 `dump-golden`、commit 新的 `shared/golden/`，Windows 的測
 - **沒有聲音在播時，電腦聲音完全不送資料**（連靜音都不送）。所以：
   - 寫檔時電腦聲音那一聲道依時間（QPC）補靜音，不是等它送資料。
   - 3 秒 watchdog（M§20.2）只看麥克風；電腦聲音沒有資料不算中斷。
+  - 麥克風有送資料、但這場收到過聲音之後連續 10 秒完全是 0：重新連接，還是 0 至少隔 30 秒再試（M§20.2、R18.8，`Recorder.RestartIfMicSendsZeros`、`RecordingWriter.HasHeard`）；一開始就是 0、暫停麥克風時不重試。Mac 的「通話佔著麥克風」那一條 Windows 沒有。秒數是 `ZeroRestartSeconds`、`ZeroRetrySeconds`（測試改短）。
   - 「電腦聲音一直沒聲音」的提醒（M§26）把沒有資料當成靜音計時。
 - **轉成 16 kHz 單聲道**：先請系統直接給 16 kHz 單聲道浮點（`AUTOCONVERTPCM`＋`SRC_DEFAULT_QUALITY`）；麥克風不接受時用裝置的格式，每個來源一個重新取樣器（NAudio 的 `WdlResampler`，純 C#，在 `Services/Capture/StreamResampler.cs`），狀態跨 buffer 保留（對應 `StreamConverter`）。NAudio 3.3 版本釘死，升級時重跑轉錄的比對。
 - **電腦聲音補靜音**：音源自己依時間（Stopwatch）補：100 毫秒沒有資料、而且送出的量落後時間超過 0.1 秒時，補到落後 50 毫秒。寫檔的對齊規則因此跟 Mac 完全相同（`RecordingWriter` 照搬）。
@@ -856,6 +857,81 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - **DEBUG**：`open settings [頁面]`（代號、0～10、4.8 以前的 `names`／`advanced`／`storage` 當別名；沒給頁面時停在上次那頁）、`closewindow settings`、`settingssearch [文字]`（等於在搜尋框打字，沒給文字是清掉；回傳留下的頁面）；state 的 `settingsPage`（開著時目前的頁面）、`settingsSearch`、`settingsVisible`（導覽看得到的頁面）、`settingsPageStored`（settings.json 記住的）。
 - 驗證：Mac 上 `dotnet test`（`SettingsPagesTests`：代號和分組同 Mac、搜尋「麥克風」「API key」「快捷鍵」各只剩一頁、英文的名稱和搜尋、關鍵字都是設定視窗裡的字、舊頁名、記住的頁面寫進 settings.json）；虛擬機用 UI Automation 和真的滑鼠點導覽換頁、`uia.sh set 設定 '搜尋設定#1' <字>` 搜尋（同名的「搜尋設定」有三個元件，`#1` 是輸入框）、`uia.sh close` 關掉再按主視窗的齒輪、重開 app 停在上次那頁，`snapwin.ps1 place` 拉大、縮到比最小還小，淺色、深色、英文截圖。2026-11-17 輔助使用巡檢：150%、對比主題「水生」（十一頁）「沙漠」、只用鍵盤（搜尋框 Tab 到導覽、↑ ↓ 換頁、Tab 進內容、搜尋「轉錄」按 Enter 選第一項）、導覽的 UI Automation 名稱；停在「檢查與更新」關掉重開，頁面不會被 ↑ ↓ 換頁改掉、導覽捲到那一項。
 
+### 11.42 會議中的畫面：截圖、照片對到時間點（R109.12，M§83、D186～D190、D173）
+
+- **Core**（跟 Mac 逐字相同，標準答案比對）：migration `v16` 的 SQL 照抄（`MigrationSql.V16`）；`MeetingDocument.At`、`MeetingDetail.Screens`；提示詞的畫面區塊、長度、系統提示詞的規則、提問的規則（M§83.5）；匯出的 md、HTML（M§83.6）；`EditPlan` 的 `at`（M§83.7）；MCP 的 `get_transcript`、`get_meeting_notes`；封包的 `documents.json` 的 `at`。標準答案用 Mac 產生的 `*-screens`、`util/edit-plan.json`、`mcp/calls.json`、`export/`。
+- **截圖**（Platform 的 `ScreenShot.cs`，D173）：`Windows.Graphics.Capture`。游標所在的螢幕（`GetCursorPos` → `MonitorFromPoint`）→ `IGraphicsCaptureItemInterop.CreateForMonitor` → `Direct3D11CaptureFramePool.CreateFreeThreaded` 取第一個畫面 → `SoftwareBitmap` → JPEG（`BitmapEncoder`，長邊最多 2560、品質 0.85）。`IsCursorCaptureEnabled = false`、`IsBorderRequired = false`（Windows 11 不閃黃框）。拾音自己的視窗：錄音島本來就是 `WDA_EXCLUDEFROMCAPTURE`；截圖前把其他開著的視窗也設成排除，截完照 R77 的設定改回來。沒有權限詢問（Windows 不需要）。`GraphicsCaptureSession.IsSupported()` 是 false 時改用 GDI 的 `BitBlt`（排除的視窗一樣不會進去）。
+- **入口**：`RegisterHotKey` 第 3 組 Ctrl+Alt+Shift+S（只在錄音中註冊，`MOD_NOREPEAT`；被佔走時設定頁寫原因，同 §12）、設定 `screenshotHotKey`；錄音島展開的「截圖」；錄音畫面的「截圖」和 Ctrl+Shift+S。回饋：提示音、錄音島展開 1.5 秒顯示縮圖和「已截圖 12:34」。
+- **貼上、拖進來**：`Clipboard.GetContent()` 的 `StandardDataFormats.Bitmap` 或 `StorageItems` 裡的圖片檔；「我的筆記」的 `TextBox` 攔 `Paste`：剪貼簿沒有文字、有圖片時加畫面（`e.Handled = true`），有文字照舊。拖進錄音畫面的 `DragOver`／`Drop` 收圖片；拖進主視窗其他地方照舊是參考文件（§11.8）。
+- **讀字**：`WindowsOcr`（§11.8 的語言順序），在背景做，完成後更新 `pages`、搜尋索引。heic 用 `BitmapDecoder` 讀（要裝 HEIF 延伸模組；讀不了時說「這台電腦讀不了 HEIC，請先轉成 JPEG 或 PNG」）。
+- **回看**：逐字稿的 `ScreenRow`（縮圖寬 200、時間、第一行字），點了用預覽的 `ContentDialog`（大圖、← → 換張、Esc 關；同時只能一個對話框，先收起舊的）、跳播；時間軸的小圖示；右鍵、「⋯」（`FillRowMenu` 同一種選單）、鍵盤（Enter 放大、Delete 刪除、Ctrl+C 複製圖片）；「用預設程式打開」走 `ShellExecute`；改時間用共用的彈窗（§11.39）。
+- **整理送圖片**：C# 的各家整理工具多 `images` 參數，請求跟 Mac 的 `mac-requests.jsonl` 比對（Claude Code 的 `stream-json` 走 stdin、`ArgumentList`；Codex 的 `--image`；Anthropic、OpenAI、Gemini 的 JSON；OpenAI 相容 API 看 `compatibleSendsImages`）。
+- **匯出**：md 旁邊的圖片資料夾同 Mac；PDF 用同一份 HTML（`data:` 圖片）給 WebView2；`DocxWriter` 的 `img` 轉成 `ImagePart` 和 `w:drawing`（寬度最多版面寬，等比例）。
+- **DEBUG 控制通道**：`screenadd <檔案> [秒數]`、`screenshot`、`screenmove <id> <秒數>`、`screendelete <id>`；`--set debugFakeScreenshot=<png>`；`state` 多 `screens`。
+- **驗證**：`dotnet test`（標準答案、`ScreenTests` 用假的截圖和假的剪貼簿）；虛擬機用控制通道和 UI Automation 走一遍錄音中截圖、貼上、回看、刪除、改時間、匯出打開看。要真的 Windows 電腦：真的 Teams、Zoom 分享畫面時按 Ctrl+Alt+Shift+S，截到的是分享的畫面、沒有拾音的視窗；兩個螢幕時截的是游標那個；150% 縮放時圖片的解析度對。
+
+### 11.43 定時停止錄音（R110，M§84、D191）
+
+- **Core**：`StopTimer`（`Shiyin.Core`，同 Mac 的 `StopTimer`）：`Presets`、`Next`、`Parse`、`Label`、`Remaining`、`DefaultTime`，規則、字跟 Mac 相同；單元測試 `StopTimerTests` 用 M§84 的例子（沒有標準答案：時間的字串由各自的程式產生，兩邊寫同樣的例子）。
+- **錄音**：`Recorder.StopAt`（本機時間的 `DateTime?`）、`SetStopTimer(DateTime?)`（錄音中才有作用，觸發 `Changed`）；`Tick`（每 0.05 秒）先看 `StopAt`，到了就停止、`Result.Scheduled = true`，暫停中也停；停止時清掉。`AppController.TimerStopped`（會議 id、標題）→ `Notifier.TimerStopped`（「已到設定的時間，自動停止錄音」、內文是會議標題，點了打開那場；同 `MeetingEndStopped`）。
+- **時間到先倒數 30 秒**（R110.3、D192）：`Recorder.StopCountdown`（本機時間）、`StopTimerDue` 事件（背景執行緒）、`ContinueAfterStopTimer()`，規則同 Mac；`--set stopTimerCountdownSeconds=8`（DEBUG）。提醒照 §11.28 的分流：錄音島（`PromptState` 的 `Deadline`，訊息跟著島的計時器換秒數，按鈕「繼續錄」「停止並轉錄」）、島關掉時的通知（按鈕的 `shiyin:` 網址）、通知也關掉時的小視窗（`MeetingPromptWindow`，不倒數）；錄音畫面的提示列、系統匣的選單也寫「已到設定的時間，N 秒後停止錄音」和兩個按鈕。按鈕、選單改定時、錄音停了，都收起定時停止的提醒（會議的提醒不動）。
+- **錄音畫面**：計時右邊一個 `DropDownButton`（同麥克風那個的樣子，碼錶圖示 `\uE916` 加「定時停止」，設定了寫「15:30 停止」；無障礙名稱設定了時是「15:30 自動停止錄音」；滑過提示寫還有多久，字變了才重設），放在計時那一組（不會被截掉；音量條那欄照舊先截），`MenuFlyout` 打開時才列（`StopTimerMenu.Items`，系統匣共用）：設定了時不能按的「15:30 自動停止錄音」、分隔線、五個選項、「指定時間…」、設定了時分隔線和「取消定時停止」。
+- **系統匣**：錄音中的選單在「停止」下面加子選單「定時停止」（`MenuFlyoutSubItem`，同一份內容）；設定了時子選單的標題寫「15:30 自動停止錄音」。Windows 沒有「檔案」選單，入口是錄音畫面和系統匣（鍵盤：Tab 到錄音畫面的下拉按鈕）。
+- **錄音島**：滑過去的畫面在最新一句下面加一行「15:30 自動停止錄音」（次要文字）。
+- **指定時間…**：`Dialogs.PickStopTime`，共用的彈窗（§11.39；同時只能一個 `ContentDialog`，先收起舊的；從系統匣按時先 `ShowMain`）：「設定」用 `MeetingLanguages.Ui("設定", "Set")`（別處的「設定」是名詞）；標題、說明行、欄位「停止的時間」、「取消」「設定」同 Mac；`TextBox.TextChanged` 更新說明行和「設定」能不能按，說明行每秒照目前時間更新；錄音停了就收起。
+- **DEBUG**：控制通道 `stoptimer <秒數|off>`；`state` 的 `recorder.stopTimer`（`remaining`，沒設定是 -1；`label`；`countdown`，沒在倒數是 -1）；`meetingaction continue|stop` 等於按島上的按鈕。
+- **驗證**：`dotnet test`（`StopTimerTests`、`Recorder` 到時間停止的測試）；虛擬機 `record-sim` 錄音中 `stoptimer 20` → 停止、轉錄、通知；UI Automation 打開錄音畫面的下拉選單選「30 分鐘後」→ 寫「HH:mm 停止」、「取消定時停止」；「指定時間…」輸入錯的、對的時間；系統匣的子選單；島滑過去的那一行。
+
+### 11.44 逐字稿搜尋：上一個、下一個（R111，M§85）
+
+- 搜尋列在 `matchLabel` 右邊加兩顆無邊框的小按鈕（`` ChevronUp、`` ChevronDown），有搜尋字時才顯示，沒有符合的段落時停用；ToolTip「上一個（Shift+Enter）」「下一個（Enter）」，無障礙名稱「上一個」「下一個」。
+- `Step(int delta)`：游標繞回（同 Mac），更新「N／M 段」、重畫看得到的列（目前那一段的底色換了）、捲過去。搜尋框的 Enter：按著 Shift 是上一個。F3、Shift+F3 是主視窗的加速鍵（同 Ctrl+F），在逐字稿分頁才有作用。
+- 目前那一段：搜尋到的字底色的透明度 90 → 170（其他段落照舊）；對比主題照舊用系統的反白色。
+- 使用說明的快捷鍵：Ctrl+F 下面加「F3／Shift+F3：搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）」。
+- **驗證**：虛擬機示範資料搜尋常見字，UI Automation 按兩顆按鈕、Enter、Shift+Enter、F3，看「N／M 段」和捲動。
+
+### 11.45 範本編輯器（R112，M§86）
+
+- 輸入框原本就是 `TextBox.Header` 在上，不用改；多行的三個（用途說明、要寫什麼、額外指示）`MinHeight` 約 3 行、`MaxHeight` 約 6 行，超過捲動，`PlaceholderText` 寫同 Mac 的例子。
+- **內建範本**：編輯區最上面一塊 `Ui.Card`：鎖的圖示（`\uE72E`）、同 Mac 的說明（會換行）、按鈕「複製一份來改」（`CreateTemplate(template, null)`）；最下面那行說明拿掉。
+- **自訂段落**：標題「自訂段落」下面一行次要文字（同 Mac 的 footer，含後半句的「待辦」提示）；每一個是一塊（`Ui.Card`）：「段落名稱」TextBox（Header）、「要寫什麼」TextBox（Header、多行）、右上角刪除（工具提示「移除這個段落」）。沒有自訂段落時一行次要文字「還沒有自訂段落。」
+- 範本頁原本就跟著視窗高度捲動，不用改。
+- **驗證**：虛擬機開設定的範本頁：內建範本的說明和「複製一份來改」、自訂範本兩個段落；中文、簡體、英文截圖。
+
+### 11.46 議題帶：新範本預設有議題、滑過的卡片（R113，M§87、D193）
+
+- 新範本（`CreateTemplate(null, null)`）的段落加 `topics`；「要產生的段落」的勾選下面一行次要文字（同 Mac 的 footer）。
+- 議題帶每一段的 `ToolTip` 改成卡片的內容（`ToolTip.Content` 放 StackPanel，`MaxWidth` 300）：同 Mac 的名稱（粗體，`FontWeights.Bold`）、時間、說話者、最多 8 條重點、「還有 N 條，在「紀錄」分頁的這個議題裡」、「點一下從這裡播放」。WinUI 的工具提示本來就是滑過一下出現、移開收起，不另外做浮動視窗。無障礙名稱照舊。
+- `TopicBand.Show` 多傳紀錄、逐字稿、說話者名稱（`MindMap.ShownTopic`、說話者的重疊秒數同 Mac）。`MeetingLanguages.UiList`：`UiNames` 改用它。
+- **驗證**：`dotnet test`；虛擬機示範資料滑過議題帶（UI Automation 讀不到工具提示，用 `shot.sh` 截圖）。
+
+### 11.47 再找不確定的地方（R114，M§88、D194）
+
+- **Core**：`NotesPrompt.MoreReview`、`Labels` 的 `Asked`、`MoreReviewInstructions`，跟 Mac 一字不差（標準答案 `prompts/<語言>/review-more.txt`，`PromptTests`）。
+- **工作**：`SummarizePayload(Review: true)`，`JobRunner.Encode` 只在 true 時寫 `review`；`Summarize(…, review:)` 同 Mac：範本只剩說明和額外指示、提示詞、濾掉問過的、接在現在的紀錄後面、`SaveNotes(… "再找不確定的地方", NotesSource.Edit)`、`MoreReviewFound` 事件（會議 id、題數）。`AppDatabase.AskedReviewQuestions` 同 Mac。
+- **AppController.FindMoreReview**：檢查、提示同 Mac；`MoreReviewFound`：N > 0 時提示並展開待確認，0 時「沒有找到其他不確定的地方」。`ReviewFinished`（會議 id 的集合）同 Mac 的規則。
+- **畫面**：「更多 → 重新處理」加「再找不確定的地方」；紀錄頂部處理完的那一行（勾、文字、按鈕、✕），樣子同資料夾建議。
+- **驗證**：`dotnet test`（`PromptTests`、payload 的 JSON、`AskedReviewQuestions`、接在後面和濾掉問過的）；虛擬機接 `fake-llm-server.py` 按一次。
+
+### 11.48 版本紀錄：看以前的版本、改用某一版（R115，M§89、D195）
+
+- **資料**：`MigrationSql.V17`（兩句 ALTER）；`Meeting.NotesTemplate`、`NotesVersion.TemplateId`、`NotesHistoryEntry`；`SaveNotes(…, template)`、`UndoNotes`、編輯會議的兩處、`NotesHistory`、`UseNotesVersion` 同 Mac（資料庫標準答案逐欄比）。`JobRunner.Summarize` 給 `template?.Id`。
+- **畫面**：紀錄分頁的編輯列多「版本紀錄」（`DropDownButton`＋`MenuFlyout`，打開時才列；每一項 `ToggleMenuFlyoutItem`，正在顯示的那一項打勾，文字「範本名稱・怎麼來的」（怎麼來的在簡體介面經過 `L.Ui`），目前的加「（目前）」，時間放在文字後面灰字不好做，寫在同一行用「　」隔開）。看以前的版本：`MainState.ViewingNotes`，紀錄分頁、播放條用 `MeetingDetail` 的副本（紀錄換成那一版、待確認的對應清空），頂部的說明條同 Mac（同資料夾建議的樣子），編輯停用、復原不顯示；換會議、紀錄變了就回到目前的。
+- **驗證**：`dotnet test`（資料庫標準答案、`NotesHistory` 的順序和說明、`UseNotesVersion` 換範本）；虛擬機示範資料換範本重新整理、打開版本紀錄、看舊版本、改用。
+
+### 11.49 錄音中單獨暫停麥克風（R116，M§90、D198）
+
+- **錄音**：`RecordingWriter.SetMicMuted`、`Recorder.MicPaused`／`SetMicPaused` 同 Mac（麥克風那一聲道寫 0、不算進收音提醒和沒人說話的判斷；繼續時重設麥克風最近的音量）。
+- **畫面**：錄音畫面的麥克風圖示變成按鈕（`Button`，暫停時圖示換成斜線的麥克風 `\uE720`→`\uF781`、音量條換成「麥克風已暫停」）；麥克風選單第一項；錄音島展開時的麥克風；系統匣選單「暫停麥克風」；Ctrl+Shift+M。
+- **驗證**：`dotnet test`（寫檔：暫停的那段麥克風是 0、電腦聲音照常、秒數不變）；虛擬機 `record-sim` 錄音中按麥克風圖示、錄音島、系統匣，停止後看 WAV。
+
+### 11.50 詞彙表匯出、匯入（R117，M§91、D199）
+
+- **格式**：`GlossaryFile`（`Shiyin.Core/Notes/Templates.cs`）同 Mac 的 `export`、`Decode`、`TermsFromFile`；Big5 用 `CodePagesEncodingProvider` 的 950。標準答案 `util/glossary-file.json`。
+- **AppController**：`ExportGlossary(path)`、`ImportGlossary(path)`，提示文字同 Mac。
+- **畫面**：設定「詞彙表」新增詞彙的欄位下面一列「從檔案匯入…」「匯出…」（`HyperlinkButton`）；`FileOpenPicker`（.txt、.csv、.tsv）、`FileSavePicker`（預設檔名「拾音詞彙表」、.txt）。沒有詞時「匯出…」停用、工具提示「還沒有詞彙可以匯出」。
+- **驗證**：`dotnet test`（標準答案）；虛擬機用控制通道 `glossaryexport`、`glossaryimport` 走一次，設定頁截圖；挑選器打開看一次（取消）。
+
 ## 12. 系統整合
 
 ### 12.1 單一執行個體、開檔
@@ -1037,6 +1113,7 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 - `shot.sh <檔案>`：在 Mac 上用 `screencapture -l` 截 UTM 的視窗（整個虛擬機的畫面）。
 - UI Automation 做不到時（開著選單、存檔對話框時 UI Automation 會卡住）：用 UTM 的 AppleScript `input scan code` 送按鍵，只會送進虛擬機，不會到 Mac 前景的 app。
 - 系統的視窗（SmartScreen、系統匣）不屬於拾音：直接從桌面的根元件找（例如系統匣在 `Shell_TrayWnd`，隱藏的圖示先按「顯示隱藏的圖示」）。
+- `ps/tray-menu.ps1 [選項] [子選單的項目或 ?]`：右鍵系統匣的拾音圖示、按選單裡的一項；子選單（`MenuFlyoutSubItem`）用虛擬機的滑鼠按一下才展開（UIA 的 Expand 會把整個選單關掉，只移游標也不會展開），`?` 只列出項目。主視窗開著時先 `closewindow main`：主視窗裡同名的元件（錄音畫面的定時停止按鈕）會先被找到。Windows 的「通知建議」（要不要關掉拾音的通知）會蓋住隱藏圖示的面板，右鍵會打到它：按「現在不要執行此動作」，不要按「關閉」（2026-11-23）。
 
 ## 16. 決策紀錄（接著 design.md 的 D41）
 
@@ -1072,3 +1149,4 @@ sherpa-onnx 的說話者分段是凝聚式分群（`FastClusteringConfig` 只有
 | D129 | Windows 的電腦聲音改錄預設輸出裝置（endpoint loopback），跟著預設裝置換（R54、§6；2026-10-28 GitHub issue #2） | 照舊用 process loopback 排除拾音自己：新版 Teams（ms-teams.exe）的聲音收到的全是 0，開始、收音都回報成功（排除和只錄某個程序兩種模式都一樣；Microsoft 的 ApplicationLoopback 範例 microsoft/Windows-classic-samples#414、OBS 的應用程式音訊擷取一樣）。process loopback 為主，偵測到「自己收到靜音、輸出裝置卻有聲音」才改錄整個裝置：Teams 跟別的聲音同時在播時偵測不到，還要一直讀每個裝置的音量、切換時兩邊銜接。process loopback 和 endpoint loopback 一起錄再混：別的 app 的聲音兩邊都有，會疊兩次。取捨：錄音中在拾音裡播放錄音會錄進去（Mac 排除自己，R54.3）；Teams 的喇叭指定了不是預設的裝置時錄不到。後續：issue #2 的回報者 Windows 預設的輸出和 Teams 的喇叭是同一台裝置，R54 就錄得到（2026-10-29 回覆）；「也錄 Teams 指定的裝置」先不做，有人回報再做（§6） |
 | D138 | Intel 內顯不等實機量過就開，第一次正式轉錄時用同一段錄音讓顯示卡和 CPU 各轉一次，文字幾乎一樣、顯示卡又比較快才用（R4.8、§8；2026-11-04 使用者決定不等實機） | 等實機量過再開：手邊沒有 Intel 的 Windows 筆電，Intel 是 Windows 使用者的 3/4，統計裡多數 Intel 筆電轉錄比錄音還慢。直接全開：ggml-vulkan 在某些 Intel 內顯、驅動上算錯或比 CPU 慢時，使用者看不出來，只會覺得逐字稿變差或變慢。只比語言偵測的機率（CI 的 lavapipe 那樣）：快，但只跑到編碼器和一步解碼，解碼器算錯看不出來，也量不到真的轉錄速度。換 OpenVINO：whisper.cpp 的 OpenVINO 只加速編碼器、要另外轉模型，結果跟 Mac 對不上（R28.4）。取捨：每台 Intel 電腦第一次正式轉錄多花 1～2 分鐘，還沒檢查時啟動多約 1 秒（先載入一次 Vulkan 版，載入就當掉時才不會每次都當）；顯示卡要快到 CPU 的 8 成以內才用（偏保守，只快一點點時寧可用 CPU）；判斷不了時下一場再試 |
 | D172 | Windows 分割會議時，WAV 直接切位元組，其他格式都重新壓成 m4a（AAC），匯入的 mp3、mp4 這類檔案分割後原本那場也換成 m4a（§11.23） | 照 Mac 用原本的格式寫回去：Media Foundation 沒有通用的「照原檔設定寫回去」，mp3、flac、mp4（影片）要各找編碼器，有些 Windows（N 版、沒裝延伸模組）沒有；Mac 的 AVAudioFile 也寫不了 mp3。不重新壓縮、照時間切 m4a 的封包：AAC 的音框有前後相依（priming），切點附近會有雜音或少一小段，還要自己寫 MP4 容器。WAV 也走 Media Foundation：要解碼再寫，格式（浮點、24 位元、WAVE_FORMAT_EXTENSIBLE）可能變，還比較慢。取捨：重新壓縮會再損失一點音質（位元率照原檔取最接近的）；mp4 影片分割後只剩聲音（拾音本來就只播聲音）；切的時間跟錄音的長度成正比（一小時的 m4a 約十幾秒，期間 `SplittingMeeting` 擋住重複分割） |
+| D173 | Windows 截圖用 `Windows.Graphics.Capture`，不能用時才用 GDI 的 `BitBlt`（§11.42） | 只用 `BitBlt`：硬體加速的視窗（Teams 的視訊、瀏覽器播的影片、有版權保護的內容）常常截成一片黑。`Windows.Graphics.Capture` 的挑選視窗（`GraphicsCapturePicker`）：每次都要選，做不到一鍵截 |

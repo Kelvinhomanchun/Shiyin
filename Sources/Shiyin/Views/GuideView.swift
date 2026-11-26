@@ -83,6 +83,8 @@ struct GuideView: View {
                 // 錄音島（design §57、R81.10）
                 GuideBullet(String(localized: "錄音中螢幕上方正中間會出現錄音島（有瀏海的 Mac 接在瀏海兩側），顯示錄了多久、音量和收音提醒；滑鼠移上去可以暫停、標記重點、停止並轉錄，不用切回拾音。全螢幕開會、換桌面都看得到，分享畫面時對方看不到。不想要的話到「設定 → 錄音」關掉「在螢幕上方顯示錄音島」。"))
                 GuideBullet(String(localized: "開 Zoom、Teams、Google Meet 等線上會議時，拾音會提醒你開始錄音（打開錄音島時提醒出現在島上）；會議好像結束時提醒停止。不想被某個 app 提醒，在提醒上按「不要再提醒」。"))
+                // 定時停止（design §84、R110）
+                GuideBullet(String(localized: "錄一場不會一直守著的線上分享、講座時，按錄音畫面計時旁邊的「定時停止」，選 1 小時後、2 小時後或「指定時間…」（例如 16:00），時間到拾音會自己停止並轉錄，暫停也照算。選單列的拾音圖示、「檔案」選單也可以設定或取消。"))
                 GuideBullet(String(localized: "遇到問題，可以從「輔助說明」選單選「回報問題…」，會附上版本和環境（不含會議內容）。"))
             }
 
@@ -152,6 +154,7 @@ struct GuideView: View {
                     shortcut(String(localized: "⌘1～⌘3"), String(localized: "切換紀錄、逐字稿、提問"))
                     shortcut("⌘+ / ⌘−", String(localized: "放大、縮小會議內容的文字（⌘0 回到標準大小）"))
                     shortcut("⌘F", String(localized: "搜尋逐字稿（在「逐字稿」）"))
+                    shortcut("⌘G / ⇧⌘G", String(localized: "搜尋逐字稿時跳到下一個、上一個（也可以按 Return、⇧Return）"))
                     shortcut("⌘,", String(localized: "設定"))
                     shortcut("⌘?", String(localized: "打開這份說明"))
                 }

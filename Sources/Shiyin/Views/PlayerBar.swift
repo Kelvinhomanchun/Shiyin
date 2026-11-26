@@ -28,11 +28,12 @@ struct PlayerBar: View {
             VStack(spacing: 4) {
                 if !topics.isEmpty {
                     TopicBand(ranges: topics, duration: duration, currentTime: player.currentTime,
-                              onSeek: { seconds in player.seek(to: seconds, play: true) })
+                              card: topicCardInfo, onSeek: { seconds in player.seek(to: seconds, play: true) })
                 }
                 TimelineBar(segments: detail.segments,
                             reviewTimes: (detail.notes?.reviewItems ?? []).compactMap { TimeFormat.seconds($0.time) },
                             bookmarkTimes: detail.bookmarks.map(\.time),
+                            screenTimes: detail.screens.compactMap(\.at),
                             duration: duration,
                             currentTime: player.currentTime,
                             onSeek: { seconds, play in player.seek(to: seconds, play: play) })
@@ -70,6 +71,21 @@ struct PlayerBar: View {
     private func speedLabel(_ value: Float) -> String {
         value == 1 ? "1×" : String(format: "%g×", value)
     }
+
+    /// 議題帶滑過的卡片（design §87）：那個議題的重點、這段時間說話的人（說得多的在前），卡片出現時才算
+    private func topicCardInfo(_ range: MindMap.TopicRange) -> TopicCard.Info {
+        let points = detail.notes.flatMap { MindMap.shownTopic($0, branch: range.branch) }?.points
+            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } ?? []
+        var talk: [Int: Double] = [:]
+        for segment in detail.segments {
+            guard let speaker = segment.speaker else { continue }
+            let overlap = min(segment.end, range.end) - max(segment.start, range.start)
+            if overlap > 0 { talk[speaker, default: 0] += overlap }
+        }
+        let speakers = talk.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .map { detail.speakers[$0.key] ?? detail.meeting.meetingLanguage.defaultSpeaker($0.key) }
+        return TopicCard.Info(points: points, speakers: speakers)
+    }
 }
 
 private extension VerticalAlignment {
@@ -81,28 +97,72 @@ private extension VerticalAlignment {
     static let timelineCenter = VerticalAlignment(TimelineCenter.self)
 }
 
-/// 議題帶（design §43.2、R68）：時間軸上面每個議題一段，顏色同心智圖的那一支，點了從那個議題開始播放
+/// 議題帶（design §43.2、R68）：時間軸上面每個議題一段，顏色同心智圖的那一支，點了從那個議題開始播放；
+/// 滑過一段出現卡片（design §87、R113.3）
 struct TopicBand: View {
     let ranges: [MindMap.TopicRange]
     let duration: Double
     let currentTime: Double
+    /// 卡片的內容（重點、說話者），卡片出現時才算
+    let card: (MindMap.TopicRange) -> TopicCard.Info
     let onSeek: (Double) -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if DEBUG
+    @Environment(AppModel.self) private var model
+    #endif
+    /// 游標在哪一段、卡片開著的是哪一段
+    @State private var hovered: Int?
+    @State private var shown: Int?
+    @State private var hoverTask: Task<Void, Never>?
 
     var body: some View {
         GeometryReader { geo in
             let scale = duration > 0 ? geo.size.width / CGFloat(duration) : 0
             ZStack(alignment: .topLeading) {
-                ForEach(Array(ranges.enumerated()), id: \.offset) { _, range in
-                    segment(range, width: max(2, CGFloat(range.end - range.start) * scale - 2))
+                ForEach(Array(ranges.enumerated()), id: \.offset) { index, range in
+                    segment(range, index: index, width: max(2, CGFloat(range.end - range.start) * scale - 2))
                         .offset(x: CGFloat(range.start) * scale)
                 }
             }
+            // 卡片在議題帶上面 6 點、左邊對齊那一段，超出右邊時往左挪；不接點擊（不擋議題帶）
+            .overlay(alignment: .bottomLeading) {
+                if let shown, ranges.indices.contains(shown) {
+                    let range = ranges[shown]
+                    TopicCard(range: range, info: card(range))
+                        .offset(x: min(CGFloat(range.start) * scale, max(0, geo.size.width - TopicCard.width)), y: -24)
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
+            }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: shown)
         }
         .frame(height: 18)
+        #if DEBUG
+        .onChange(of: model.debugTopicHover) { _, index in hovered = index; shown = index }
+        #endif
     }
 
-    private func segment(_ range: MindMap.TopicRange, width: CGFloat) -> some View {
+    /// 滑過 0.3 秒後出現；卡片開著時移到另一段馬上換；移開稍等一下才收（段與段之間有 2 點的空隙）
+    private func hover(_ index: Int, inside: Bool) {
+        hoverTask?.cancel()
+        if inside {
+            hovered = index
+            if shown != nil { shown = index; return }
+            hoverTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                if !Task.isCancelled, hovered == index { shown = index }
+            }
+        } else if hovered == index {
+            hovered = nil
+            hoverTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(120))
+                if !Task.isCancelled, hovered == nil { shown = nil }
+            }
+        }
+    }
+
+    private func segment(_ range: MindMap.TopicRange, index: Int, width: CGFloat) -> some View {
         let color = Color(hex: MindMap.color(range.branch, dark: colorScheme == .dark))
         let isCurrent = currentTime >= range.start && currentTime < range.end
         let label = "\(range.title)　\(TimeFormat.string(range.start))–\(TimeFormat.string(range.end))"  // l10n-skip：名稱和時間，不用翻譯
@@ -122,8 +182,61 @@ struct TopicBand: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(label)
+        .onHover { hover(index, inside: $0) }
         .accessibilityLabel(label)
+    }
+}
+
+/// 議題帶滑過的卡片（design §87、R113.3）：議題名稱、時間、說話者、前幾條重點
+struct TopicCard: View {
+    struct Info {
+        var points: [String]
+        var speakers: [String]
+    }
+
+    static let width: CGFloat = 300
+    /// 列出幾條重點（原本 3 條，卡片點不到「還有 N 條」，2026-11-25 #19 改成直接列出來）
+    static let maxPoints = 8
+    let range: MindMap.TopicRange
+    let info: Info
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: range.title)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: "\(TimeFormat.string(range.start))–\(TimeFormat.string(range.end))・\(TimeFormat.duration(Int((range.end - range.start).rounded())))")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+            if !info.speakers.isEmpty {
+                Text(String(localized: "說話者：\(MeetingLanguage.uiList(info.speakers))"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !info.points.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(info.points.prefix(Self.maxPoints).enumerated()), id: \.offset) { _, point in
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text(verbatim: "・")
+                            Text(verbatim: point).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    // 卡片不接點擊、移開就收起：多的指到紀錄分頁（#19）
+                    if info.points.count > Self.maxPoints {
+                        Text("還有 \(info.points.count - Self.maxPoints) 條，在「紀錄」分頁的這個議題裡").foregroundStyle(.secondary)
+                    }
+                }
+                .font(.system(size: 12))
+                .padding(.top, 2)
+            }
+            Text("點一下從這裡播放").font(.caption2).foregroundStyle(.tertiary).padding(.top, 2)
+        }
+        .padding(12)
+        .frame(width: Self.width, alignment: .leading)
+        .floatingPanelChrome()
     }
 }
 
@@ -133,6 +246,8 @@ struct TimelineBar: View {
     let segments: [Segment]
     let reviewTimes: [Double]
     var bookmarkTimes: [Double] = []
+    /// 會議中的畫面（design §83.4）
+    var screenTimes: [Double] = []
     let duration: Double
     let currentTime: Double
     let onSeek: (Double, Bool) -> Void
@@ -202,6 +317,13 @@ struct TimelineBar: View {
         for t in bookmarkTimes {
             let x = CGFloat(t) * scale
             context.fill(Path(ellipseIn: CGRect(x: x - 2.5, y: height - 5, width: 5, height: 5)), with: .color(.celadon))
+        }
+
+        // 會議中的畫面：下方的小方框（像一張相片），跟重點的圓點分得開
+        for t in screenTimes {
+            let x = CGFloat(t) * scale
+            let frame = CGRect(x: x - 3, y: height - 5.5, width: 6, height: 5)
+            context.stroke(Path(roundedRect: frame, cornerRadius: 1), with: .color(.primary.opacity(0.55)), lineWidth: 1)
         }
 
         // 目前播放位置

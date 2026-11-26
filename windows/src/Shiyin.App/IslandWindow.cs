@@ -37,8 +37,12 @@ public sealed partial class IslandWindow : Window
     // 狀態（M§57.2）
     public bool Hover { get; private set; }
     public sealed record PromptAction(string Id, string Title, Action Run);
-    /// <summary>Deadline：會議結束的倒數（R95、M§69）到什麼時候，訊息每秒換成剩下的秒數；null 是一般的提醒</summary>
-    public sealed record PromptState(MeetingDetector.Prompt Prompt, string Message, List<PromptAction> Actions, DateTime Expires, DateTime? Deadline = null);
+    /// <summary>
+    /// Deadline：會議結束的倒數（R95、M§69）到什麼時候（UTC），訊息每秒換成剩下的秒數；null 是一般的提醒。
+    /// Prompt 是 null：定時停止的倒數（R110.3），Countdown 寫倒數的那一句
+    /// </summary>
+    public sealed record PromptState(MeetingDetector.Prompt? Prompt, string Message, List<PromptAction> Actions, DateTime Expires, DateTime? Deadline = null,
+                                     Func<int, string>? Countdown = null);
     public PromptState? Prompt { get; private set; }
     /// <summary>目前的提醒是哪一個；換了就展開 10 秒（R81.2），之後收回成琥珀色的點</summary>
     public string? HintKey { get; private set; }
@@ -140,8 +144,24 @@ public sealed partial class IslandWindow : Window
 
     static string CountdownText(int seconds) => L.F("會議好像結束了，%lld 秒後自動停止錄音", (long)seconds);
 
+    /// <summary>
+    /// 定時停止的時間到了、倒數中（R110.3、M§84，同 Mac 的 showStopTimerPrompt）：「已到設定的時間，N 秒後停止錄音」，
+    /// 「繼續錄」取消定時、「停止並轉錄」馬上停。倒數沒了（按了按鈕、改了定時、錄音停了）Update 會收起來
+    /// </summary>
+    public void ShowStopTimerPrompt()
+    {
+        var recorder = host.Recorder;
+        if (recorder.StopCountdown is not DateTime end) return;
+        var deadline = end.ToUniversalTime();
+        List<PromptAction> actions = [new("continue", L.T("繼續錄"), () => recorder.SetStopTimer(null)), new("stop", L.T("停止並轉錄"), recorder.Stop)];
+        Prompt = new PromptState(null, StopTimerText((int)recorder.StopCountdownSeconds), actions, deadline.AddSeconds(2), deadline, StopTimerText);
+        Update();
+    }
+
+    public static string StopTimerText(int seconds) => L.F("已到設定的時間，%lld 秒後停止錄音", (long)seconds);
+
     /// <summary>提醒現在寫的字（倒數時是剩下的秒數；DEBUG 的 state 讀）</summary>
-    public string? PromptText => Prompt is { } p ? p.Deadline is DateTime d ? CountdownText(Math.Max(0, (int)Math.Ceiling((d - DateTime.UtcNow).TotalSeconds))) : p.Message : null;
+    public string? PromptText => Prompt is { } p ? p.Deadline is DateTime d ? (p.Countdown ?? CountdownText)(Math.Max(0, (int)Math.Ceiling((d - DateTime.UtcNow).TotalSeconds))) : p.Message : null;
 
     /// <summary>按島上偵測會議的按鈕（DEBUG 的 meetingaction 也走這裡）</summary>
     public void Perform(string id)
@@ -185,6 +205,8 @@ public sealed partial class IslandWindow : Window
         var recorder = host.Recorder;
         var now = DateTime.UtcNow;
         if (Prompt is { } p && p.Expires < now) Prompt = null;
+        // 定時停止的倒數沒了（繼續錄、改了定時、錄音停了）：島上的提醒收起
+        if (Prompt is { Prompt: null } && recorder.StopCountdown is null) Prompt = null;
         var key = HintKeyOf(recorder);
         if (key != HintKey)
         {
@@ -227,8 +249,8 @@ public sealed partial class IslandWindow : Window
         var recorder = host.Recorder;
         var mode = Prompt is not null ? "prompt" : Hover && recorder.IsRecording ? "hover" : hintExpanded ? "hint" : "collapsed";
         var line = mode == "hover" ? LatestLine(recorder) : null;
-        var key = string.Join('\u001F', mode, HintKey, Prompt?.Message, recorder.IsPaused, bookmarked, recorder.HasMic, recorder.HasSystem,
-            recorder.MicHint?.BuiltIn?.Name, line is not null);
+        var key = string.Join('\u001F', mode, HintKey, Prompt?.Message, recorder.IsPaused, recorder.MicPaused, bookmarked, recorder.HasMic, recorder.HasSystem,
+            recorder.MicHint?.BuiltIn?.Name, line is not null, recorder.StopAt);
         if (key == shownKey)
         {
             if (clock is not null) clock.Text = TimeFormat.String(recorder.ElapsedSeconds);
@@ -281,7 +303,8 @@ public sealed partial class IslandWindow : Window
     FrameworkElement PromptHeader()
     {
         clock = null;
-        var row = Ui.Row(8, new FontIcon { Glyph = "\uE720", FontSize = 14, Foreground = Brush(0x6DB2A1) });
+        // 定時停止的倒數（R110.3）用碼錶的圖示，會議 app 的提醒用麥克風
+        var row = Ui.Row(8, new FontIcon { Glyph = Prompt is { Prompt: null } ? "\uE916" : "\uE720", FontSize = 14, Foreground = Brush(0x6DB2A1) });
         row.Height = 30;
         return row;
     }
@@ -310,7 +333,7 @@ public sealed partial class IslandWindow : Window
         var column = Ui.Column(12);
         var colors = ((Brush)new SolidColorBrush(Color.FromArgb(46, 255, 255, 255)), (Brush)Brush(0x6DB2A1), (Brush)Brush(0xE2AD3B));
         var meters = Ui.Row(14);
-        if (recorder.HasMic) meters.Children.Add(Meter("\uE720", () => recorder.MicLevel, colors, L.T("麥克風")));
+        if (recorder.HasMic) meters.Children.Add(MicMeter(recorder, colors));
         if (recorder.HasSystem) meters.Children.Add(Meter("\uE767", () => recorder.SystemLevel, colors, L.T("電腦聲音")));
         column.Children.Add(meters);
         if (LatestLine(recorder) is { } line)
@@ -319,6 +342,9 @@ public sealed partial class IslandWindow : Window
             latest.Language = Ui.ContentLanguage(recorder.Language);
             column.Children.Add(latest);
         }
+        // 定時停止（R110.2、M§84）
+        if (recorder.StopAt is DateTime stopAt)
+            column.Children.Add(Ui.Row(8, Icon("\uE916", null), Ui.Text(StopTimerMenu.Status(stopAt), 13, color: Secondary, wrap: false)));
         if (CurrentHint() is { } hint)
         {
             column.Children.Add(Ui.Split(Icon(hint.Glyph, 0xE2AD3B), Ui.Text(hint.Text, 13, color: Brush(0xE2AD3B), maxLines: 3), 8));
@@ -352,6 +378,25 @@ public sealed partial class IslandWindow : Window
     {
         host.ShowMain?.Invoke(meetingId);
         if (App.Current.MainHandle is { } main && main != IntPtr.Zero) SetForegroundWindow(main);
+    }
+
+    /// <summary>麥克風的音量；麥克風＋電腦聲音時整塊是按鈕，單獨暫停、繼續錄麥克風（R116、M§90）</summary>
+    FrameworkElement MicMeter(Recorder recorder, (Brush, Brush, Brush) colors)
+    {
+        var content = recorder.MicPaused
+            ? Ui.Row(6, Icon(Views.MicrophoneMenu.MicOffGlyph, null), Ui.Text(L.T("麥克風已暫停"), 13, color: Secondary, wrap: false))
+            : Meter(Views.MicrophoneMenu.MicGlyph, () => recorder.MicLevel, colors, L.T("麥克風"));
+        if (!recorder.CanPauseMic) return content;
+        var button = new Button
+        {
+            Content = content, Padding = new Thickness(0), BorderThickness = new Thickness(0),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
+        ToolTipService.SetToolTip(button, recorder.MicPaused ? L.T("繼續錄麥克風")
+            : L.T("暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到"));
+        AutomationProperties.SetName(button, recorder.MicPaused ? L.T("繼續錄麥克風") : L.T("暫停麥克風"));
+        button.Click += (_, _) => recorder.SetMicPaused(!recorder.MicPaused);
+        return button;
     }
 
     FrameworkElement Meter(string glyph, Func<float> read, (Brush, Brush, Brush) colors, string name)

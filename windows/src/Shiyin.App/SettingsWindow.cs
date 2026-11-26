@@ -606,7 +606,8 @@ public sealed class SettingsWindow : Window
     {
         var id = "custom-" + Guid.NewGuid().ToString("N")[..8];
         // 複製內建範本：跟畫面上看到的一樣（簡體介面是簡體，同 Mac 的「複製」按鈕用畫面上的 draft）
-        var definition = edited ?? (source is null ? null : Shown(source)) ?? new TemplateDefinition("", ["summary", "decisions", "actionItems"], [], "");
+        // 新範本預設有議題（R113.1）：沒有議題時播放條上沒有議題帶
+        var definition = edited ?? (source is null ? null : Shown(source)) ?? new TemplateDefinition("", ["summary", "decisions", "actionItems", "topics"], [], "");
         host.Controller.SaveTemplate(new TemplateRecord
         {
             Id = id, Name = source is null ? L.T("新範本") : L.F("%@（副本）", source.DisplayName()), Builtin = false, Definition = definition.JsonString(),
@@ -629,11 +630,22 @@ public sealed class SettingsWindow : Window
         var definition = Shown(template);
         var sections = definition.Sections.ToList();
         var custom = definition.Custom.ToList();
-        var name = new TextBox { Header = L.T("名稱"), Text = template.DisplayName(), IsEnabled = !template.Builtin };
-        // AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行（多行的說明會被截掉，存檔就不見了）
-        var description = new TextBox { Header = L.T("用途說明"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = definition.Description, IsEnabled = !template.Builtin };
-        var instruction = new TextBox { Header = L.T("額外指示（選填）"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = definition.Instruction, IsEnabled = !template.Builtin };
-        var column = Ui.Column(12, name, description);
+        var name = new TextBox { Header = L.T("名稱"), PlaceholderText = L.T("範本名稱"), Text = template.DisplayName(), IsEnabled = !template.Builtin };
+        var description = MultiLine(L.T("用途說明"), L.T("例如：週會、專案會議用"), definition.Description, !template.Builtin);
+        var instruction = MultiLine(L.T("額外指示（選填）"), L.T("給整理工具的其他要求，例如：金額、數字照原文寫。可以分行。"), definition.Instruction, !template.Builtin);
+        var column = Ui.Column(12);
+        // 內建範本不能改：說明放最上面、給一顆複製的按鈕（R112.1、design-windows §11.45；原本在最下面）
+        if (template.Builtin)
+        {
+            var copy = Ui.Button(L.T("複製一份來改"), () => CreateTemplate(template, null));
+            copy.VerticalAlignment = VerticalAlignment.Center;
+            var text = Ui.Text(L.T("內建範本不能修改。按「複製一份來改」，就能改段落、加自訂段落。"), 13, color: Ui.Secondary);
+            text.VerticalAlignment = VerticalAlignment.Center;
+            var lockIcon = new FontIcon { Glyph = "\uE72E", FontSize = 14, Foreground = Ui.Secondary, VerticalAlignment = VerticalAlignment.Center };
+            column.Children.Add(Ui.Card(Ui.Bar(lockIcon, text, copy, 10), 12));
+        }
+        column.Children.Add(name);
+        column.Children.Add(description);
         var toggles = Ui.Column(4, Ui.Text(L.T("要產生的段落"), 14, bold: true));
         foreach (var id in TemplateDefinition.BuiltinSectionIds)
         {
@@ -641,18 +653,23 @@ public sealed class SettingsWindow : Window
             box.Click += (_, _) => { if (box.IsChecked == true) { if (!sections.Contains(id)) sections.Add(id); } else sections.Remove(id); };
             toggles.Children.Add(box);
         }
+        toggles.Children.Add(Note(L.T("關掉「議題詳細」時，紀錄裡沒有議題：播放條上沒有議題帶，心智圖改用摘要。")));
         column.Children.Add(toggles);
-        var customs = Ui.Column(8, Ui.Text(L.T("自訂段落"), 14, bold: true));
+        // 自訂段落一個一塊（R112.4）：段落名稱、要寫什麼（多行）、右上角移除
+        var customs = Ui.Column(8, Ui.Text(L.T("自訂段落"), 14, bold: true),
+            Ui.Text(L.T("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列；負責人、期限這類待辦，請打開上面的「待辦」。"), 12, color: Ui.Secondary));
+        if (custom.Count == 0) customs.Children.Add(Ui.Text(L.T("還沒有自訂段落。"), 13, color: Ui.Secondary));
         for (var i = 0; i < custom.Count; i++)
         {
             var index = i;
-            var title = new TextBox { PlaceholderText = L.T("段落名稱"), Text = custom[i].Title, IsEnabled = !template.Builtin };
+            var title = new TextBox { Header = L.T("段落名稱"), PlaceholderText = L.T("例如：風險"), Text = custom[i].Title, IsEnabled = !template.Builtin };
             title.TextChanged += (_, _) => custom[index] = custom[index] with { Title = title.Text };
-            var what = new TextBox { PlaceholderText = L.T("要寫什麼"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Text = custom[i].Instruction, IsEnabled = !template.Builtin };
+            var what = MultiLine(L.T("要寫什麼"), L.T("例如：列出討論中提到的風險、負責人和期限。可以分行，用 - 條列。"), custom[i].Instruction, !template.Builtin);
             what.TextChanged += (_, _) => custom[index] = custom[index] with { Instruction = Lines(what.Text) };
-            var delete = Ui.IconButton(Symbol.Delete, L.T("刪除"), () => { custom.RemoveAt(index); Save(); Show(); });
+            var delete = Ui.IconButton(Symbol.Delete, L.T("移除這個段落"), () => { custom.RemoveAt(index); Save(); Show(); });
             delete.IsEnabled = !template.Builtin;
-            customs.Children.Add(Ui.Bar(null, Ui.Column(4, title, what), delete));
+            delete.VerticalAlignment = VerticalAlignment.Top;
+            customs.Children.Add(Ui.Card(Ui.Bar(null, Ui.Column(8, title, what), delete, 10), 12));
         }
         if (!template.Builtin) customs.Children.Add(Ui.Link(L.T("新增自訂段落"), () => { custom.Add(new TemplateDefinition.CustomSpec("", "")); Save(); Show(); }));
         column.Children.Add(customs);
@@ -676,10 +693,23 @@ public sealed class SettingsWindow : Window
             actions.Children.Add(Ui.Button(L.T("刪除"), () => DeleteTemplate(template)));
             actions.Children.Add(Ui.Button(L.T("儲存"), () => { Save(); Show(); }, accent: true));
         }
-        var note = template.Builtin ? Note(L.T("內建範本不能修改，可以按「複製」做一份自己的。")) : null;
-        if (note is not null) note.VerticalAlignment = VerticalAlignment.Center;
-        column.Children.Add(Ui.Bar(null, note, actions, 12));
+        column.Children.Add(Ui.Bar(null, null, actions, 12));
         return column;
+    }
+
+    /// <summary>
+    /// 多行的輸入框（用途說明、要寫什麼、額外指示，R112.3）：Enter 換行，約 3～6 行高、超過的捲動。
+    /// AcceptsReturn 要在 Text 之前設：單行的 TextBox 設 Text 時只留第一行（多行的說明會被截掉，存檔就不見了）
+    /// </summary>
+    static TextBox MultiLine(string header, string placeholder, string text, bool enabled)
+    {
+        var box = new TextBox
+        {
+            Header = header, PlaceholderText = placeholder, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
+            MinHeight = 72, MaxHeight = 140, Text = text, IsEnabled = enabled,
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(box, ScrollBarVisibility.Auto);
+        return box;
     }
 
     /// <summary>WinUI 的 TextBox 把換行存成 \r：範本會放進提示詞，跟 Mac 一樣存成 \n</summary>
@@ -704,6 +734,36 @@ public sealed class SettingsWindow : Window
     bool confirmingPerson;
     /// <summary>正在就地改的詞（R100）</summary>
     long? editingTerm;
+
+    /// <summary>詞彙表從檔案匯入（R117.2）：.txt、.csv、.tsv，一律合併；結果寫在輸入框下面</summary>
+    async Task ImportGlossaryFile()
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            foreach (var ext in new[] { ".txt", ".csv", ".tsv" }) picker.FileTypeFilter.Add(ext);
+            if (await picker.PickSingleFileAsync() is not { } file) return;
+            glossaryNotice = host.Controller.ImportGlossary(file.Path);
+        }
+        catch (System.Runtime.InteropServices.COMException e) { glossaryNotice = e.Message; }
+        Show();
+    }
+
+    /// <summary>詞彙表匯出成文字檔（R117.1）</summary>
+    async Task ExportGlossaryFile()
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = L.T("拾音詞彙表") };
+            picker.FileTypeChoices.Add(L.T("純文字（txt）"), [".txt"]);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            if (await picker.PickSaveFileAsync() is not { } file) return;
+            glossaryNotice = host.Controller.ExportGlossary(file.Path);
+        }
+        catch (System.Runtime.InteropServices.COMException e) { glossaryNotice = e.Message; }
+        Show();
+    }
 
     FrameworkElement Glossary()
     {
@@ -742,6 +802,14 @@ public sealed class SettingsWindow : Window
             input.Loaded += (_, _) => input.Focus(FocusState.Programmatic);
         }
         column.Children.Add(Ui.Bar(null, input, add));
+        // 匯入、匯出（R117、M§91）：匯入一律合併
+        var importLink = Ui.Link(L.T("從檔案匯入…"), () => _ = ImportGlossaryFile());
+        ToolTipService.SetToolTip(importLink, L.T("加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉"));
+        var exportLink = Ui.Link(L.T("匯出…"), () => _ = ExportGlossaryFile());
+        var hasTerms = host.Db.Glossary().Count > 0;
+        exportLink.IsEnabled = hasTerms;
+        ToolTipService.SetToolTip(exportLink, hasTerms ? L.T("存成文字檔，一行一個詞") : L.T("還沒有詞彙可以匯出"));
+        column.Children.Add(Ui.Row(14, importLink, exportLink));
         if (glossaryNotice is { } notice)
         {
             glossaryNotice = null;

@@ -105,6 +105,23 @@
         }
       }
     },
+    "%@ 停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 停止"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stops at %@"
+          }
+        }
+      }
+    },
     "%@ 回傳 HTTP %lld%@：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -186,6 +203,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bookmark at %@"
+          }
+        }
+      }
+    },
+    "%@ 的畫面，整理時會一起參考": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的画面，整理时会一起参考"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen at %@ will be used when summarizing"
+          }
+        }
+      }
+    },
+    "%@ 自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 自动停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stops at %@"
+          }
+        }
+      }
+    },
+    "%@ 自動停止錄音（還有 %@），點一下可以改或取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 自动停止录音（还有 %@），点一下可以改或取消"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stops at %@ (%@ left). Click to change or cancel."
           }
         }
       }
@@ -761,6 +829,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@（没有安装）"
+          }
+        }
+      }
+    },
+    "%@（目前）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（目前）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (current)"
           }
         }
       }
@@ -1477,6 +1562,40 @@
         }
       }
     },
+    "1 小時 30 分鐘後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 小时 30 分钟后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 Hour 30 Minutes"
+          }
+        }
+      }
+    },
+    "1 小時後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 小时后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 1 Hour"
+          }
+        }
+      }
+    },
     "100%（標準）": {
       "extractionState": "manual",
       "localizations": {
@@ -1490,6 +1609,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "100%（标准）"
+          }
+        }
+      }
+    },
+    "2 小時後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 小时后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 2 Hours"
+          }
+        }
+      }
+    },
+    "3 小時後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 小时后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 3 Hours"
+          }
+        }
+      }
+    },
+    "30 分鐘後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 分钟后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 30 Minutes"
           }
         }
       }
@@ -2253,6 +2423,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Return to save, Esc to cancel"
+          }
+        }
+      }
+    },
+    "Word 檔加圖片失敗（%@ 結束代碼 %d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word 文件加图片失败（%@ 退出代码 %d）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t add images to the Word file (%@ exit code %d)"
           }
         }
       }
@@ -3069,6 +3256,40 @@
         }
       }
     },
+    "上一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous"
+          }
+        }
+      }
+    },
+    "上一個（⇧Return）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个（⇧Return）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous (⇧Return)"
+          }
+        }
+      }
+    },
     "上一步": {
       "extractionState": "manual",
       "localizations": {
@@ -3167,6 +3388,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "The last attempt to create the clean version failed: %@"
+          }
+        }
+      }
+    },
+    "下一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        }
+      }
+    },
+    "下一個（Return）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个（Return）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next (Return)"
           }
         }
       }
@@ -4197,6 +4452,23 @@
         }
       }
     },
+    "今天 %@ 自動停止錄音並轉錄（%@後）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天 %@ 自动停止录音并转录（%@后）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording will stop and be transcribed today at %@ (in %@)."
+          }
+        }
+      }
+    },
     "他對你的信任": {
       "extractionState": "manual",
       "localizations": {
@@ -5066,6 +5338,23 @@
         }
       }
     },
+    "例如：列出討論中提到的風險、負責人和期限。可以分行，用 - 條列。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：列出讨论中提到的风险、负责人和期限。可以分行，用 - 条列。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: list the risks raised, with owners and deadlines. You can use several lines and - for bullets."
+          }
+        }
+      }
+    },
     "例如：向誰報告、在意什麼指標、跟我們合作的歷史、私下聊過的事": {
       "extractionState": "manual",
       "localizations": {
@@ -5134,6 +5423,23 @@
         }
       }
     },
+    "例如：週會、專案會議用": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：周会、项目会议用"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: weekly and project meetings"
+          }
+        }
+      }
+    },
     "例如：預算的討論寫得太簡略，補上數字和誰負責；Sandy 的職稱是 Head of Claims，不是 Claims Lead": {
       "extractionState": "manual",
       "localizations": {
@@ -5147,6 +5453,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如：预算的讨论写得太简略，补上数字和谁负责；Sandy 的职称是 Head of Claims，不是 Claims Lead"
+          }
+        }
+      }
+    },
+    "例如：風險": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：风险"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: Risks"
           }
         }
       }
@@ -5448,6 +5771,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止并转录"
+          }
+        }
+      }
+    },
+    "停止的時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止的时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop at"
           }
         }
       }
@@ -5844,19 +6184,19 @@
         }
       }
     },
-    "內建範本不能修改，可以按「複製」做一份自己的。": {
+    "內建範本不能修改。按「複製一份來改」，就能改段落、加自訂段落。": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Built-in templates can't be changed. Click “Duplicate” to make your own copy."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "内建模板不能修改，可以按“复制”做一份自己的。"
+            "value": "内建模板不能修改。按“复制一份来改”，就能改段落、加自定义段落。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in templates can't be changed. Click Duplicate to Edit to change the sections or add custom ones."
           }
         }
       }
@@ -6499,6 +6839,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keep reading a little longer: KelNote needs at least 10 seconds of speech."
+          }
+        }
+      }
+    },
+    "再找不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再找不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find More to Confirm"
           }
         }
       }
@@ -7174,6 +7531,23 @@
         }
       }
     },
+    "刪除 %@ 的畫面？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除 %@ 的画面？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the screen at %@?"
+          }
+        }
+      }
+    },
     "刪除 key": {
       "extractionState": "manual",
       "localizations": {
@@ -7187,6 +7561,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除 key"
+          }
+        }
+      }
+    },
+    "刪除…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete…"
           }
         }
       }
@@ -7652,6 +8043,23 @@
         }
       }
     },
+    "剛允許的權限要重新打開拾音才會生效，錄完這場再重新打開。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刚允许的权限要重新打开拾音才会生效，录完这场再重新打开。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A newly granted permission takes effect after Shiyin reopens. Reopen it after this recording."
+          }
+        }
+      }
+    },
     "剩 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -7841,6 +8249,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開 KelNote、跳到那個時間點。"
+          }
+        }
+      }
+    },
+    "加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加进文本文件里的词（.txt、.csv），已经有的跳过，原本的词不会被删掉"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds the terms in a text file (.txt, .csv). Terms you already have are skipped, and none of your existing terms are removed"
           }
         }
       }
@@ -8489,6 +8914,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Undo Merge"
+          }
+        }
+      }
+    },
+    "取消定時停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消定时停止"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel Stop Timer"
+          }
+        }
+      }
+    },
+    "取消定時停止，照常錄下去": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消定时停止，照常录下去"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel the stop timer and keep recording"
           }
         }
       }
@@ -9315,6 +9774,23 @@
         }
       }
     },
+    "回到目前的版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回到目前的版本"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Current"
+          }
+        }
+      }
+    },
     "回到符合寬度": {
       "extractionState": "manual",
       "localizations": {
@@ -9464,6 +9940,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "回答待确认、修改"
+          }
+        }
+      }
+    },
+    "圖片和辨識出的文字都會刪掉。已經整理好的會議紀錄要重新整理才會拿掉這張的內容。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图片和识别出的文字都会删掉。已经整理好的会议记录要重新整理才会拿掉这张的内容。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The image and its recognized text will be deleted. Notes already written keep its content until you regenerate them."
           }
         }
       }
@@ -9883,6 +10376,35 @@
         }
       }
     },
+    "多找到 %lld 個不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "多找到 %lld 个不确定的地方"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Found %lld more thing to confirm"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Found %lld more things to confirm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "大力支持": {
       "extractionState": "manual",
       "localizations": {
@@ -10121,6 +10643,23 @@
         }
       }
     },
+    "存成文字檔，一行一個詞": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存成文本文件，一行一个词"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as a text file, one term per line"
+          }
+        }
+      }
+    },
     "存檔…": {
       "extractionState": "manual",
       "localizations": {
@@ -10202,6 +10741,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成后可以关掉这个窗口。"
+          }
+        }
+      }
+    },
+    "定時停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定时停止"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Timer"
+          }
+        }
+      }
+    },
+    "定時停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "定时停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a Stop Time"
           }
         }
       }
@@ -10614,6 +11187,23 @@
         }
       }
     },
+    "已刪除 %@ 的畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除 %@ 的画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted the screen at %@"
+          }
+        }
+      }
+    },
     "已刪除一條紀錄，按「編輯」旁的「復原上一版」可以還原": {
       "extractionState": "manual",
       "localizations": {
@@ -10627,6 +11217,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deleted the item. To bring it back, click Restore previous version next to Edit."
+          }
+        }
+      }
+    },
+    "已刪除的範本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除的模板"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted template"
           }
         }
       }
@@ -10661,6 +11268,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Line deleted. To undo, right-click in the transcript and choose Undo."
+          }
+        }
+      }
+    },
+    "已到設定的時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已到设置的时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's the time you set"
+          }
+        }
+      }
+    },
+    "已到設定的時間，%lld 秒後停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已到设置的时间，%lld 秒后停止录音"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "It's the time you set. Recording stops in %lld second"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "It's the time you set. Recording stops in %lld seconds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "已到設定的時間，自動停止錄音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已到设置的时间，自动停止录音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording stopped at the time you set"
+          }
+        }
+      }
+    },
+    "已加入 %@ 的畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入 %@ 的画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added a screen at %@"
           }
         }
       }
@@ -10736,6 +11423,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Added %1$lld terms; %2$lld were already in the glossary"
+          }
+        }
+      }
+    },
+    "已加入 %lld 張畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入 %lld 张画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld screens"
           }
         }
       }
@@ -10905,6 +11609,23 @@
         }
       }
     },
+    "已匯出 %lld 個詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导出 %lld 个词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported %lld terms"
+          }
+        }
+      }
+    },
     "已取消": {
       "extractionState": "manual",
       "localizations": {
@@ -11058,6 +11779,40 @@
         }
       }
     },
+    "已從檔案加入 %lld 個詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从文件加入 %lld 个词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld terms from the file"
+          }
+        }
+      }
+    },
+    "已從檔案加入 %lld 個詞彙，%lld 個已經有了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从文件加入 %lld 个词汇，%lld 个已经有了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld terms from the file; %lld were already in the glossary"
+          }
+        }
+      }
+    },
     "已復原：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -11071,6 +11826,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已撤销：%@"
+          }
+        }
+      }
+    },
+    "已截圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已截图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captured"
           }
         }
       }
@@ -11242,6 +12014,23 @@
         }
       }
     },
+    "已改到 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已改到 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved to %@"
+          }
+        }
+      }
+    },
     "已改成「%@」（原本是「%@」）": {
       "extractionState": "manual",
       "localizations": {
@@ -11289,6 +12078,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已改用系统默认的麦克风（%@），之后的录音也用系统默认"
+          }
+        }
+      }
+    },
+    "已改用這一版，原本的版本留在版本紀錄裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已改用这一版，原本的版本留在版本记录里"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switched to this version. The previous one is kept in Version History."
           }
         }
       }
@@ -11725,6 +12531,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已复制"
+          }
+        }
+      }
+    },
+    "已複製 %@ 的畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已复制 %@ 的画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied the screen at %@"
           }
         }
       }
@@ -12360,6 +13183,23 @@
         }
       }
     },
+    "待確認都處理完了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待确认都处理完了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All questions handled"
+          }
+        }
+      }
+    },
     "待辦": {
       "extractionState": "manual",
       "localizations": {
@@ -12549,6 +13389,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "从左边选一场会议"
+          }
+        }
+      }
+    },
+    "從檔案匯入…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文件导入…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import from File…"
           }
         }
       }
@@ -13189,6 +14046,40 @@
         }
       }
     },
+    "截下游標所在的螢幕（⇧⌘S；在其他 app 裡按 %@），整理時會一起參考": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截下光标所在的屏幕（⇧⌘S；在其他 app 里按 %@），整理时会一起参考"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture the screen under the pointer (⇧⌘S; %@ in other apps) to use when summarizing"
+          }
+        }
+      }
+    },
+    "截圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screenshot"
+          }
+        }
+      }
+    },
     "所有人": {
       "extractionState": "manual",
       "localizations": {
@@ -13751,6 +14642,23 @@
         }
       }
     },
+    "找不到這張畫面的檔案": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到这张画面的文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t find the file for this screen"
+          }
+        }
+      }
+    },
     "找不到音訊資料區段": {
       "extractionState": "manual",
       "localizations": {
@@ -13764,6 +14672,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "找不到音频数据区段"
+          }
+        }
+      }
+    },
+    "找不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding things to confirm"
           }
         }
       }
@@ -14608,6 +15533,23 @@
         }
       }
     },
+    "拾音詞彙表.txt": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音词汇表.txt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin Glossary.txt"
+          }
+        }
+      }
+    },
     "拾音認出這個人的聲音，自動帶入名字。不對的話點名字": {
       "extractionState": "manual",
       "localizations": {
@@ -14856,6 +15798,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "No change"
+          }
+        }
+      }
+    },
+    "指定時間…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定时间…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At a Specific Time…"
           }
         }
       }
@@ -15446,6 +16405,23 @@
         }
       }
     },
+    "搜尋逐字稿時跳到下一個、上一個（也可以按 Return、⇧Return）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索逐字稿时跳到下一个、上一个（也可以按 Return、⇧Return）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next or previous match when searching the transcript (Return and ⇧Return also work)"
+          }
+        }
+      }
+    },
     "搜尋逐字稿（在「逐字稿」）": {
       "extractionState": "manual",
       "localizations": {
@@ -15735,6 +16711,23 @@
         }
       }
     },
+    "改時間…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改时间…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Time…"
+          }
+        }
+      }
+    },
     "改用 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -15748,6 +16741,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "改用 %@"
+          }
+        }
+      }
+    },
+    "改用以前的版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改用以前的版本"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switched to an earlier version"
+          }
+        }
+      }
+    },
+    "改用這一版": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改用这一版"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use This Version"
+          }
+        }
+      }
+    },
+    "改這張畫面的時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改这张画面的时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change the Time of This Screen"
           }
         }
       }
@@ -15901,6 +16945,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "放进输入框，再自己补完"
+          }
+        }
+      }
+    },
+    "放開就加到 %@ 的畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放开就加到 %@ 的画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop to add as the screen at %@"
           }
         }
       }
@@ -16591,6 +17652,23 @@
         }
       }
     },
+    "整理時附上會議中的畫面（模型要能看圖）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理时附上会议中的画面（模型要能看图）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include meeting screens when summarizing (the model must support images)"
+          }
+        }
+      }
+    },
     "整理會議紀錄、提問時，文件讀出來的文字會一起送給整理工具，幫忙看懂討論、寫對數字和名稱。紀錄還是以會議中講的為準，用到文件的地方會註明出處，會議說的跟文件不一樣時會列成待確認。已經整理好的會議加了文件，按紀錄上方的「重新整理會議紀錄」。": {
       "extractionState": "manual",
       "localizations": {
@@ -16655,6 +17733,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "The numbers are calculated from your meetings. Press Refresh for written coaching."
+          }
+        }
+      }
+    },
+    "文件和畫面有變動，會議紀錄還沒用上。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档和画面有变动，会议记录还没用上。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents and screens changed; the notes don’t include them yet."
           }
         }
       }
@@ -17005,6 +18100,40 @@
         }
       }
     },
+    "明天 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明天 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomorrow %@"
+          }
+        }
+      }
+    },
+    "明天 %@ 自動停止錄音並轉錄（%@後）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明天 %@ 自动停止录音并转录（%@后）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording will stop and be transcribed tomorrow at %@ (in %@)."
+          }
+        }
+      }
+    },
     "是": {
       "extractionState": "manual",
       "localizations": {
@@ -17086,6 +18215,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "时间"
+          }
+        }
+      }
+    },
+    "時間到自動停止錄音並轉錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间到自动停止录音并转录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop and transcribe the recording automatically at a set time"
           }
         }
       }
@@ -17188,6 +18334,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂停录音（⇧⌘P）"
+          }
+        }
+      }
+    },
+    "暫停麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause Microphone"
+          }
+        }
+      }
+    },
+    "暫停麥克風（只錄電腦聲音）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风（只录电脑声音）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause Microphone (Record Computer Audio Only)"
+          }
+        }
+      }
+    },
+    "暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风：只录电脑声音。用扬声器开会时避免录到回音，同一个房间的人说话也不会录到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause the microphone and record only computer audio. Avoids recording echo when the meeting plays through speakers; people talking in the same room won't be recorded either"
+          }
+        }
+      }
+    },
+    "暫停麥克風：只錄電腦聲音（⇧⌘M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风：只录电脑声音（⇧⌘M）。用扬声器开会时避免录到回音，同一个房间的人说话也不会录到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause the microphone and record only computer audio (⇧⌘M). Avoids recording echo when the meeting plays through speakers; people talking in the same room won't be recorded either"
           }
         }
       }
@@ -17733,6 +18947,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "会议中一起讨论的文档（演示文稿、规格书、报价单、白板照片）可以加进会议：会议标题下回纹针图标的菜单（还没有文档时写“加入文档”）选“加入文档…”，或把 PDF、Word、PowerPoint、图片拖进窗口。纯文本、Markdown 要从“加入文档…”选（拖进来的 txt 会当成逐字稿、md 会当成笔记）。"
+          }
+        }
+      }
+    },
+    "會議中的畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议中的画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screens"
           }
         }
       }
@@ -19070,6 +20301,57 @@
         }
       }
     },
+    "檔案太大：詞彙表的文字檔通常只有幾 KB": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件太大：词汇表的文本文件通常只有几 KB"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is too large. A glossary text file is usually only a few KB"
+          }
+        }
+      }
+    },
+    "檔案裡沒有詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件里没有词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file has no terms"
+          }
+        }
+      }
+    },
+    "檔案裡的 %lld 個詞彙都已經在詞彙表裡了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件里的 %lld 个词汇都已经在词汇表里了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All %lld terms in the file are already in the glossary"
+          }
+        }
+      }
+    },
     "檢查可能聽錯的字": {
       "extractionState": "manual",
       "localizations": {
@@ -19752,6 +21034,23 @@
         }
       }
     },
+    "正在看以前的版本：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在看以前的版本：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viewing an earlier version: %@"
+          }
+        }
+      }
+    },
     "正在算聲音特徵…第一次要先下載說話者辨識的模型": {
       "extractionState": "manual",
       "localizations": {
@@ -19884,6 +21183,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在读取文档…"
+          }
+        }
+      }
+    },
+    "正在讀取畫面上的字…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读取画面上的字…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading text on the screen…"
           }
         }
       }
@@ -20247,6 +21563,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "每个人都从他出现过的所有会议重新分析，用 %@ 每人呼叫一次，大约半分钟一位，在背景进行。你填的背景会保留。"
+          }
+        }
+      }
+    },
+    "每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列；負責人、期限這類待辦，請打開上面的「待辦」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个自定义段落是会议记录里的一节，整理工具照“要写什么”写成条列；负责人、期限这类待办，请打开上面的“待办”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each custom section becomes a section of the notes, written as a list following What to write. For action items with owners and due dates, turn on Action items above."
           }
         }
       }
@@ -20757,6 +22090,23 @@
         }
       }
     },
+    "沒有找到其他不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到其他不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found nothing else to confirm"
+          }
+        }
+      }
+    },
     "沒有找到相關的會議": {
       "extractionState": "manual",
       "localizations": {
@@ -20997,6 +22347,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't add to Reminders: %@"
+          }
+        }
+      }
+    },
+    "沒辦法存這張畫面：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没办法存这张画面：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save this screen: %@"
           }
         }
       }
@@ -21477,6 +22844,23 @@
         }
       }
     },
+    "版本紀錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version History"
+          }
+        }
+      }
+    },
     "狀態": {
       "extractionState": "manual",
       "localizations": {
@@ -21892,6 +23276,23 @@
         }
       }
     },
+    "用目前播放的位置": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用目前播放的位置"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Playback Position"
+          }
+        }
+      }
+    },
     "用詞修正": {
       "extractionState": "manual",
       "localizations": {
@@ -21973,6 +23374,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uses template"
+          }
+        }
+      }
+    },
+    "用預覽程式打開": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用预览程序打开"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Preview"
           }
         }
       }
@@ -22121,6 +23539,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "略过待确认"
+          }
+        }
+      }
+    },
+    "畫面": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen"
+          }
+        }
+      }
+    },
+    "畫面 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen %@"
+          }
+        }
+      }
+    },
+    "畫面上沒有辨識出文字": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面上没有识别出文字"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No text recognized"
+          }
+        }
+      }
+    },
+    "畫面會移到這個時間，整理會議紀錄時照新的時間對上逐字稿。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面会移到这个时间，整理会议记录时照新的时间对上逐字稿。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The screen moves to this time and is matched to the transcript at the new time when summarizing."
+          }
+        }
+      }
+    },
+    "畫面有變動，會議紀錄還沒用上。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面有变动，会议记录还没用上。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screens changed; the notes don’t include them yet."
           }
         }
       }
@@ -22422,6 +23925,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "直接修改会议记录，保存时会留一个版本"
+          }
+        }
+      }
+    },
+    "看以前的版本、改用某一版（換範本整理前的紀錄都在這裡）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看以前的版本、改用某一版（换模板整理前的记录都在这里）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View earlier versions or switch to one (notes from before you changed templates are kept here)"
           }
         }
       }
@@ -22795,6 +24315,23 @@
         }
       }
     },
+    "移除這個段落": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除这个段落"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove This Section"
+          }
+        }
+      }
+    },
     "稍後": {
       "extractionState": "manual",
       "localizations": {
@@ -22916,6 +24453,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "第一次錄音時會詢問；被拒絕的話到「系統設定 → 隱私權與安全性 → 麥克風」打開 KelNote"
+          }
+        }
+      }
+    },
+    "第一版": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一版"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First version"
           }
         }
       }
@@ -23075,6 +24629,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "範本、會議語言、大約幾個人。人多、吵雜或手機放在桌上錄音時，先告訴 KelNote 大約幾個人，說話者會分得比較準"
+          }
+        }
+      }
+    },
+    "範本名稱": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模板名称"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template name"
           }
         }
       }
@@ -23551,6 +25122,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Room given"
+          }
+        }
+      }
+    },
+    "給整理工具的其他要求，例如：金額、數字照原文寫。可以分行。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "给整理工具的其他要求，例如：金额、数字照原文写。可以分行。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anything else for the summarizer, for example: keep amounts and numbers as spoken. You can use several lines."
           }
         }
       }
@@ -24044,6 +25632,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "继续录音（⇧⌘P）"
+          }
+        }
+      }
+    },
+    "繼續錄麥克風": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续录麦克风"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume Microphone"
+          }
+        }
+      }
+    },
+    "繼續錄麥克風（⇧⌘M）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续录麦克风（⇧⌘M）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume microphone (⇧⌘M)"
           }
         }
       }
@@ -24576,6 +26198,40 @@
         }
       }
     },
+    "複製一份來改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制一份来改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate to Edit"
+          }
+        }
+      }
+    },
+    "複製圖片": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制图片"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Image"
+          }
+        }
+      }
+    },
     "複製心智圖（圖片）": {
       "extractionState": "manual",
       "localizations": {
@@ -24759,6 +26415,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "要停止录音吗？再 15 分钟没人说话会自动停止。"
+          }
+        }
+      }
+    },
+    "要允許拾音「錄製螢幕」才能截圖。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要允许拾音“录制屏幕”才能截图。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Shiyin to record the screen to take screenshots."
+          }
+        }
+      }
+    },
+    "要允許拾音「錄製螢幕」才能截圖。貼上、拖進來的圖片不需要這個權限。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要允许拾音“录制屏幕”才能截图。粘贴、拖进来的图片不需要这个权限。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Shiyin to record the screen to take screenshots. Pasted or dropped images don’t need this permission."
           }
         }
       }
@@ -25654,6 +27344,23 @@
         }
       }
     },
+    "說話者：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说话者：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers: %@"
+          }
+        }
+      }
+    },
     "請到「系統設定 → 隱私權與安全性 → 提醒事項」允許拾音，再按一次「加到提醒事項」。": {
       "extractionState": "manual",
       "localizations": {
@@ -25696,6 +27403,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "請到「系統設定 → 隱私權與安全性 → 麥克風」打開「KelNote」，再重新開始錄音。"
+          }
+        }
+      }
+    },
+    "請輸入像 12:34 或 1:02:03 的時間。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入像 12:34 或 1:02:03 的时间。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a time like 12:34 or 1:02:03."
+          }
+        }
+      }
+    },
+    "請輸入像 15:30 的時間。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入像 15:30 的时间。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a time like 15:30."
           }
         }
       }
@@ -25815,6 +27556,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Can’t read the recording"
+          }
+        }
+      }
+    },
+    "讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读不懂这个文件的文字编码，请另存成 UTF-8 的文本文件再导入"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read this file’s text encoding. Save it as a UTF-8 text file and import it again"
           }
         }
       }
@@ -26176,6 +27934,23 @@
         }
       }
     },
+    "超過會議的長度（%@）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超过会议的长度（%@）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Longer than the meeting (%@)."
+          }
+        }
+      }
+    },
     "趨勢": {
       "extractionState": "manual",
       "localizations": {
@@ -26291,6 +28066,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Go Here"
+          }
+        }
+      }
+    },
+    "輸入幾點幾分，到時間自動停止錄音並轉錄。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入几点几分，到时间自动停止录音并转录。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a time. Recording will stop and be transcribed then."
           }
         }
       }
@@ -26965,6 +28757,23 @@
         }
       }
     },
+    "這一版變成目前的會議紀錄，原本的留在版本紀錄裡，可以再換回來": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这一版变成目前的会议记录，原本的留在版本记录里，可以再换回来"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make this the current notes. The current notes are kept in Version History, so you can switch back."
+          }
+        }
+      }
+    },
     "這一頁還沒有內容。按「重新分析」用最新的分析方式整理。": {
       "extractionState": "manual",
       "localizations": {
@@ -27278,19 +29087,19 @@
         }
       }
     },
-    "這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。30 天內可以從「更多」還原。": {
+    "這句和之後的逐字稿、錄音、標記重點、畫面變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。30 天內可以從「更多」還原。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这句和之后的逐字稿、录音、标记重点变成新的一场，前面的留在这场；我的笔记、参考文档、提问留在这场。两场都要重新整理会议记录。30 天内可以从“更多”还原。"
+            "value": "这句和之后的逐字稿、录音、标记重点、画面变成新的一场，前面的留在这场；我的笔记、参考文档、提问留在这场。两场都要重新整理会议记录。30 天内可以从“更多”还原。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This line and everything after it in the transcript, recording and bookmarks becomes a new meeting; everything before stays here, along with My Notes, documents and questions. Both meetings need their notes rewritten. You can restore it from More within 30 days."
+            "value": "This line and everything after it in the transcript, recording, bookmarks and screens becomes a new meeting; everything before stays here, along with My Notes, documents and questions. Both meetings need their notes rewritten. You can restore it from More within 30 days."
           }
         }
       }
@@ -27958,6 +29767,23 @@
         }
       }
     },
+    "這張畫面已經加過了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这张画面已经加过了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This screen was already added"
+          }
+        }
+      }
+    },
     "這是 %@ 附的 codex，也可以另外安裝 Codex CLI（npm install -g @openai/codex）再試。": {
       "extractionState": "manual",
       "localizations": {
@@ -28107,6 +29933,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last 5 meetings of this type against the 5 before. Green band = target. Click a dot to open that meeting."
+          }
+        }
+      }
+    },
+    "這組按鍵被別的 app 佔用了，可以用錄音島或錄音畫面上的「截圖」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这组按键被别的 app 占用了，可以用录音岛或录音画面上的“截图”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another app is using this shortcut. Use Screenshot on the recording island or the recording view."
           }
         }
       }
@@ -28548,6 +30391,35 @@
         }
       }
     },
+    "還有 %lld 條，在「紀錄」分頁的這個議題裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还有 %lld 条，在“记录”标签页的这个议题里"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more in this topic on the Notes tab"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more in this topic on the Notes tab"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "還有 %lld 題待確認": {
       "extractionState": "manual",
       "localizations": {
@@ -28963,6 +30835,23 @@
         }
       }
     },
+    "還沒有會議紀錄，整理完才能再找不確定的地方": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有会议记录，整理完才能再找不确定的地方"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no notes yet. Once the notes are summarized, you can look for more to confirm."
+          }
+        }
+      }
+    },
     "還沒有正式逐字稿，轉錄完成後再試一次": {
       "extractionState": "manual",
       "localizations": {
@@ -28976,6 +30865,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有正式逐字稿，转录完成后再试一次"
+          }
+        }
+      }
+    },
+    "還沒有自訂段落。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有自定义段落。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No custom sections yet."
           }
         }
       }
@@ -29010,6 +30916,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有词汇。用词修正时勾选“加进词汇表”也会加到这里。"
+          }
+        }
+      }
+    },
+    "還沒有詞彙可以匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有词汇可以导出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no terms to export yet"
           }
         }
       }
@@ -29853,6 +31776,23 @@
         }
       }
     },
+    "錄一場不會一直守著的線上分享、講座時，按錄音畫面計時旁邊的「定時停止」，選 1 小時後、2 小時後或「指定時間…」（例如 16:00），時間到拾音會自己停止並轉錄，暫停也照算。選單列的拾音圖示、「檔案」選單也可以設定或取消。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录一场不会一直守着的线上分享、讲座时，按录音画面计时旁边的“定时停止”，选 1 小时后、2 小时后或“指定时间…”（例如 16:00），时间到拾音会自己停止并转录，暂停也照算。菜单栏的拾音图标、“文件”菜单也可以设置或取消。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you record an online talk or lecture you won't be watching the whole time, click Stop Timer next to the clock on the recording screen and choose In 1 Hour, In 2 Hours, or At a Specific Time… (for example 16:00). Shiyin stops and transcribes the recording at that time, even while paused. You can also set or cancel it from the Shiyin icon in the menu bar or the File menu."
+          }
+        }
+      }
+    },
     "錄一段你自己的聲音，第一場會議就認得你。": {
       "extractionState": "manual",
       "localizations": {
@@ -30199,6 +32139,23 @@
         }
       }
     },
+    "錄音中按 %@ 截圖（在其他 app 裡也能用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中按 %@ 截图（在其他 app 里也能用）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press %@ while recording to take a screenshot (works in other apps)"
+          }
+        }
+      }
+    },
     "錄音中按 %@ 標記重點（在其他 app 裡也能用）": {
       "extractionState": "manual",
       "localizations": {
@@ -30422,6 +32379,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音按钮旁的箭头、录音画面也可以换麦克风。蓝牙耳机连着时，系统默认可能会自动变成耳机的麦克风，现场会议请选这台 Mac 的麦克风。"
+          }
+        }
+      }
+    },
+    "錄音時間": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording time"
           }
         }
       }
@@ -31005,6 +32979,40 @@
         }
       }
     },
+    "關掉「議題詳細」時，紀錄裡沒有議題：播放條上沒有議題帶，心智圖改用摘要。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关掉“议题详细”时，记录里没有议题：播放条上没有议题带，心智图改用摘要。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With Topics off, the notes have no topics: the player has no topic band and the mind map uses the summary instead."
+          }
+        }
+      }
+    },
+    "關掉時只送畫面上辨識出的文字。模型不能看圖時拾音會自動改成只送文字。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关掉时只送画面上识别出的文字。模型不能看图时拾音会自动改成只送文字。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When off, only the text recognized on screens is sent. If the model can’t read images, Shiyin automatically sends text only."
+          }
+        }
+      }
+    },
     "關閉": {
       "extractionState": "manual",
       "localizations": {
@@ -31459,6 +33467,23 @@
         }
       }
     },
+    "麥克風已暫停": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风已暂停"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone paused"
+          }
+        }
+      }
+    },
     "麥克風幾乎收不到聲音：%@ 可能正在用這支麥克風做回音消除（例如用 Safari 開的 Google Meet），拾音收不到你的聲音。請改用 Chrome 開會，或讓會議和拾音用不同的麥克風。": {
       "extractionState": "manual",
       "localizations": {
@@ -31624,6 +33649,23 @@
         }
       }
     },
+    "麥克風被 Mac 上的通話（iPhone 轉接的電話、FaceTime）佔住，拾音收不到你的聲音。請讓通話用 AirPods 或其他耳機的麥克風，或在 iPhone 上接聽。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风被 Mac 上的通话（iPhone 转接的电话、FaceTime）占住，拾音收不到你的声音。请让通话用 AirPods 或其他耳机的麦克风，或在 iPhone 上接听。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A call on this Mac (an iPhone call or FaceTime) is using the microphone, so Shiyin can’t hear you. Use AirPods or another headset’s microphone for the call, or answer it on your iPhone."
+          }
+        }
+      }
+    },
     "麥克風音量": {
       "extractionState": "manual",
       "localizations": {
@@ -31705,6 +33747,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "点一下帮这位说话者改名"
+          }
+        }
+      }
+    },
+    "點一下從這裡播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点一下从这里播放"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to play from here"
           }
         }
       }

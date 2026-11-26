@@ -1,3 +1,4 @@
+using System.Text;
 using Shiyin.Data;
 using Shiyin.IO;
 using Shiyin.LLM;
@@ -69,6 +70,8 @@ public sealed partial class AppController
     public event Action<string>? Error;
     /// <summary>沒人說話太久，自動停止了錄音（R48.2）：App 送通知（會議 id、標題）</summary>
     public event Action<long, string>? IdleStopped;
+    /// <summary>到了定時停止的時間，自動停止了（R110.3）：會議 id、標題</summary>
+    public event Action<long, string>? TimerStopped;
     /// <summary>資料改了：會議 id（null 是列表也要重讀）</summary>
     public event Action<long?>? Changed;
     /// <summary>要顯示這場會議（匯入完、錄音開始、點了通知）</summary>
@@ -79,6 +82,10 @@ public sealed partial class AppController
     public event Action<long>? ReleasingAudio;
     /// <summary>錄音檔換了（編輯會議、分成兩場、還原，design-windows §11.40）：畫面重新載入播放器</summary>
     public event Action<long>? AudioReplaced;
+    /// <summary>再找不確定的地方做完（M§88）：會議 id、多找到幾題</summary>
+    public event Action<long, int>? MoreReviewFound;
+    /// <summary>這次選取期間送出過待確認的會議（R114.5、M§88）：題目都處理完時紀錄頂部顯示「再找不確定的地方」；App 換會議時清掉</summary>
+    public HashSet<long> ReviewFinished { get; } = [];
 
     /// <summary>正在匯入的檔案數，側邊欄下方顯示（M§21.13、R20.4）</summary>
     public int ImportingCount => Volatile.Read(ref importing);
@@ -113,6 +120,12 @@ public sealed partial class AppController
         runner.Changed += () => Changed?.Invoke(null);
         // 自動放進資料夾了（M§72）
         runner.Organized += Organized;
+        // 再找不確定的地方做完（M§88）：找到時 App 展開待確認
+        runner.MoreReviewFound += (id, count) =>
+        {
+            Notice?.Invoke(count > 0 ? L.F("多找到 %lld 個不確定的地方", count) : L.T("沒有找到其他不確定的地方"));
+            MoreReviewFound?.Invoke(id, count);
+        };
     }
 
     /// <summary>啟動時：內建範本、清掉上次的暫存、過期的垃圾桶、復原錄音、開始工作佇列（同 Mac 的 AppModel.start）</summary>
@@ -441,6 +454,7 @@ public sealed partial class AppController
                 Db.Enqueue(result.MeetingId, JobKind.Transcribe, until is double u ? JobRunner.Encode(new TranscribePayload(u)) : null);
                 Usage?.Recorded(result.Duration);
                 if (result.IdleSince is not null) IdleStopped?.Invoke(result.MeetingId, meeting.DisplayTitle);
+                if (result.Scheduled) TimerStopped?.Invoke(result.MeetingId, meeting.DisplayTitle);
             }
             catch
             {
@@ -948,6 +962,30 @@ public sealed partial class AppController
         Runner.Wake();
     }
 
+    /// <summary>「改用這一版」（R115.3、M§89）：那一版變成目前的紀錄，原本的留成一版</summary>
+    public void UseNotesVersion(long id, long versionId)
+    {
+        if (!ReadyForAction(id)) return;
+        Perform(id, () => { if (Db.UseNotesVersion(id, versionId)) Notice?.Invoke(L.T("已改用這一版，原本的版本留在版本紀錄裡")); });
+    }
+
+    /// <summary>「再找不確定的地方」（R114、M§88）：整理工具再找一次要確認的地方，只加待確認，其他段落不動</summary>
+    public void FindMoreReview(long id)
+    {
+        if (!ReadyForAction(id)) return;
+        if (Db.Meeting(id)?.DecodedNotes is null) { Notice?.Invoke(L.T("還沒有會議紀錄，整理完才能再找不確定的地方")); return; }
+        if (Settings.Provider == LLMProvider.None)
+        {
+            Error?.Invoke(Settings.NeedsProviderSetup ? L.T("還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : L.T("整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API"));
+            return;
+        }
+        if (Settings.SummarizerProblem is { } problem) { Error?.Invoke(problem.Message); return; }
+        ReviewFinished.Remove(id);
+        Perform(id, () => Db.Enqueue(id, JobKind.Summarize, JobRunner.Encode(new SummarizePayload(Review: true))));
+        Runner.Wake();
+    }
+
     // MARK: 參考文件（R61，M§39.4）
 
     /// <summary>拖進主視窗的文件：加到選取中的會議（R61.1）</summary>
@@ -1083,6 +1121,8 @@ public sealed partial class AppController
             if (answered.Count > 0) Db.Enqueue(id, JobKind.Revise, JobRunner.Encode(new RevisePayload(answered)));
         });
         Runner.Wake();
+        // 題目都處理完時紀錄頂部可以接著再找（R114.5）；還有題目、校稿還沒好時畫面不顯示
+        ReviewFinished.Add(id);
         Usage?.Reviewed(answered.Count, confirmed.Count, skipped);   // 匿名統計（R41.7）：只記題數
         return true;
     }
@@ -1193,6 +1233,50 @@ public sealed partial class AppController
         else if (terms.Count > 1)
             message = added == terms.Count ? L.F("已加入 %lld 個詞彙", (long)added) : L.F("已加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
         if (message is not null) Notice?.Invoke(message);
+        return message;
+    }
+
+    /// <summary>
+    /// 詞彙表匯出成文字檔（R117.1、M§91）：只有自己的詞，順序同畫面。成功時 Notice、失敗時 Error，回傳同一句（設定頁寫在輸入框下面）
+    /// </summary>
+    public string ExportGlossary(string path)
+    {
+        var terms = Db.Glossary().Select(t => t.Term).ToList();
+        try { File.WriteAllText(path, GlossaryFile.Export(terms), new UTF8Encoding(false)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Error?.Invoke(e.Message);
+            return e.Message;
+        }
+        var message = L.F("已匯出 %lld 個詞彙", (long)terms.Count);
+        Notice?.Invoke(message);
+        return message;
+    }
+
+    /// <summary>從文字檔匯入詞彙（R117.2、R117.3，同 Mac 的 importGlossary）：一律合併，已經有的跳過，不刪原本的</summary>
+    public string ImportGlossary(string path)
+    {
+        string Fail(string message)
+        {
+            Error?.Invoke(message);
+            return message;
+        }
+        byte[] data;
+        try
+        {
+            if (new FileInfo(path).Length > GlossaryFile.MaxBytes) return Fail(L.T("檔案太大：詞彙表的文字檔通常只有幾 KB"));
+            data = File.ReadAllBytes(path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return Fail(e.Message); }
+        if (GlossaryFile.Decode(data) is not { } text) return Fail(L.T("讀不懂這個檔案的文字編碼，請另存成 UTF-8 的文字檔再匯入"));
+        var terms = GlossaryFile.TermsFromFile(text);
+        if (terms.Count == 0) return Fail(L.T("檔案裡沒有詞彙"));
+        var added = 0;
+        Perform(null, () => added = Db.AddTerms(terms));
+        var message = added == 0 ? L.F("檔案裡的 %lld 個詞彙都已經在詞彙表裡了", (long)terms.Count)
+            : added == terms.Count ? L.F("已從檔案加入 %lld 個詞彙", (long)added)
+            : L.F("已從檔案加入 %lld 個詞彙，%lld 個已經有了", (long)added, (long)(terms.Count - added));
+        Notice?.Invoke(message);
         return message;
     }
 

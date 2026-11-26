@@ -487,6 +487,31 @@ struct MenuAnchor: NSViewRepresentable {
     func updateNSView(_ view: NSView, context: Context) { box.view = view }
 }
 
+/// 有字的按鈕打開自己畫的選單，掛在按鈕下面（紀錄分頁的「版本紀錄」，design §89）；樣子同旁邊的「復原上一版」「編輯」
+struct FloatingMenuLabelButton: View {
+    let title: String
+    let systemImage: String
+    var help: String?
+    /// 窄的時候只留圖示（fork）
+    var compact = false
+    let entries: () -> [MenuEntry]
+    @State private var box = MenuAnchorBox()
+
+    var body: some View {
+        Button {
+            if let view = box.view { FloatingMenuController.shared.show(entries(), below: view) }
+        } label: {
+            Group {
+                if compact { Image(systemName: systemImage) } else { Label(title, systemImage: systemImage) }
+            }
+            .background(MenuAnchor(box: box))
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(Color.celadon)
+        .help(help ?? "")
+    }
+}
+
 /// 列右邊的「⋯」：打開自己畫的選單，掛在按鈕下面
 struct FloatingMenuButton: View {
     let entries: () -> [MenuEntry]
@@ -584,5 +609,19 @@ private struct FloatingRowMenuModifier: ViewModifier {
                 guard let window = NSApp.keyWindow else { return }
                 FloatingMenuController.shared.show(entries(), at: NSEvent.mouseLocation, from: window)
             }
+    }
+}
+
+extension View {
+    /// 浮出的面板的外框（自己畫的選單、議題帶的卡片，design §79、§87）：圓角 14、深色 white 0.17／淺色白色、細框、陰影
+    func floatingPanelChrome() -> some View {
+        background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: NSColor(name: nil) { appearance in
+                    appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.17, alpha: 1) : NSColor(white: 1, alpha: 1)
+                }))
+                .shadow(color: .black.opacity(0.28), radius: 10, y: 4)
+        }
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
     }
 }

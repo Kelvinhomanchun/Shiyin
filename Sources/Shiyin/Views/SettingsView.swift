@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// 設定的每一頁（R108、design §82、D184）：側欄的順序、分組、圖示和顏色、搜尋用的關鍵字
 enum SettingsPage: String, CaseIterable, Identifiable {
@@ -200,12 +201,17 @@ struct SettingsIcon: View {
 /// 右邊的那一頁：原本的段落照搬（R108.6，項目和存的鍵都沒變）
 struct SettingsPageView: View {
     let page: SettingsPage
+    /// 範本頁外層 Form 的上下留白（量的：再多會出現外層的捲軸）
+    static let templatePageInset: CGFloat = 60
 
     var body: some View {
         switch page {
         case .provider: ProviderSettings()
         case .templates:
-            Form { Section { TemplateSettings().frame(minHeight: 460) } }.formStyle(.grouped)
+            // 高度跟著視窗（R112.5）：減掉外層 Form 的上下留白，最少 460（原本固定最少 460，編輯區在小框裡捲）
+            GeometryReader { page in
+                Form { Section { TemplateSettings().frame(height: max(460, page.size.height - Self.templatePageInset)) } }.formStyle(.grouped)
+            }
         case .recording: RecordingSettings(part: .recording)
         case .transcription: RecordingSettings(part: .transcription)
         case .models: ModelsSettings()
@@ -222,6 +228,7 @@ struct SettingsPageView: View {
 // MARK: 整理工具與金鑰（R6.1）
 
 struct ProviderSettings: View {
+    @AppStorage(AppSettings.compatibleSendsImagesKey) private var compatibleSendsImages = false
     @Environment(AppModel.self) private var model
     @AppStorage(AppSettings.providerKey) private var storedProvider = ""
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
@@ -329,6 +336,10 @@ struct ProviderSettings: View {
                 if !baseURL.trimmingCharacters(in: .whitespaces).isEmpty && OpenAICompatibleAPI.normalized(baseURL) == nil {
                     Text("網址要以 http:// 或 https:// 開頭").font(.caption).foregroundStyle(.red)
                 }
+                // 會議中的畫面（design §83.5、D188）：很多本機模型不能看圖，預設只送畫面上辨識出的文字
+                Toggle("整理時附上會議中的畫面（模型要能看圖）", isOn: $compatibleSendsImages)
+                Text("關掉時只送畫面上辨識出的文字。模型不能看圖時拾音會自動改成只送文字。")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             // 公司：模型由公司的後台決定，這裡只顯示（R51.1）
             if current == .enterprise && EnterpriseServer.shared.isSignedIn && EnterpriseServer.shared.account?.llm == true {
@@ -763,11 +774,40 @@ struct TemplateSettings: View {
 
     @ViewBuilder
     private var editor: some View {
-        if let template = model.templates.first(where: { $0.id == selection }), let binding = Binding($draft) {
+        if let template = model.templates.first(where: { $0.id == selection }), let shown = draft {
+            // 不用 Binding($draft)：點清單的空白處清掉選取時 draft 先變 nil，還在畫面上的多行輸入框更新綁定時
+            // 會強制解開而當掉（2026-11-25 驗 design §86 時發現）
+            let binding = Binding<TemplateDefinition>(get: { draft ?? shown }, set: { draft = $0 })
+            // 欄位的名稱寫在框的上面、字靠左（design §86、R112.2）：不用 Form 預設的「左邊標籤、字靠右」
             Form {
-                TextField("名稱", text: $draftName).disabled(template.builtin)
-                TextField("用途說明", text: binding.description, axis: .vertical).disabled(template.builtin)
-                Section("要產生的段落") {
+                // 內建範本不能改：說明放最上面、給一顆複製的按鈕（R112.1；原本在最下面，要捲才看得到）
+                if template.builtin {
+                    Section {
+                        HStack(alignment: .center, spacing: 10) {
+                            Image(systemName: "lock").foregroundStyle(.secondary).accessibilityHidden(true)
+                            Text("內建範本不能修改。按「複製一份來改」，就能改段落、加自訂段落。")
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
+                            Button("複製一份來改") { create(from: template, definition: draft) }
+                                .buttonStyle(SheetPillButtonStyle(.secondary, compact: true))
+                        }
+                    }
+                }
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        SheetFieldLabel(String(localized: "名稱"))
+                        // 分組的 Form 裡單行輸入框的字預設靠右
+                        TextField("", text: $draftName, prompt: Text("範本名稱")).textFieldStyle(.sheetCompact)
+                            .labelsHidden().multilineTextAlignment(.leading)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        SheetFieldLabel(String(localized: "用途說明"))
+                        SheetTextEditor(placeholder: String(localized: "例如：週會、專案會議用"), text: binding.description, height: 54)
+                    }
+                }
+                .disabled(template.builtin)
+                Section {
                     ForEach(TemplateDefinition.builtinSections, id: \.id) { section in
                         Toggle(section.label, isOn: Binding(
                             get: { binding.wrappedValue.sections.contains(section.id) },
@@ -776,28 +816,52 @@ struct TemplateSettings: View {
                                 else { binding.wrappedValue.sections.removeAll { $0 == section.id } }
                             }))
                     }
+                } header: {
+                    Text("要產生的段落")
+                } footer: {
+                    Text("關掉「議題詳細」時，紀錄裡沒有議題：播放條上沒有議題帶，心智圖改用摘要。")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .disabled(template.builtin)
-                Section("自訂段落") {
+                Section {
+                    if binding.wrappedValue.custom.isEmpty {
+                        Text("還沒有自訂段落。").foregroundStyle(.secondary)
+                    }
                     ForEach(binding.wrappedValue.custom.indices, id: \.self) { i in
                         let custom = binding.custom.safe(i, fallback: .init(title: "", instruction: ""))
-                        HStack(alignment: .top) {
-                            VStack {
-                                TextField("段落名稱", text: custom.title)
-                                TextField("要寫什麼", text: custom.instruction, axis: .vertical)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                SheetFieldLabel(String(localized: "段落名稱"))
+                                Spacer()
+                                Button { binding.custom.remove(i) } label: { Image(systemName: "trash") }
+                                    .buttonStyle(.borderless)
+                                    .foregroundStyle(.secondary)
+                                    .help("移除這個段落")
+                                    .accessibilityLabel("移除這個段落")
                             }
-                            Button { binding.custom.remove(i) } label: { Image(systemName: "trash") }
-                                .buttonStyle(.borderless)
+                            TextField("", text: custom.title, prompt: Text("例如：風險")).textFieldStyle(.sheetCompact)
+                                .labelsHidden().multilineTextAlignment(.leading)
+                            SheetFieldLabel(String(localized: "要寫什麼")).padding(.top, 4)
+                            SheetTextEditor(placeholder: String(localized: "例如：列出討論中提到的風險、負責人和期限。可以分行，用 - 條列。"),
+                                            text: custom.instruction)
                         }
+                        .padding(.vertical, 4)
                     }
                     Button("新增自訂段落", systemImage: "plus") { binding.wrappedValue.custom.append(.init(title: "", instruction: "")) }
+                } header: {
+                    Text("自訂段落")
+                } footer: {
+                    Text("每個自訂段落是會議紀錄裡的一節，整理工具照「要寫什麼」寫成條列；負責人、期限這類待辦，請打開上面的「待辦」。")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .disabled(template.builtin)
-                TextField("額外指示（選填）", text: binding.instruction, axis: .vertical).disabled(template.builtin)
+                Section("額外指示（選填）") {
+                    SheetTextEditor(placeholder: String(localized: "給整理工具的其他要求，例如：金額、數字照原文寫。可以分行。"), text: binding.instruction)
+                }
+                .disabled(template.builtin)
                 HStack {
-                    if template.builtin {
-                        Text("內建範本不能修改，可以按「複製」做一份自己的。").font(.caption).foregroundStyle(.secondary)
-                    }
                     Spacer()
                     Button("設為預設範本") { defaultTemplate = template.id }.disabled(defaultTemplate == template.id)
                     if !template.builtin {
@@ -845,7 +909,8 @@ struct TemplateSettings: View {
             return template.builtin && MeetingLanguage.simplifiedInterface ? definition.mappingText(ChineseScript.toSimplifiedUI) : definition
         }
         let definition = edited ?? shown
-            ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems"], custom: [], instruction: "")
+            // 新範本預設有議題（R113.1）：沒有議題時播放條上沒有議題帶
+            ?? TemplateDefinition(description: "", sections: ["summary", "decisions", "actionItems", "topics"], custom: [], instruction: "")
         model.saveTemplate(TemplateRecord(id: id, name: source.map { String(localized: "\($0.displayName)（副本）") } ?? String(localized: "新範本"), builtin: false,
                                           definition: definition.jsonString()))
         selection = id
@@ -1082,6 +1147,16 @@ struct GlossarySettings: View {
                 .onSubmit(add)
             Button("新增", action: add).disabled(newTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+        // 匯入、匯出（R117、design §91）：匯入一律合併
+        HStack(spacing: 14) {
+            Button("從檔案匯入…", action: importFile).buttonStyle(.link)
+                .help("加進文字檔裡的詞（.txt、.csv），已經有的跳過，原本的詞不會被刪掉")
+            Button("匯出…", action: exportFile).buttonStyle(.link)
+                .disabled(model.glossary.isEmpty)
+                .help(model.glossary.isEmpty ? String(localized: "還沒有詞彙可以匯出") : String(localized: "存成文字檔，一行一個詞"))
+            Spacer()
+        }
+        .font(.callout)
         // 詞彙表建議（design §17.5）：最多 12 個
         if !model.glossarySuggestions.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
@@ -1186,6 +1261,22 @@ struct GlossarySettings: View {
         newTerm = ""
     }
 
+    private func importFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.plainText, .commaSeparatedText, .tabSeparatedText]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.importGlossary(from: url)
+    }
+
+    private func exportFile() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = String(localized: "拾音詞彙表.txt")
+        panel.allowedContentTypes = [.plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.exportGlossary(to: url)
+    }
+
     private func startEditing(_ term: GlossaryTerm) {
         termText = term.term
         editingTerm = term.id
@@ -1248,6 +1339,7 @@ struct RecordingSettings: View {
     @AppStorage(AppSettings.recordingIslandKey) private var recordingIsland = true
     @AppStorage(AppSettings.idleStopKey) private var idleStop = true
     @AppStorage(AppSettings.bookmarkHotKeyKey) private var bookmarkHotKey = true
+    @AppStorage(AppSettings.screenshotHotKeyKey) private var screenshotHotKey = true
     @State private var mutedApps: [String] = []
     @State private var hotKeyFailed = false
 
@@ -1324,6 +1416,15 @@ struct RecordingSettings: View {
                 .onChange(of: bookmarkHotKey) { _, enabled in
                     GlobalHotKey.shared.setBookmarkEnabled(enabled && model.recorder.isRecording)
                 }
+            // 會議中的畫面（R109.1、design §83.2）
+            Toggle("錄音中按 \(GlobalHotKey.screenshotDisplay) 截圖（在其他 app 裡也能用）", isOn: $screenshotHotKey)
+                .onChange(of: screenshotHotKey) { _, enabled in
+                    GlobalHotKey.shared.setScreenshotEnabled(enabled && model.recorder.isRecording)
+                }
+            if screenshotHotKey && model.recorder.isRecording && !GlobalHotKey.shared.isScreenshotRegistered {
+                Text("這組按鍵被別的 app 佔用了，可以用錄音島或錄音畫面上的「截圖」。")
+                    .font(.caption).foregroundStyle(.red)
+            }
         }
     }
 

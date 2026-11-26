@@ -27,6 +27,8 @@ enum AppSettings {
     static let voiceprintsKey = "voiceprints"
     static let meetingDetectionKey = "meetingDetection"
     static let bookmarkHotKeyKey = "bookmarkHotKey"
+    static let screenshotHotKeyKey = "screenshotHotKey"
+    static let compatibleSendsImagesKey = "compatibleSendsImages"
     static let idleStopKey = "idleStop"
     static let textSizeKey = "contentTextSize"   // 會議內容的文字大小，−1～5，0 是 100%（design §38.5）
     static let notesViewKey = "notesView"   // 紀錄分頁：list（條列）／mindMap（心智圖，design §42.4）
@@ -129,6 +131,10 @@ enum AppSettings {
     static var hideFromScreenSharing: Bool { flag(hideFromScreenSharingKey, default: false) }
     /// 錄音中按 ⌃⌥⌘B 標記重點（design §21.10、R19.5）
     static var bookmarkHotKey: Bool { flag(bookmarkHotKeyKey, default: true) }
+    /// 錄音中按 ⌃⌥⌘S 截圖（R109.1、design §83.2）
+    static var screenshotHotKey: Bool { flag(screenshotHotKeyKey, default: true) }
+    /// OpenAI 相容 API 整理時附上會議中的畫面（design §83.5），預設關
+    static var compatibleSendsImages: Bool { flag(compatibleSendsImagesKey, default: false) }
     /// 很久沒人說話時提醒，30 分鐘後自動停止（design §35、R48.5）
     static var idleStop: Bool { flag(idleStopKey, default: true) }
     /// 正式轉錄用 macOS 內建辨識（design §6.2.1）
@@ -182,27 +188,31 @@ struct RevisePayload: Codable {
     }
 }
 
-/// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）；people 是只補上每個人的重點，其他段落不動（design §66）
+/// 整理工作的 payload：draft 是用即時逐字稿整理草稿（design §21.3）；people 是只補上每個人的重點，其他段落不動（design §66）；
+/// review 是再找不確定的地方，只加待確認（design §88）
 struct SummarizePayload: Codable {
     var draft = false
     var people = false
+    var review = false
 
-    init(draft: Bool = false, people: Bool = false) { (self.draft, self.people) = (draft, people) }
+    init(draft: Bool = false, people: Bool = false, review: Bool = false) { (self.draft, self.people, self.review) = (draft, people, review) }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         draft = (try? c.decode(Bool.self, forKey: .draft)) ?? false
         people = (try? c.decode(Bool.self, forKey: .people)) ?? false
+        review = (try? c.decode(Bool.self, forKey: .review)) ?? false
     }
 
-    /// people 是 false 時不寫：草稿的 payload 跟以前一字不差
+    /// people、review 是 false 時不寫：草稿的 payload 跟以前一字不差
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(draft, forKey: .draft)
         if people { try c.encode(true, forKey: .people) }
+        if review { try c.encode(true, forKey: .review) }
     }
 
-    private enum CodingKeys: String, CodingKey { case draft, people }
+    private enum CodingKeys: String, CodingKey { case draft, people, review }
 }
 
 /// 轉錄工作的 payload（design §35.3）：until 是只轉錄到第幾秒（沒人說話太久而自動停止的錄音）；
@@ -252,6 +262,8 @@ final class JobRunner {
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
     /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
     @ObservationIgnored var onRediarized: ((Int64, Result<Int, Error>) -> Void)?
+    /// 再找不確定的地方做完：會議 id、多找到幾題（design §88）
+    @ObservationIgnored var onMoreReview: ((Int64, Int) -> Void)?
 
     /// 使用者按了「改在這台電腦轉錄」的工作（R50.5）：只在記憶體，app 重開後照設定
     @ObservationIgnored private var localJobs: Set<Int64> = []
@@ -343,7 +355,7 @@ final class JobRunner {
             case .transcribe: try await transcribe(job, lane: lane)
             case .summarize:
                 let payload = (try? JSONDecoder().decode(SummarizePayload.self, from: Data((job.payload ?? "{}").utf8))) ?? SummarizePayload()
-                notify = try await summarize(job, lane: lane, answers: nil, draft: payload.draft, peopleOnly: payload.people)
+                notify = try await summarize(job, lane: lane, answers: nil, draft: payload.draft, peopleOnly: payload.people, review: payload.review)
             case .revise:
                 let payload = try JSONDecoder().decode(RevisePayload.self, from: Data((job.payload ?? "{}").utf8))
                 notify = try await summarize(job, lane: lane, answers: payload.answers, refine: payload.instruction.map { ($0, payload.focus) })
@@ -1015,7 +1027,7 @@ final class JobRunner {
 
     /// 回傳要不要發通知：草稿沒做（正式逐字稿已經好了）、正式版取代了草稿時不發
     private func summarize(_ job: Job, lane: JobLane, answers: [ReviewAnswer]?, draft: Bool = false, peopleOnly: Bool = false,
-                           refine: (instruction: String, focus: String?)? = nil) async throws -> Bool {
+                           refine: (instruction: String, focus: String?)? = nil, review: Bool = false) async throws -> Bool {
         guard let meeting = try db.meeting(job.meetingId) else { return false }
         // 草稿（design §21.3）：正式逐字稿已經好了就不做（短的會議轉錄比較快）
         if try draft && !db.segments(job.meetingId).isEmpty { return false }
@@ -1026,7 +1038,8 @@ final class JobRunner {
                 : String(localized: "整理工具設定為「不整理」，請到設定改成 Claude、Codex 或 API"))
         }
         running[lane]?.provider = provider
-        running[lane]?.stage = draft ? String(localized: "整理草稿") : answers == nil ? String(localized: "整理") : String(localized: "校稿")
+        running[lane]?.stage = draft ? String(localized: "整理草稿") : review ? String(localized: "找不確定的地方")
+            : answers == nil ? String(localized: "整理") : String(localized: "校稿")
         let segments = try db.segments(job.meetingId, kind: draft ? "live" : "final")
         guard !segments.isEmpty || !meeting.userNotes.isEmpty else { throw LLMError.failed(String(localized: "還沒有逐字稿，請先完成轉錄")) }
         let templates = try db.templates()
@@ -1038,12 +1051,19 @@ final class JobRunner {
             guard meeting.decodedNotes != nil else { return false }
             definition = TemplateDefinition(description: definition.description, sections: ["people"], custom: [], instruction: definition.instruction)
         }
+        // 再找不確定的地方（design §88）：範本不要任何段落，只剩待確認
+        if review {
+            guard meeting.decodedNotes != nil else { return false }
+            definition = TemplateDefinition(description: definition.description, sections: [], custom: [], instruction: definition.instruction)
+        }
+        let asked = review ? try db.askedReviewQuestions(job.meetingId) : []
         let context = NotesContext(
             meeting: meeting, segments: segments,
             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }),
             bookmarks: try db.bookmarks(job.meetingId), glossary: try glossaryTerms(),
             template: definition,
-            documents: try db.documents(job.meetingId).map(DocumentText.init))
+            documents: try db.documents(job.meetingId).map(DocumentText.init),
+            screens: try db.screens(job.meetingId).map(ScreenText.init))
         let prompt: String
         if let refine {
             guard let notes = meeting.decodedNotes else { return false }
@@ -1051,12 +1071,19 @@ final class JobRunner {
         } else if let answers {
             guard let notes = meeting.decodedNotes else { return false }
             prompt = NotesPrompt.revise(context, notes: notes, answers: answers)
+        } else if review, let notes = meeting.decodedNotes {
+            prompt = NotesPrompt.moreReview(context, notes: notes, asked: asked)
         } else {
             prompt = NotesPrompt.summarize(context)
         }
-        let system = NotesPrompt.system(notesLanguage, transcript: meeting.meetingLanguage, documents: !context.documents.isEmpty)
+        let system = NotesPrompt.system(notesLanguage, transcript: meeting.meetingLanguage, documents: !context.documents.isEmpty,
+                                        screens: !context.screens.isEmpty)
+        // 會議中的畫面的圖片本身（design §83.5、D188）：能看圖的整理工具才送，縮圖在背景做
+        let screens = context.screens, language = meeting.meetingLanguage
+        let images = provider.sendsScreenImages && !screens.isEmpty
+            ? await Task.detached(priority: .userInitiated) { ScreenPrompt.images(screens, language: language) }.value : []
         var notes = try await callLLM(lane) { onStart in
-            try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, onStart: onStart)
+            try await LLMClient.generate(provider: provider, model: AppSettings.model, system: system, prompt: prompt, images: images, onStart: onStart)
         }
         guard isStillRunning(job) else { return false }
         // 中文會議用簡體時，整理完才轉（提示詞照舊，design §47.2、D154）
@@ -1068,16 +1095,30 @@ final class JobRunner {
             try db.saveNotes(job.meetingId, notes: current, by: nil, reason: String(localized: "補上每個人的重點"), source: .edit)
             return false
         }
+        if review {
+            // 去掉空的、問過的（同一題只留一次），接在現在的紀錄後面；其他段落不動
+            var seen = Set(asked.map(MeetingNotes.questionKey))
+            let found = notes.reviewItems.filter { item in
+                let key = MeetingNotes.questionKey(item.question)
+                return !key.isEmpty && seen.insert(key).inserted
+            }
+            if !found.isEmpty, var current = try db.meeting(job.meetingId)?.decodedNotes {
+                current.reviewItems += found
+                try db.saveNotes(job.meetingId, notes: current, by: nil, reason: String(localized: "再找不確定的地方"), source: .edit)
+            }
+            onMoreReview?(job.meetingId, found.count)
+            return false
+        }
         if draft {
             // 整理草稿的期間正式逐字稿好了、或已經有會議紀錄：丟掉草稿
             guard try db.segments(job.meetingId).isEmpty, try db.meeting(job.meetingId)?.notes == nil else { return false }
-            try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: String(localized: "草稿"), source: .draft)
+            try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue, reason: String(localized: "草稿"), source: .draft, template: template?.id)
             return true
         }
         let hadDraft = try db.meeting(job.meetingId)?.notesDraft ?? 0
         let replacedEdited = try db.saveNotes(job.meetingId, notes: notes, by: provider.rawValue,
                                               reason: refine != nil ? String(localized: "依提示修正") : answers == nil ? String(localized: "重新整理") : String(localized: "校稿"),
-                                              source: answers == nil ? .generated : .revised)
+                                              source: answers == nil ? .generated : .revised, template: template?.id)
         if replacedEdited { onEditedDraftReplaced?(job.meetingId) }
         // 正式的會議紀錄好了（整理、重新整理、校稿都算）：更新這場會議裡每個人的利害關係人分析
         //（輔助線，不擋別的工作）。這場會議就算分析過也重送，用最新的紀錄和名字

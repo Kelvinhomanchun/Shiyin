@@ -681,6 +681,74 @@
         }
       }
     },
+    "上一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个"
+          }
+        }
+      }
+    },
+    "上一個（Shift+Enter）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous (Shift+Enter)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一个（Shift+Enter）"
+          }
+        }
+      }
+    },
+    "下一個": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个"
+          }
+        }
+      }
+    },
+    "下一個（Enter）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next (Enter)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个（Enter）"
+          }
+        }
+      }
+    },
     "下載的壓縮檔裡少了需要的檔案，請重新下載": {
       "extractionState": "manual",
       "localizations": {
@@ -1917,6 +1985,23 @@
         }
       }
     },
+    "拾音詞彙表": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shiyin Glossary"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拾音词汇表"
+          }
+        }
+      }
+    },
     "拾音錄音島": {
       "extractionState": "manual",
       "localizations": {
@@ -2172,6 +2257,23 @@
         }
       }
     },
+    "搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next or previous match when searching the transcript (Enter and Shift+Enter also work)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索逐字稿时跳到下一个、上一个（也可以按 Enter、Shift+Enter）"
+          }
+        }
+      }
+    },
     "播放": {
       "extractionState": "manual",
       "localizations": {
@@ -2270,6 +2372,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂停录音（Ctrl+Shift+P）"
+          }
+        }
+      }
+    },
+    "暫停麥克風：只錄電腦聲音（Ctrl+Shift+M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause the microphone and record only computer audio (Ctrl+Shift+M). Avoids recording echo when the meeting plays through speakers; people talking in the same room won't be recorded either"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停麦克风：只录电脑声音（Ctrl+Shift+M）。用扬声器开会时避免录到回音，同一个房间的人说话也不会录到"
           }
         }
       }
@@ -3022,6 +3141,23 @@
         }
       }
     },
+    "繼續錄麥克風（Ctrl+Shift+M）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume microphone (Ctrl+Shift+M)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续录麦克风（Ctrl+Shift+M）"
+          }
+        }
+      }
+    },
     "聲紋（說話者的聲音特徵，一組數字，不是錄音）只存在這台電腦，不會放進匯出的 .shiyin 封包。": {
       "extractionState": "manual",
       "localizations": {
@@ -3625,6 +3761,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这个版本没有更新密钥（开发版），不会检查更新。"
+          }
+        }
+      }
+    },
+    "這句和之後的逐字稿、錄音、標記重點變成新的一場，前面的留在這場；我的筆記、參考文件、提問留在這場。兩場都要重新整理會議紀錄。30 天內可以從「更多」還原。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This line and everything after it in the transcript, recording and bookmarks becomes a new meeting; everything before stays here, along with My Notes, documents and questions. Both meetings need their notes rewritten. You can restore it from More within 30 days."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这句和之后的逐字稿、录音、标记重点变成新的一场，前面的留在这场；我的笔记、参考文档、提问留在这场。两场都要重新整理会议记录。30 天内可以从“更多”还原。"
           }
         }
       }

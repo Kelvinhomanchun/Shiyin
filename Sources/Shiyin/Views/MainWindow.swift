@@ -29,6 +29,7 @@ struct RootView: View {
             .sheet(isPresented: $model.showExportSheet) { ExportSheet() }
             .sheet(isPresented: $model.showRediarizeSheet) { RediarizeSheet() }
             .sheet(item: $model.refineRequest) { RefineSheet(request: $0) }
+            .sheet(isPresented: $model.showStopTimerSheet) { StopTimerSheet() }
             .alert("出了一點問題", isPresented: Binding(get: { model.errorMessage != nil },
                                                    set: { if !$0 { model.errorMessage = nil } })) {
                 Button("好") {}
@@ -202,6 +203,7 @@ struct MainView: View {
         .sheet(item: Binding(get: { model.editingMeeting.map(EditingMeeting.init) }, set: { model.editingMeeting = $0?.id })) {
             MeetingEditSheet(meetingId: $0.id)
         }
+        .modifier(ScreenSheets())
     }
 }
 
@@ -755,6 +757,7 @@ struct SearchResultsList: View {
         case .segment: return String(localized: "逐字稿")
         case .notes: return String(localized: "會議紀錄")
         case .userNotes: return String(localized: "我的筆記")
+        case .screen: return String(localized: "會議中的畫面")
         }
     }
 }

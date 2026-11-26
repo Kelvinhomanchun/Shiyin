@@ -426,6 +426,7 @@ public static class OtherWindows
             L.F("%@：%@", L.T("空白鍵"), L.T("播放或暫停")),
             L.F("%@：%@", "Ctrl+1～Ctrl+3", L.T("切換紀錄、逐字稿、提問")),  // l10n-skip
             L.F("%@：%@", "Ctrl+F", L.T("搜尋逐字稿（在「逐字稿」）")),
+            L.F("%@：%@", "F3／Shift+F3", L.T("搜尋逐字稿時跳到下一個、上一個（也可以按 Enter、Shift+Enter）")),  // l10n-skip：只有快捷鍵
             L.F("%@：%@", "Ctrl+＋／Ctrl+－", L.T("放大、縮小會議內容的文字")),  // l10n-skip：只有快捷鍵
             L.F("%@：%@", "Ctrl+0", L.T("會議內容的文字回到實際大小"))));
         window.Content = Ui.WindowBackground(Ui.Scroll(new ReadingColumn(column, 680), 36));
@@ -575,16 +576,24 @@ public static class OtherWindows
 public sealed class MeetingPromptWindow : Window
 {
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(30) };
-    public MeetingDetector.Prompt Prompt { get; }
+    /// <summary>null：定時停止的倒數（R110.3）</summary>
+    public MeetingDetector.Prompt? Prompt { get; }
 
-    public MeetingPromptWindow(AppHost host, MeetingDetector.Prompt prompt)
+    public MeetingPromptWindow(AppHost host, MeetingDetector.Prompt? prompt)
     {
         Prompt = prompt;
         Title = L.T("拾音");
         string message;
         var buttons = Ui.Row(8);
         void Do(Action action) { Close(); action(); }
-        if (prompt is MeetingDetector.Prompt.Start)
+        if (prompt is null)
+        {
+            // 定時停止的倒數（R110.3、M§84）：寫同一句、不倒數（同 Mac 的浮動視窗）
+            message = IslandWindow.StopTimerText((int)host.Recorder.StopCountdownSeconds);
+            buttons.Children.Add(Ui.Button(L.T("繼續錄"), () => Do(() => host.Recorder.SetStopTimer(null))));
+            buttons.Children.Add(Ui.Button(L.T("停止並轉錄"), () => Do(host.Recorder.Stop), accent: true));
+        }
+        else if (prompt is MeetingDetector.Prompt.Start)
         {
             message = L.F("%@ 正在開會，要開始錄音嗎？", prompt.App.Name);
             buttons.Children.Add(Ui.Button(L.T("這次不用"), () => Do(() => { })));

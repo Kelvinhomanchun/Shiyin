@@ -21,7 +21,9 @@ public sealed class RecordingWriter : IDisposable
     readonly List<float>[] pending;
     readonly float[] levels;
     readonly double[] silentSeconds;
+    readonly bool[] heard;   // 各聲道這場錄音收到過不是 0 的聲音（麥克風一直是 0 時重新連接用，M§20.2）
     bool paused;
+    bool micMuted;   // 單獨暫停麥克風（M§90）：左聲道寫 0
     readonly long[] acceptedFrames;   // 各聲道累計收到的音框（不含暫停）
     readonly double[] lastReceived;   // 各聲道最後一次收到音訊的時間，看門狗用（M§20.2）
     bool failed;
@@ -43,6 +45,7 @@ public sealed class RecordingWriter : IDisposable
         pending = Enumerable.Range(0, channels).Select(_ => new List<float>()).ToArray();
         levels = new float[channels];
         silentSeconds = new double[channels];
+        heard = new bool[channels];
         acceptedFrames = new long[channels];
         frameEnergy = new float[channels];
         frameSamples = new int[channels];
@@ -76,11 +79,15 @@ public sealed class RecordingWriter : IDisposable
         lock (gate)
         {
             lastReceived[channel] = now;
-            levels[channel] = rms;
-            silentSeconds[channel] = rms == 0 ? silentSeconds[channel] + samples.Length / SampleRate : 0;
+            // 暫停麥克風：照樣收（看門狗用），寫進去的是同樣長度的 0，音量、無聲的秒數、最近的音量都不算
+            var muted = micMuted && channel == 0;
+            levels[channel] = muted ? 0 : rms;
+            silentSeconds[channel] = muted || rms != 0 ? 0 : silentSeconds[channel] + samples.Length / SampleRate;
+            if (rms > 0) heard[channel] = true;
             if (paused) return;
-            pending[channel].AddRange(samples);
+            pending[channel].AddRange(muted ? new float[samples.Length] : samples);
             acceptedFrames[channel] += samples.Length;
+            if (muted) return;
             frameEnergy[channel] += sum;
             frameSamples[channel] += samples.Length;
             if (frameSamples[channel] >= (int)(SampleRate / 10))
@@ -103,6 +110,17 @@ public sealed class RecordingWriter : IDisposable
         }
     }
 
+    /// <summary>單獨暫停麥克風（M§90）：兩個音源時才有用。繼續時麥克風之前的音量不算</summary>
+    public void SetMicMuted(bool value)
+    {
+        lock (gate)
+        {
+            if (Channels != 2 || value == micMuted) return;
+            micMuted = value;
+            if (!value) { recent[0].Clear(); frameEnergy[0] = 0; frameSamples[0] = 0; }
+        }
+    }
+
     /// <summary>目前錄到的秒數（不含暫停），給計時、筆記和重點標記的時間點用</summary>
     public double RecordedSeconds { get { lock (gate) return acceptedFrames.Max() / SampleRate; } }
 
@@ -119,6 +137,9 @@ public sealed class RecordingWriter : IDisposable
     public bool WriteFailed { get { lock (gate) return failed; } }
 
     public double Silence(int channel) { lock (gate) return channel < Channels ? silentSeconds[channel] : 0; }
+
+    /// <summary>這場錄音這個聲道收到過不是 0 的聲音</summary>
+    public bool HasHeard(int channel) { lock (gate) return channel < Channels && heard[channel]; }
 
     /// <summary>最近 30 秒（不含暫停）每 100 毫秒的音量，dBFS（M§26.1）</summary>
     public float[] RecentLevels(int channel) { lock (gate) return channel < Channels ? [.. recent[channel]] : []; }

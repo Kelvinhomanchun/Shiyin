@@ -10,6 +10,10 @@ struct TranscriptTab: View {
 
     @State private var query = ""
     @State private var matchCursor = 0
+    /// 按一次上一個、下一個加一（design §85）：只有一段符合時游標不變，捲動要看這個
+    @State private var matchJump = 0
+    /// 目前跳到的那一段（R111.3）：游標換了才設，每一列不用重算 matches
+    @State private var currentMatch: Int64?
     @State private var editingId: Int64?
     @State private var editText = ""
     @State private var draftTask: Task<Void, Never>?
@@ -82,6 +86,18 @@ struct TranscriptTab: View {
                     .foregroundStyle(.secondary)
                     .padding(32)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                // 還沒有逐字稿時，錄音中截的畫面照樣看得到（design §83.4）
+                if !detail.screens.isEmpty {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 2) {
+                            ForEach(detail.screens) { ScreenRow(screen: $0, highlighted: $0.id == model.highlightScreen) }
+                        }
+                        .contentFont()
+                        .frame(maxWidth: 760 * scale, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 Spacer()
             } else if cleanMode && detail.cleanLines.isEmpty {
                 cleanPlaceholder
@@ -96,13 +112,20 @@ struct TranscriptTab: View {
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
+                let segments = visibleSegments
+                // 會議中的畫面夾在逐字稿裡（design §83.4）
+                let placement = ScreenPlacement.place(detail.screens, starts: segments.map(\.start))
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 2) {
-                            ForEach(visibleSegments) { segment in
+                            ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
+                                if let screens = placement.before[index] {
+                                    ForEach(screens) { screenRow($0) }
+                                }
                                 row(segment)
                                     .id(segment.id)
                             }
+                            ForEach(placement.trailing) { screenRow($0) }
                         }
                         .contentFont()   // 文字大小（design §38.5）
                         .frame(maxWidth: 760 * scale, alignment: .leading)
@@ -115,11 +138,12 @@ struct TranscriptTab: View {
                         if reduceMotion { proxy.scrollTo(id, anchor: .center) }
                         else { withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(id, anchor: .center) } }
                     }
-                    .onChange(of: matchCursor) { _, cursor in
-                        if matches.indices.contains(cursor) { proxy.scrollTo(matches[cursor], anchor: .center) }
+                    .onChange(of: matchJump) { _, _ in
+                        if let currentMatch { proxy.scrollTo(currentMatch, anchor: .center) }
                     }
                     .onChange(of: query) { _, _ in
                         matchCursor = 0
+                        currentMatch = matches.first
                         if let first = matches.first { proxy.scrollTo(first, anchor: .center) }
                     }
                     // 單段編輯的草稿（design §21.15、R20.6）：換分頁、換會議、結束拾音都還在
@@ -146,6 +170,13 @@ struct TranscriptTab: View {
                         Task { @MainActor in
                             try? await Task.sleep(for: .milliseconds(150))
                             proxy.scrollTo(id, anchor: .center)
+                        }
+                    }
+                    .onChange(of: model.highlightScreen, initial: true) { _, id in
+                        guard let id else { return }
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(150))
+                            proxy.scrollTo("screen-\(id)", anchor: .center)
                         }
                     }
                     .onChange(of: model.highlightSegment, initial: true) { _, id in
@@ -176,12 +207,25 @@ struct TranscriptTab: View {
                 TextField("搜尋逐字稿", text: $query)
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
-                    .onSubmit { if !matches.isEmpty { matchCursor = (matchCursor + 1) % matches.count } }
+                    // ⇧Return 是上一個（R111.2）：onSubmit 拿不到修飾鍵，看送來的這個事件
+                    .onSubmit { step(NSApp.currentEvent?.modifierFlags.contains(.shift) == true ? -1 : 1) }
                 if !query.isEmpty {
                     Text(matches.isEmpty ? "找不到" : "\(min(matchCursor + 1, matches.count))／\(matches.count) 段")
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
+                    // 上一個、下一個（R111.1）
+                    HStack(spacing: 2) {
+                        Button { step(-1) } label: { Image(systemName: "chevron.up").font(.system(size: 11, weight: .semibold)).frame(width: 18, height: 16) }
+                            .help("上一個（⇧Return）")
+                            .accessibilityLabel("上一個")
+                        Button { step(1) } label: { Image(systemName: "chevron.down").font(.system(size: 11, weight: .semibold)).frame(width: 18, height: 16) }
+                            .help("下一個（Return）")
+                            .accessibilityLabel("下一個")
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .disabled(matches.isEmpty)
                     Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
@@ -194,6 +238,17 @@ struct TranscriptTab: View {
             // ⌘F 聚焦搜尋框（design §9.4）
             Button("搜尋") { searchFocused = true }
                 .keyboardShortcut("f")
+                .hidden()
+                .frame(width: 0)
+            // ⌘G、⇧⌘G（R111.2）：沒有符合的段落時停用，不吃掉快捷鍵
+            Button("下一個") { step(1) }
+                .keyboardShortcut("g")
+                .disabled(matches.isEmpty)
+                .hidden()
+                .frame(width: 0)
+            Button("上一個") { step(-1) }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+                .disabled(matches.isEmpty)
                 .hidden()
                 .frame(width: 0)
             if !detail.speakers.isEmpty {
@@ -390,6 +445,11 @@ struct TranscriptTab: View {
         .contentFont(.caption)
     }
 
+    private func screenRow(_ screen: MeetingDocument) -> some View {
+        ScreenRow(screen: screen, highlighted: screen.id == model.highlightScreen)
+            .id("screen-\(screen.id ?? 0)")
+    }
+
     @ViewBuilder
     private func row(_ segment: Segment) -> some View {
         let isCurrent = segment.id == currentSegmentId
@@ -453,11 +513,12 @@ struct TranscriptTab: View {
                 let clean = cleanMode ? segment.id.flatMap { detail.cleanLines[$0] } : nil
                 let corrections = clean == nil ? (segment.id.flatMap { detail.correctionsBySegment[$0] } ?? []) : []
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(clean.map { AttributedString($0) } ?? highlighted(segment.text, corrections: corrections)).meetingText()
+                    Text(clean.map { AttributedString($0) } ?? highlighted(segment.text, corrections: corrections,
+                                                                         current: segment.id != nil && segment.id == currentMatch)).meetingText()
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .onTapGesture(count: 2) { startEdit(segment) }
+                        .onDoubleClick { startEdit(segment) }
                     ForEach(corrections) { correctionLine($0) }
                 }
             }
@@ -471,35 +532,9 @@ struct TranscriptTab: View {
                 RoundedRectangle(cornerRadius: 1).fill(Color.signal).frame(width: 3).padding(.vertical, 6)
             }
         }
-        .contextMenu {
-            Button("從這裡播放") { model.player.seek(to: segment.start) }
-            Button("編輯這一段") { startEdit(segment) }
-            Button("拷貝") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(segment.text, forType: .string)
-            }
-            if let id = segment.id, segment.kind == "final" {
-                Divider()
-                // 改這句的說話者（design §24.3、R23.2）
-                if !detail.speakers.isEmpty {
-                    Button("拆成兩句…") { startSplit(id) }   // R70
-                    Menu("這句是誰說的") { speakerChoices(for: [id], current: segment.speaker) }
-                    let run = detail.speakerRun(around: id)
-                    if run.count > 1 {
-                        Menu("這段連續的話是誰說的（\(run.count) 句）") { speakerChoices(for: run, current: segment.speaker) }
-                    }
-                }
-                // 分割會議（R90、design §64）：第一句之前沒有東西，不能從第一句分
-                if detail.segments.first(where: { $0.kind == "final" })?.id != id {
-                    Button("從這裡分成兩場…") { model.splitMeetingRequest = id }
-                }
-                DestructiveMenuButton(String(localized: "刪除這句")) { model.deleteSegment(id) }   // R89
-                // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
-                if let label = detail.speakerUndoLabel {
-                    Button("復原：\(label)") { model.undoSpeakerEdit() }
-                }
-            }
-        }
+        // 自己畫的選單（R105.4、design §79）：可以選取的文字上按右鍵原本跳出系統的文字選單，空白處沒有選單（GitHub #19）；
+        // app 層級的事件監看比文字先收到右鍵，這一句的任何地方都是同一份
+        .floatingContextMenu { segmentMenu(segment) }
         .help(segment.lowConfidence ? "辨識信心低，建議對照錄音確認" : "")
     }
 
@@ -575,16 +610,48 @@ struct TranscriptTab: View {
         detail.speakers.keys.sorted().filter { $0 != idx }.map { ($0, detail.speakerName($0) ?? "") }
     }
 
-    @ViewBuilder
-    private func speakerChoices(for ids: [Int64], current: Int?) -> some View {
-        ForEach(otherSpeakers(than: current), id: \.idx) { speaker in
-            Button(speaker.name) { model.reassignSegments(ids, to: speaker.idx) }
+    /// 一句的右鍵選單（R105.4）：播放、編輯、拷貝；正式逐字稿再加拆句、改說話者、分成兩場、刪除、復原
+    private func segmentMenu(_ segment: Segment) -> [MenuEntry] {
+        var entries: [MenuEntry] = [
+            .action(String(localized: "從這裡播放"), icon: "play") { model.player.seek(to: segment.start) },
+            .action(String(localized: "編輯這一段"), icon: "pencil") { startEdit(segment) },
+            .action(String(localized: "拷貝"), icon: "doc.on.doc") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(segment.text, forType: .string)
+            },
+        ]
+        guard let id = segment.id, segment.kind == "final" else { return entries }
+        entries.append(.divider)
+        // 改這句的說話者（design §24.3、R23.2）
+        if !detail.speakers.isEmpty {
+            entries.append(.action(String(localized: "拆成兩句…"), icon: "arrow.triangle.branch") { startSplit(id) })   // R70
+            entries.append(.submenu(String(localized: "這句是誰說的"), icon: "person", speakerChoices(for: [id], current: segment.speaker)))
+            let run = detail.speakerRun(around: id)
+            if run.count > 1 {
+                entries.append(.submenu(String(localized: "這段連續的話是誰說的（\(run.count) 句）"), icon: "person.2",
+                                        speakerChoices(for: run, current: segment.speaker)))
+            }
         }
-        Divider()
-        Button("新的說話者") { model.reassignSegments(ids, to: nil) }
+        // 分割會議（R90、design §64）：第一句之前沒有東西，不能從第一句分
+        if detail.segments.first(where: { $0.kind == "final" })?.id != id {
+            entries.append(.action(String(localized: "從這裡分成兩場…"), icon: "rectangle.split.2x1") { model.splitMeetingRequest = id })
+        }
+        entries.append(.action(String(localized: "刪除這句"), icon: "trash", destructive: true) { model.deleteSegment(id) })   // R89
+        // 復原最近一次說話者的調整、刪除（R44.4、R89）：有東西可復原才出現
+        if let label = detail.speakerUndoLabel {
+            entries.append(.action(String(localized: "復原：\(label)"), icon: "arrow.uturn.backward") { model.undoSpeakerEdit() })
+        }
+        return entries
     }
 
-    private func highlighted(_ text: String, corrections: [Correction] = []) -> AttributedString {
+    private func speakerChoices(for ids: [Int64], current: Int?) -> [MenuEntry] {
+        otherSpeakers(than: current).map { speaker in
+            MenuEntry.action(speaker.name) { model.reassignSegments(ids, to: speaker.idx) }
+        } + [.divider, .action(String(localized: "新的說話者")) { model.reassignSegments(ids, to: nil) }]
+    }
+
+    /// current：目前跳到的那一段，搜尋到的字底色深一點（R111.3）
+    private func highlighted(_ text: String, corrections: [Correction] = [], current: Bool = false) -> AttributedString {
         var attributed = AttributedString(text)
         // 待確認的校正建議：原文加底線和底色
         for c in corrections where c.status == "pending" {
@@ -597,10 +664,19 @@ struct TranscriptTab: View {
         guard !q.isEmpty else { return attributed }
         var searchRange = attributed.startIndex..<attributed.endIndex
         while let range = attributed[searchRange].range(of: q, options: .caseInsensitive) {
-            attributed[range].backgroundColor = Color.highlight
+            attributed[range].backgroundColor = Color.highlight.opacity(current ? 1 : 0.55)
             searchRange = range.upperBound..<attributed.endIndex
         }
         return attributed
+    }
+
+    /// 跳到上一個（-1）、下一個（1）符合的段落，到頭繞回（R111.1）
+    private func step(_ delta: Int) {
+        let found = matches
+        guard !found.isEmpty else { return }
+        matchCursor = ((matchCursor + delta) % found.count + found.count) % found.count
+        currentMatch = found[matchCursor]
+        matchJump += 1
     }
 
     private func startEdit(_ segment: Segment) {
@@ -867,3 +943,54 @@ private struct SplitTextView: NSViewRepresentable {
     }
 }
 
+// MARK: 雙擊（可以選取的文字上也收得到）
+
+extension View {
+    /// 雙擊做某件事：可以選取的文字自己處理雙擊（選一個詞），SwiftUI 的 onTapGesture(count: 2) 收不到（逐字稿雙擊進編輯，design §79）。
+    /// 蓋一層不接事件的透明 view，app 層級的事件監看收到第二下時交給游標下面的那一個、吃掉這一下；第一下、拖曳選字照舊給文字
+    func onDoubleClick(_ action: @escaping () -> Void) -> some View {
+        overlay(DoubleClickCatcher(action: action))
+    }
+}
+
+private struct DoubleClickCatcher: NSViewRepresentable {
+    let action: () -> Void
+
+    func makeNSView(context: Context) -> CatcherView { CatcherView() }
+    func updateNSView(_ view: CatcherView, context: Context) { view.action = action }
+
+    final class CatcherView: NSView {
+        var action: (() -> Void)?
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window != nil { DoubleClickRegistry.shared.add(self) }
+        }
+    }
+}
+
+@MainActor
+private final class DoubleClickRegistry {
+    static let shared = DoubleClickRegistry()
+    private let views = NSHashTable<DoubleClickCatcher.CatcherView>.weakObjects()
+    private var monitor: Any?
+
+    func add(_ view: DoubleClickCatcher.CatcherView) {
+        views.add(view)
+        guard monitor == nil else { return }
+        // 只接沒按修飾鍵的第二下（⌘、⇧ 點是多選、延伸選取）
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard event.clickCount == 2, event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty,
+                  let self, let window = event.window else { return event }
+            let hit = self.views.allObjects.first { view in
+                view.window === window && !view.isHiddenOrHasHiddenAncestor
+                    && view.bounds.contains(view.convert(event.locationInWindow, from: nil))
+            }
+            guard let action = hit?.action else { return event }
+            action()
+            return nil
+        }
+    }
+}

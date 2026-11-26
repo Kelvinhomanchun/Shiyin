@@ -11,8 +11,8 @@ namespace Shiyin.Services.Capture;
 /// </summary>
 public sealed class Recorder
 {
-    /// <summary>IdleSince：沒人說話太久而自動停止（R48.2）時，最後有人說話的秒數</summary>
-    public sealed record Result(long MeetingId, string? File, double Duration, string? Error, double? IdleSince = null);
+    /// <summary>IdleSince：沒人說話太久而自動停止（R48.2）時，最後有人說話的秒數；Scheduled：到了定時停止的時間（R110.3）</summary>
+    public sealed record Result(long MeetingId, string? File, double Duration, string? Error, double? IdleSince = null, bool Scheduled = false);
     public sealed record LiveLine(double Start, double End, string Text);
 
     /// <summary>收音提醒（M§26.1、R24.1、R24.3）</summary>
@@ -92,6 +92,9 @@ public sealed class Recorder
     public PlayingApp? SystemCulprit { get; private set; }
     /// <summary>電腦聲音全是 0 多久才去看有沒有 app 在出聲（R75.3 是 10 秒；測試縮短）</summary>
     public double SystemMissingSeconds { get; set; } = 10;
+    /// <summary>麥克風收到過聲音後連續幾秒完全是 0 就重新連接、還是 0 時隔幾秒再試（M§20.2、R18.8；測試改短）</summary>
+    public double ZeroRestartSeconds { get; set; } = 10;
+    public double ZeroRetrySeconds { get; set; } = 30;
     /// <summary>提示的文字（錄音畫面、系統匣、通知共用，R42）</summary>
     public string HintText(LevelHint hint) => hint.Text(SystemCulprit);
     /// <summary>正在收音的麥克風（R58.2）：實際開的那支，不是「系統預設」這幾個字；沒有麥克風時是 null</summary>
@@ -105,6 +108,16 @@ public sealed class Recorder
     /// <summary>15 分鐘提醒、30 分鐘自動停止；DEBUG 用 --set idleRemindSeconds=…、idleStopSeconds=… 縮短（AppHost 設）</summary>
     public double IdleRemindSeconds { get; set; } = 900;
     public double IdleStopSeconds { get; set; } = 1800;
+    /// <summary>定時停止（R110、M§84）：到這個時間（本機時間）就停止錄音；跟著時鐘走，暫停也照算</summary>
+    public DateTime? StopAt { get { lock (gate) return stopAt; } }
+    DateTime? stopAt;
+    /// <summary>時間到了先倒數（R110.3、D192）：到這個時間（本機時間）才停止；null 是沒在倒數</summary>
+    public DateTime? StopCountdown { get { lock (gate) return stopCountdown; } }
+    DateTime? stopCountdown;
+    /// <summary>倒數幾秒；DEBUG 用 --set stopTimerCountdownSeconds=… 縮短（AppHost 設）</summary>
+    public double StopCountdownSeconds { get; set; } = 30;
+    /// <summary>定時停止的時間到了、開始倒數（App 顯示提醒）。在背景執行緒觸發</summary>
+    public event Action? StopTimerDue;
     /// <summary>沒人說話多久（DEBUG 的 state）</summary>
     public double IdleSeconds { get { lock (gate) return IsRecording ? Elapsed - lastSpeechAt : 0; } }
     public double LastSpeechAt { get { lock (gate) return lastSpeechAt; } }
@@ -112,6 +125,10 @@ public sealed class Recorder
 
     public bool HasMic => Source != "system";
     public bool HasSystem => Source != "mic";
+    /// <summary>單獨暫停麥克風、電腦聲音照錄（M§90、R116）</summary>
+    public bool MicPaused { get; private set; }
+    /// <summary>可以單獨暫停麥克風：麥克風＋電腦聲音的錄音</summary>
+    public bool CanPauseMic => IsRecording && Source == "both";
 
     /// <summary>畫面要重畫的狀態變了</summary>
     public event Action? Changed;
@@ -150,6 +167,8 @@ public sealed class Recorder
     /// <summary>重新連接的節奏（M§50.1）：每個聲道 60 秒內重新連接的時間、上次重新連接完的時間</summary>
     readonly Dictionary<int, List<DateTime>> restarts = [];
     readonly Dictionary<int, DateTime> restartedAt = [];
+    /// <summary>麥克風還在送資料、但一直完全是 0：上次因為這樣重新連接的時間</summary>
+    DateTime? zeroRestartAt;
     DateTime lastDiskCheck = DateTime.MinValue;
     bool warnedLowDisk;
     bool simulationEnded;
@@ -239,6 +258,20 @@ public sealed class Recorder
         Notify();
     }
 
+    /// <summary>單獨暫停、繼續錄麥克風（M§90、R116）：麥克風那一聲道寫 0，電腦聲音照錄</summary>
+    public void SetMicPaused(bool value)
+    {
+        lock (gate)
+        {
+            if (!CanPauseMic || value == MicPaused) return;
+            writer?.SetMicMuted(value);
+            MicPaused = value;
+            (noisySeconds, quietSeconds) = (0, 0);   // 暫停時不再累計，留著的秒數會讓「太小聲」「太吵」一直在
+        }
+        Log.Info(value ? "microphone paused" : "microphone resumed");
+        Notify();
+    }
+
     /// <summary>「繼續錄」：人還在，重新計時（R48.1）</summary>
     public void ContinueAfterIdle()
     {
@@ -247,6 +280,19 @@ public sealed class Recorder
             if (!IsRecording) return;
             MarkSpeechLocked();
         }
+        Notify();
+    }
+
+    /// <summary>定時停止（R110.1）：錄音中才有作用；null 是取消（倒數中的「繼續錄」也是）。選了新的時間就取代原本的，倒數也收起</summary>
+    public void SetStopTimer(DateTime? at)
+    {
+        lock (gate)
+        {
+            if (!IsRecording || stopAt == at) return;
+            stopAt = at;
+            stopCountdown = null;
+        }
+        Log.Info(at is DateTime t ? $"stop timer set, {(int)(t - DateTime.Now).TotalSeconds}s from now" : "stop timer cancelled");
         Notify();
     }
 
@@ -278,7 +324,8 @@ public sealed class Recorder
     /// 或本身就高於 -40 dBFS（一開始就一直有人說話時，背景也是說話的音量）</summary>
     bool SoundsLikeSpeech(RecordingWriter w)
     {
-        for (var channel = 0; channel < (Source == "both" ? 2 : 1); channel++)
+        // 暫停麥克風時只看電腦聲音：麥克風最近的音量停在暫停前（M§90）
+        for (var channel = Source == "both" && MicPaused ? 1 : 0; channel < (Source == "both" ? 2 : 1); channel++)
         {
             var levels = w.RecentLevels(channel);
             if (levels.Length < 20) continue;
@@ -366,8 +413,8 @@ public sealed class Recorder
 
     public void Stop() => Stop(null);
 
-    /// <summary>idleSince：沒人說話太久而自動停止（R48.2），最後有人說話的秒數</summary>
-    public void Stop(double? idleSince)
+    /// <summary>idleSince：沒人說話太久而自動停止（R48.2），最後有人說話的秒數；scheduled：到了定時停止的時間（R110.3）</summary>
+    public void Stop(double? idleSince, bool scheduled = false)
     {
         Result result;
         ILiveTranscriber? finishing;
@@ -389,7 +436,7 @@ public sealed class Recorder
             }
             finishing = live;
             Cleanup();
-            result = new Result(meetingId, file, duration, null, idleSince);
+            result = new Result(meetingId, file, duration, null, idleSince, scheduled);
         }
         Log.Info($"recording stopped, {(int)duration}s");
         _ = Task.Run(() =>
@@ -472,6 +519,7 @@ public sealed class Recorder
             VolatileText = "";
             SystemSilent = false;
             IsPaused = false;
+            MicPaused = false;
             IsRecording = true;
             generation++;
             keepAwake = power.KeepAwake(L.T("拾音正在錄音"));
@@ -623,13 +671,27 @@ public sealed class Recorder
     {
         var changed = false;
         var stop = false;
+        var scheduled = false;
+        var due = false;
         double? idleSince = null;
         lock (gate)
         {
             if (generation != current || writer is not { } w) return;
             if (w.WriteFailed) stop = true;
+            // 定時停止（M§84）：放在整秒的判斷外面，暫停時 Elapsed 不走也要停。時間到先倒數，倒數完才停（R110.3）
+            else if (stopCountdown is DateTime end && DateTime.Now >= end)
+            {
+                Log.Info("recording stopped at the scheduled time");
+                (stop, scheduled) = (true, true);
+            }
             else
             {
+                if (stopAt is DateTime at && stopCountdown is null && DateTime.Now >= at)
+                {
+                    stopCountdown = DateTime.Now.AddSeconds(StopCountdownSeconds);
+                    (due, changed) = (true, true);
+                    Log.Info("stop timer reached, counting down");
+                }
                 Elapsed = w.RecordedSeconds;
                 var seconds = (int)Elapsed;
                 if (seconds != ElapsedSeconds)
@@ -667,8 +729,12 @@ public sealed class Recorder
                 if (DateTime.UtcNow - lastDiskCheck >= TimeSpan.FromSeconds(30)) changed |= CheckDiskSpace(w, starting: false);
             }
         }
-        if (stop) Stop(idleSince);
-        else if (changed) Notify();
+        if (stop) Stop(idleSince, scheduled);
+        else
+        {
+            if (changed) Notify();
+            if (due) StopTimerDue?.Invoke();
+        }
     }
 
     /// <summary>收音提醒（M§26.1）：每秒看麥克風最近 30 秒的音量。第 90 百分位是說話的音量、第 10 百分位是背景</summary>
@@ -679,7 +745,8 @@ public sealed class Recorder
         var silent = false;
         float speech = 0, background = 0;
         var frames = 0;
-        if (HasMic)
+        // 暫停麥克風時麥克風的提醒都不出現（M§90）
+        if (HasMic && !MicPaused)
         {
             silent = w.Silence(0) > 10;
             var levels = w.RecentLevels(0);
@@ -702,6 +769,7 @@ public sealed class Recorder
             ["speech"] = speech, ["background"] = background, ["frames"] = frames, ["silentSeconds"] = HasMic ? w.Silence(0) : 0,
             ["noisySeconds"] = noisySeconds, ["quietSeconds"] = quietSeconds, ["hint"] = shown?.ToString().ToLowerInvariant() ?? "",
             ["systemSilentSeconds"] = HasSystem ? w.Silence(Source == "both" ? 1 : 0) : 0, ["playingApp"] = playing?.Name ?? "",
+            ["micPaused"] = MicPaused,
         };
         if (shown == Hint) return false;
         // 是哪個 app 在提示出現時決定，之後不跟著變（R75.4）
@@ -859,7 +927,29 @@ public sealed class Recorder
                 UpdateDeviceWarning();
             }
         }
+        micChanged |= RestartIfMicSendsZeros(w, now);
         return before != DeviceWarning || micChanged;
+    }
+
+    /// <summary>
+    /// 麥克風還在送資料、但送的完全是 0（這場稍早有過聲音）：重新連接一次（M§20.2、R18.8）。真的麥克風一定有底噪，
+    /// 完全是 0 是裝置那頭斷了但音源沒停、看門狗看不到。收音提醒（R24.3）照舊；還是 0 就至少隔 ZeroRetrySeconds 再試。
+    /// 一開始就是 0 的（硬體靜音）、自己暫停麥克風（寫檔那邊不累計無聲的秒數）不重試
+    /// </summary>
+    bool RestartIfMicSendsZeros(RecordingWriter w, DateTime now)
+    {
+        if (!HasMic || IsPaused || MicPaused || !sources.ContainsKey(0) || !w.HasHeard(0) || w.Silence(0) <= ZeroRestartSeconds)
+        {
+            zeroRestartAt = null;
+            return false;
+        }
+        if (pendingRestarts.ContainsKey(0) || reconnecting.ContainsKey(0)) return false;
+        var interval = TimeSpan.FromSeconds(Math.Max(ZeroRetrySeconds, RestartDelay(RecentRestarts(0, now))));
+        if (zeroRestartAt is DateTime last && now - last < interval) return false;
+        zeroRestartAt = now;
+        Log.Info($"microphone sent only zeros for {(int)w.Silence(0)} s, reconnecting");
+        RestartSource(0);
+        return UpdateMicrophone();
     }
 
     /// <summary>提示列（M§50.1）：重新連接失敗的原因 ＞ 一直在重新連接（60 秒內 3 次以上）＞ 正在重新連接…</summary>
@@ -902,6 +992,7 @@ public sealed class Recorder
         pendingRestarts.Clear();
         restarts.Clear();
         restartedAt.Clear();
+        zeroRestartAt = null;
         reconnecting.Clear();
         reconnectErrors.Clear();
         DeviceWarning = null;
@@ -911,6 +1002,8 @@ public sealed class Recorder
         live = null;
         liveActive = false;
         IdlePrompt = false;
+        stopAt = null;
+        stopCountdown = null;
         simulation = null;
         tap.SetLive(null);
         tap.SetDetector(null);

@@ -59,11 +59,37 @@ struct MenuBarContent: View {
                     Button(recorder.isPaused ? "繼續" : "暫停") { recorder.isPaused ? recorder.resume() : recorder.pause() }
                     Button("停止") { recorder.stop() }
                 }
+                // 定時停止（design §84、R110）
+                Menu {
+                    StopTimerMenuItems(model: model)
+                } label: {
+                    Label {
+                        if let stopAt = recorder.stopAt { Text("\(StopTimer.label(stopAt)) 自動停止錄音") } else { Text("定時停止") }
+                    } icon: {
+                        Image(systemName: "timer")
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .controlSize(.small)
+                .fixedSize()
                 if recorder.hasMic {
-                    RecorderMeter(recorder: recorder, system: false, segments: 24)
-                    // 正在用哪一支麥克風（design §38.3）
-                    if let device = recorder.micDevice {
-                        Text("麥克風：\(device.name)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if recorder.micPaused {
+                        Label("麥克風已暫停", systemImage: "mic.slash").font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        RecorderMeter(recorder: recorder, system: false, segments: 24)
+                    }
+                    HStack(spacing: 8) {
+                        // 正在用哪一支麥克風（design §38.3）
+                        if let device = recorder.micDevice {
+                            Text("麥克風：\(device.name)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        // 單獨暫停麥克風、電腦聲音照錄（design §90、R116）
+                        if recorder.canPauseMic {
+                            Button(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風") { recorder.setMicPaused(!recorder.micPaused) }
+                                .controlSize(.small)
+                                .help(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風：只錄電腦聲音。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到")
+                        }
                     }
                 }
                 if recorder.hasSystem { RecorderMeter(recorder: recorder, system: true, segments: 24) }
@@ -77,6 +103,22 @@ struct MenuBarContent: View {
                         HStack {
                             Button("繼續錄") { recorder.continueAfterIdle() }
                             Button("停止錄音") { recorder.stop() }
+                        }
+                        .font(.caption)
+                    }
+                }
+                if let countdown = recorder.stopCountdown {
+                    // 定時停止的倒數（R110.3）：同錄音畫面
+                    VStack(alignment: .leading, spacing: 6) {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Label(String(localized: "已到設定的時間，\(StopTimer.secondsLeft(countdown, now: context.date)) 秒後停止錄音"),
+                                  systemImage: "timer")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(Color.signal)
+                        HStack {
+                            Button("繼續錄") { model.continueAfterStopTimer() }
+                            Button("停止並轉錄") { recorder.stop() }
                         }
                         .font(.caption)
                     }
