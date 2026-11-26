@@ -435,6 +435,27 @@ enum DebugControl {
         case "personcite": if let id { model.openFromPersonPage(id, seconds: args.count > 2 ? TimeFormat.seconds(args[2]) : nil) }   // personcite <會議 id> [時間]：等於點人物頁的出處
         case "coachinguseful": if let id, args.count > 2 { model.toggleUsefulCoachingFinding(id, title: args.dropFirst(2).joined(separator: " ")) }   // coachinguseful <人物 id> <標題>：等於按「有用」
         case "overviewnames": write(["names": model.peopleOverview.map(\.name)], to: args[1])   // overviewnames <輸出.json>：側欄「人物」現在列的名字（不重讀）
+        // 端到端測試（docs/e2e-test-plan.md）：畫面現在拿著的東西，不重讀
+        case "screen":   // screen <輸出.json>
+            let record = model.stakeholder
+            write(["people": model.peopleOverview.map { ["id": Int($0.id), "name": $0.name, "meetings": $0.meetingCount, "me": $0.isMe] },
+                   "selectedPerson": model.selectedPerson.map { Int($0) } ?? -1, "selection": model.selection.map { Int($0) } ?? -1,
+                   "mode": "\(model.sidebarMode)",
+                   "stakeholderPerson": model.stakeholderPersonId.map { Int($0) } ?? -1,
+                   "stakeholderUpdated": record?.updatedAt ?? "", "stakeholderSummary": record?.decoded?.summary ?? "",
+                   "portraitFilled": record?.decoded?.portrait.filledCount ?? -1,
+                   "analyzing": model.analyzingStakeholders.map { Int($0) },
+                   "coachingMeetings": model.coachingStats.count, "coachingLast": model.coachingStats.last?.id.description ?? "",
+                   "coachingUpdated": model.coaching?.updatedAt ?? "", "coachingRunning": model.coachingRunning,
+                   "coachingSummary": model.coaching?.decoded?.summary.first ?? "",
+                   "strengths": model.coaching?.decoded?.strengths.map(\.title) ?? [],
+                   "weaknesses": model.coaching?.decoded?.weaknesses.map(\.title) ?? [],
+                   "useful": model.coaching?.usefulTitles ?? [], "rejected": model.coaching?.rejectedTitles ?? [],
+                   "coachingTab": model.coachingTab.rawValue,
+                   "speakers": model.detail?.speakers.map { "\($0.key)=\($0.value)" }.sorted() ?? [],
+                   "queued": model.queuedCount + (model.runner.isBusy ? 1 : 0),
+                   "myIds": ((try? model.db.myPersonIds()) ?? []).sorted().map { Int($0) }], to: args[1])
+        case "renameperson": if let id, args.count > 2 { model.renamePerson(id, to: args.dropFirst(2).joined(separator: " ")) }   // renameperson <人物 id> <名字>
         case "coachingstate":   // coachingstate <輸出.json>
             write(["stats": model.coachingStats.count, "skipped": model.coachingSkipped, "running": model.coachingRunning,
                    "hasProfile": model.coaching?.decoded != nil, "strengths": model.coaching?.decoded?.strengths.map(\.title) ?? [],
