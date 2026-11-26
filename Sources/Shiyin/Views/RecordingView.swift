@@ -171,7 +171,7 @@ struct RecordingPanel: View {
             StopTimerMenu()
                 .layoutPriority(-1)
             if recorder.hasMic {
-                micStatus(recorder)
+                micStatus(recorder).layoutPriority(-1)
                 // 正在用哪一支麥克風，點一下可以換（design §38.3、R58.2）；視窗窄的時候先縮這個
                 MicrophoneMenu(recorder: recorder)
                     .frame(maxWidth: 180, alignment: .leading)
@@ -225,7 +225,9 @@ struct RecordingPanel: View {
                 .help(recorder.micPaused ? "繼續錄麥克風（⇧⌘M）" : "暫停麥克風：只錄電腦聲音（⇧⌘M）。用喇叭開會時避免錄到回音，同一個房間的人說話也不會錄到")
                 .accessibilityLabel(recorder.micPaused ? "繼續錄麥克風" : "暫停麥克風")
                 if recorder.micPaused {
-                    Text("麥克風已暫停").foregroundStyle(.secondary).lineLimit(1)
+                    // 窄的時候（fork：大字、960 寬）先縮成「…」，不把停止鈕擠出畫面
+                    Text("麥克風已暫停").foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                        .frame(minWidth: 0).layoutPriority(-2)
                 } else {
                     RecorderMeter(recorder: recorder, system: false).help("麥克風音量")
                 }

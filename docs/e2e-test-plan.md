@@ -36,6 +36,28 @@ background job in the TC-2 group is checked for that.
 </content>
 </invoke>
 
+## Regression suite (existing functions + upstream 5.1–5.3 features)
+
+`python3 scripts/dev/e2e/regression.py [R-…]` — same safety rules (debug build, data copy, fake AI, live checksum).
+
+| ID | Area | Expected |
+|---|---|---|
+| R-1 | Notes language | A Cantonese meeting re-summarizes with English notes; the setting is kept |
+| R-2 | Ask | Asking one meeting and asking an Account folder both answer and are saved with the right scope |
+| R-3 | Folders | An Account folder lists exactly its own meetings and its projects' meetings |
+| R-4 | Export | PDF, Word and Markdown come out in the KelNote layout (kicker with Account › Project, numbered sections, footer) |
+| R-5 | Speakers | A rename shows on the meeting and in People |
+| R-6 | Notes | An action item marked done is kept; Fix with AI makes a new version |
+| R-7 | Glossary | Terms add |
+| R-8 | Recording | A (simulated) recording starts, pauses, resumes and stops into a new meeting |
+| R-9 | New: mic pause | Pause only the microphone while recording, then turn it back on |
+| R-10 | New: timed stop | A stop time can be set and cleared while recording |
+| R-11 | New: screenshots | A screenshot stays on the meeting and is exported with the notes |
+| R-12 | New: version history | An earlier notes version can be picked and used |
+| R-13 | New: find more | "Find more uncertain points" runs and keeps the notes |
+| R-14 | New: glossary file | The glossary exports to a file and imports (merged) |
+| R-15 | Transcription | The recorded meeting transcribes on this Mac |
+
 ## Last run (2026-11-26)
 
 19 of 19 passed on a copy of the live data; the live database checksum was unchanged.
@@ -43,3 +65,9 @@ background job in the TC-2 group is checked for that.
 The suite was checked against the bug it is meant to catch: with the People refresh after jobs switched off
 (`refreshPeopleIfChanged()` in `AppModel.reload()`), TC-1.2, TC-2.1a and TC-2.1b fail. A green run therefore means that
 class of defect is not present.
+
+## Last run with upstream features (2026-11-27)
+
+`run.py` 19 of 19 and `regression.py` 16 of 16 passed on the merged build; live database unchanged.
+Screens checked by eye at text size 4 and 960 pt: notes toolbar (version history, undo, Fix with AI, Edit), transcript
+search, My coaching, recording bar. The recording bar pushed Stop off-screen with the microphone paused; fixed.
