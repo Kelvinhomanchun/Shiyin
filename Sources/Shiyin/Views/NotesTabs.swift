@@ -238,6 +238,14 @@ struct NotesPage: View {
                 if !notes.summary.isEmpty {
                     NotesSection(title: String(localized: "摘要")) { ItemList(items: notes.summary, detail: detail) { .summary($0) } }
                 }
+                // 會議紀錄的圖（fork）：摘要後面；整理工具判斷不需要圖時不顯示這一段
+                if let record = detail.diagrams, !record.diagrams.isEmpty {
+                    DiagramsSection(detail: detail, record: record)
+                } else if detail.drawingDiagrams {
+                    Label("正在判斷要不要畫圖…", systemImage: "rectangle.connected.to.line.below")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
                 if !notes.decisions.isEmpty {
                     NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions, detail: detail) { .decisions($0) } }
                 }

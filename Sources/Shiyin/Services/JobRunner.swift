@@ -98,6 +98,8 @@ enum AppSettings {
     }
     static var autoSummarize: Bool { flag(autoSummarizeKey, default: true) }
     static var stakeholderAnalysis: Bool { flag(stakeholderAnalysisKey, default: true) }
+    static let meetingDiagramsKey = "meetingDiagrams"   // fork：會議整理完判斷要不要畫流程圖等，預設開
+    static var meetingDiagrams: Bool { flag(meetingDiagramsKey, default: true) }
     static var mcpEnabled: Bool { flag(mcpEnabledKey, default: false) }
     static var compressAudio: Bool { flag(compressAudioKey, default: true) }
     static var diarize: Bool { flag(diarizeKey, default: true) }
@@ -258,6 +260,8 @@ final class JobRunner {
     @ObservationIgnored var onStakeholdersFinished: ((Job, Error?) -> Void)?
     /// 我的表現（fork）：教練建議更新好了、或失敗了
     @ObservationIgnored var onCoachingFinished: ((Job, Error?) -> Void)?
+    /// 會議紀錄的圖畫完（fork）：畫面上的「圖」那一段更新
+    @ObservationIgnored var onDiagramsFinished: ((Job, Error?) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
     /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
@@ -364,6 +368,7 @@ final class JobRunner {
             case .clean: try await clean(job, lane: lane)
             case .stakeholders: try await stakeholders(job, lane: lane)
             case .coaching: try await coaching(job, lane: lane)
+            case .diagrams: try await diagrams(job, lane: lane)
             case .nameSpeakers: await nameSpeakers(job, lane: lane)
             case .rediarize: try await rediarize(job, lane: lane)
             }
@@ -398,6 +403,7 @@ final class JobRunner {
             if !job.kind.isAuxiliary && (notify || failure != nil) { onFinished?(job, failure) }
             if job.kind == .stakeholders { onStakeholdersFinished?(job, failure) }
             if job.kind == .coaching { onCoachingFinished?(job, failure) }
+            if job.kind == .diagrams { onDiagramsFinished?(job, failure) }
         }
         onChange?()
     }
@@ -1004,6 +1010,32 @@ final class JobRunner {
         log.info("coaching updated from \(materials.count) meetings")
     }
 
+    /// 會議紀錄的圖（fork）：用人物分析的模型（比較會判斷要畫什麼）；不需要圖時存空的，畫面不顯示那一段
+    private func diagrams(_ job: Job, lane: JobLane) async throws {
+        let provider = AppSettings.provider
+        guard provider != .none, let meeting = try db.meeting(job.meetingId), meeting.deletedAt == nil,
+              let notes = meeting.decodedNotes, !notes.isEmpty else { return }
+        running[lane]?.provider = provider
+        running[lane]?.stage = String(localized: "畫圖")
+        let language = meeting.notesOutputLanguage
+        let prompt = Diagrams.prompt(meeting: meeting, notes: notes, segments: try db.segments(job.meetingId),
+                                     speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }))
+        let model = AppSettings.stakeholderModel
+        let data = try await callLLM(lane) { onStart in
+            try await LLMClient.generateJSON(provider: provider, model: model, system: Diagrams.system(language), prompt: prompt,
+                                             format: Diagrams.format, onStart: onStart)
+        }
+        guard isStillRunning(job) else { return }
+        var decoded: MeetingDiagrams
+        do { decoded = try JSONDecoder().decode(MeetingDiagrams.self, from: data).validated() }
+        catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+        if AppSettings.simplifiedChinese(for: language) { decoded = decoded.mappingText(ChineseScript.toSimplified) }
+        // 畫的期間紀錄被改了也照樣存；key 記的是畫的時候根據的那一版
+        try db.saveDiagrams(job.meetingId, DiagramRecord(diagrams: decoded, notesKey: Diagrams.notesKey(notes), provider: provider.rawValue,
+                                                         model: model, updatedAt: Clock.now()))
+        log.info("diagrams: \(decoded.diagrams.count) for meeting \(job.meetingId)")
+    }
+
     private static func idsJSON(_ ids: Set<Int64>) -> String {
         (try? JSONEncoder().encode(ids.sorted())).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
     }
@@ -1125,6 +1157,8 @@ final class JobRunner {
         if AppSettings.summarizerReady, try db.enqueueStakeholderRefresh(job.meetingId) { wake() }
         // 我的表現：我在這場會議，教練建議也更新（同樣等會議紀錄定下來）
         if AppSettings.summarizerReady, try db.enqueueCoachingRefresh(job.meetingId) { wake() }
+        // 會議紀錄的圖（fork）：講到流程、步驟的會議，整理工具判斷要不要畫
+        if AppSettings.summarizerReady, AppSettings.meetingDiagrams, try db.enqueueDiagrams(job.meetingId) { wake() }
         // 整理完有標題了，照資料夾的條件放（design §72）
         if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder) }
         return answers != nil || hadDraft == 0

@@ -49,6 +49,34 @@ enum ScreenExport {
         return out
     }
 
+    // MARK: 會議紀錄的圖（fork）
+
+    /// 圖的位置標記（同畫面的做法）
+    static func diagramMarker(_ index: Int) -> String { String(format: "SHIYINDIAGRAM%04d", index + 1) }
+
+    /// md 旁邊的圖：diagram-1.png、diagram-2.png，放在畫面的同一個資料夾
+    static func diagramFileName(_ index: Int) -> String { "diagram-\(index + 1).png" }
+
+    static func writeDiagrams(_ pngs: [Data], next url: URL, language: MeetingLanguage) throws {
+        guard !pngs.isEmpty else { return }
+        let folder = url.deletingLastPathComponent().appendingPathComponent(folderName(for: url, language: language), isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for (index, png) in pngs.enumerated() { try png.write(to: folder.appendingPathComponent(diagramFileName(index))) }
+    }
+
+    /// PDF：圖的標記換成內嵌的 PNG（寬度是圖本身的寬，比頁面寬時縮到頁寬）
+    static func inlineDiagrams(_ html: String, _ pngs: [Data]) -> String {
+        var out = html
+        for (index, png) in pngs.enumerated() {
+            // 原本的大小、不超過欄寬；高的圖（泳道）縮到約大半頁高，標題才不會被單獨留在上一頁
+            let size = pixelSize(png).map { (w: Double($0.width) / 2, h: Double($0.height) / 2) } ?? (w: 600, h: 400)
+            let width = Int(min(size.w, size.w * 640 / max(size.h, 1)))
+            out = out.replacingOccurrences(of: "<p class=\"diagram\">\(diagramMarker(index))</p>",
+                with: "<p class=\"diagram\"><img src=\"data:image/png;base64,\(png.base64EncodedString())\" style=\"width:\(width)px;max-width:100%\"></p>")
+        }
+        return out
+    }
+
     /// 圖片的像素大小
     static func pixelSize(_ data: Data) -> (width: Int, height: Int)? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
@@ -95,9 +123,11 @@ enum DocxImages {
                 document.removeSubrange(start..<end)
                 continue
             }
-            let name = "screen\(index + 1).jpg", id = "rIdShiyinScreen\(index + 1)"
+            let isPNG = jpeg.starts(with: [0x89, 0x50, 0x4E, 0x47])
+            let name = "screen\(index + 1).\(isPNG ? "png" : "jpg")", id = "rIdShiyinScreen\(index + 1)"
             try jpeg.write(to: media.appendingPathComponent(name))
-            let width = min(maxWidth, size.width * 9525)
+            // PNG（圖）是兩倍解析度
+            let width = min(maxWidth, size.width * 9525 / (isPNG ? 2 : 1))
             let height = Int(Double(width) * Double(size.height) / Double(size.width))
             document.replaceSubrange(start..<end, with: drawing(id: id, number: index + 1, name: name, width: width, height: height))
             rels = rels.replacingOccurrences(of: "</Relationships>", with:
@@ -107,10 +137,16 @@ enum DocxImages {
         try rels.write(to: relsURL, atomically: true, encoding: .utf8)
         let typesURL = dir.appendingPathComponent("[Content_Types].xml")
         var types = try String(contentsOf: typesURL, encoding: .utf8)
+        var typesChanged = false
         if !types.contains("Extension=\"jpg\"") {
             types = types.replacingOccurrences(of: "<Default Extension=\"xml\"", with: "<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/><Default Extension=\"xml\"")
-            try types.write(to: typesURL, atomically: true, encoding: .utf8)
+            typesChanged = true
         }
+        if !types.contains("Extension=\"png\"") {
+            types = types.replacingOccurrences(of: "<Default Extension=\"xml\"", with: "<Default Extension=\"png\" ContentType=\"image/png\"/><Default Extension=\"xml\"")
+            typesChanged = true
+        }
+        if typesChanged { try types.write(to: typesURL, atomically: true, encoding: .utf8) }
         // [Content_Types].xml 放第一個（有些讀取程式要求）
         let entries = (try fm.contentsOfDirectory(atPath: dir.path)).filter { $0 != "[Content_Types].xml" }.sorted()
         try run("/usr/bin/zip", ["-X", "-q", "-r", output.path, "[Content_Types].xml"] + entries, in: dir)

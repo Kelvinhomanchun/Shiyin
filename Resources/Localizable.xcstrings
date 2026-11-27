@@ -4267,6 +4267,12 @@
             "state": "translated",
             "value": "Later refreshes keep this point. Click again to undo."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之后重新整理会保留这一点。再按一次取消"
+          }
         }
       }
     },
@@ -9944,6 +9950,23 @@
         }
       }
     },
+    "圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagrams"
+          }
+        }
+      }
+    },
     "圖片和辨識出的文字都會刪掉。已經整理好的會議紀錄要重新整理才會拿掉這張的內容。": {
       "extractionState": "manual",
       "localizations": {
@@ -12209,6 +12232,12 @@
             "state": "translated",
             "value": "Marked useful"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已标为有用"
+          }
         }
       }
     },
@@ -13304,6 +13333,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splits at %@ into %@ and %@; the second one is called “%@ (2)”."
+          }
+        }
+      }
+    },
+    "從 %@ 播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 %@ 播放"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play from %@"
           }
         }
       }
@@ -19558,6 +19604,23 @@
         }
       }
     },
+    "會議講到流程、步驟時，整理完自動畫圖（流程圖、泳道圖…）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议讲到流程、步骤时，整理完自动画图（流程图、泳道图…）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw diagrams automatically when a meeting walks through a process or steps (flowcharts, swimlanes…)"
+          }
+        }
+      }
+    },
     "會議還不夠": {
       "extractionState": "manual",
       "localizations": {
@@ -20128,6 +20191,12 @@
             "state": "translated",
             "value": "Mark as useful: later refreshes keep this point."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标为有用：之后重新整理会保留这一点"
+          }
         }
       }
     },
@@ -20627,6 +20696,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在分析他在会议里说的话…"
+          }
+        }
+      }
+    },
+    "正在判斷要不要畫圖…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在判断要不要画图…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deciding whether a diagram would help…"
           }
         }
       }
@@ -23543,6 +23629,91 @@
         }
       }
     },
+    "畫圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw diagrams"
+          }
+        }
+      }
+    },
+    "畫圖中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画图中…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drawing…"
+          }
+        }
+      }
+    },
+    "畫圖失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画图失败：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't draw diagrams: %@"
+          }
+        }
+      }
+    },
+    "畫圖（流程圖等）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画图（流程图等）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw Diagrams (Flowcharts…)"
+          }
+        }
+      }
+    },
+    "畫圖：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画图：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drawing diagrams: %@"
+          }
+        }
+      }
+    },
     "畫面": {
       "extractionState": "manual",
       "localizations": {
@@ -24742,6 +24913,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Concision"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简洁"
           }
         }
       }
@@ -27407,6 +27584,23 @@
         }
       }
     },
+    "請整理工具依目前的會議紀錄重新判斷要畫哪些圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请整理工具依目前的会议记录重新判断要画哪些图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask the summarizer to decide again, from the current notes, which diagrams to draw"
+          }
+        }
+      }
+    },
     "請輸入像 12:34 或 1:02:03 的時間。": {
       "extractionState": "manual",
       "localizations": {
@@ -27703,6 +27897,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Room maker"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让人畅所欲言"
           }
         }
       }
@@ -28831,6 +29031,23 @@
         }
       }
     },
+    "這些圖是依之前的會議紀錄畫的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些图是依之前的会议记录画的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These diagrams were drawn from an earlier version of the notes"
+          }
+        }
+      }
+    },
     "這些待辦都已經在提醒事項了": {
       "extractionState": "manual",
       "localizations": {
@@ -29321,6 +29538,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这场会议不再提示"
+          }
+        }
+      }
+    },
+    "這場會議不需要圖：沒有流程、步驟或交接可以畫": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场会议不需要图：没有流程、步骤或交接可以画"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting doesn't need a diagram: there is no process, steps or hand-off to draw"
           }
         }
       }
@@ -29877,6 +30111,12 @@
             "state": "translated",
             "value": "No weaknesses with evidence this time."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这次没有找到有出处的弱项。"
+          }
         }
       }
     },
@@ -29887,6 +30127,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "No strengths with evidence this time."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这次没有找到有出处的强项。"
           }
         }
       }
@@ -30852,6 +31098,23 @@
         }
       }
     },
+    "還沒有會議紀錄，整理完才能畫圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有会议记录，整理完才能画图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No notes yet. Diagrams can be drawn once the notes are ready"
+          }
+        }
+      }
+    },
     "還沒有正式逐字稿，轉錄完成後再試一次": {
       "extractionState": "manual",
       "localizations": {
@@ -31534,6 +31797,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新检查登录状态"
+          }
+        }
+      }
+    },
+    "重新畫": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新画"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redraw"
           }
         }
       }

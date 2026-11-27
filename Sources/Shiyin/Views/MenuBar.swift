@@ -208,6 +208,7 @@ struct MenuBarContent: View {
         case .nameSpeakers: return String(localized: "猜說話者：\(title)")
         case .stakeholders: return String(localized: "分析與會者：\(title)")
         case .coaching: return String(localized: "整理我的表現")
+        case .diagrams: return String(localized: "畫圖：\(title)")
         default: return String(localized: "整理中：\(title)")
         }
     }

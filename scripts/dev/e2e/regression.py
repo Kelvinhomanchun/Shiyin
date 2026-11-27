@@ -260,12 +260,133 @@ def r_15():
     e.check("R-15", "The recorded meeting transcribes on this Mac", segs > 0, f"segments {segs}")
 
 
-CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15]
+# ---------------- meeting diagrams (fork) ----------------
+
+PBI = 25   # "Walkthrough of PBI Report Generation Process"
+
+
+def diagrams_state():
+    path = HOME + "/diagrams.json"
+    if os.path.exists(path): os.remove(path)
+    e.ctl("diagramstate", path, wait=0.4)
+    for _ in range(20):
+        if os.path.exists(path):
+            try: return json.load(open(path))
+            except ValueError: pass
+        time.sleep(0.2)
+    raise RuntimeError("no diagramstate")
+
+
+def until_diagrams(cond, timeout=60):
+    end = time.time() + timeout
+    s = diagrams_state()
+    while time.time() < end and not cond(s):
+        time.sleep(1); s = diagrams_state()
+    return s
+
+
+def r_16():
+    """After notes are re-made, a diagram is drawn automatically on the stakeholder model and shows with no click."""
+    e.mode(diagrams="pbi")
+    e.ctl("select", PBI, wait=1.5)
+    n0 = len(e.ai_calls("diagrams"))
+    e.ctl("resummarize", PBI, wait=1)
+    s = until_diagrams(lambda s: s["count"] == 2 and not s["drawing"], timeout=90)
+    calls = e.ai_calls("diagrams")[n0:]
+    e.check("R-16", "Re-summarize draws the diagrams by itself, on the stakeholder model, and the notes page shows them",
+            s["selection"] == PBI and s["kinds"] == ["swimlane", "flowchart"] and calls and calls[-1]["model"] == "stake-model"
+            and s["model"] == "stake-model" and not s["stale"],
+            f"state {s}, calls {[c['model'] for c in calls]}")
+
+
+def r_17():
+    """Redraw: it says drawing while it runs, still says so after leaving the meeting and coming back, then shows the result."""
+    other = e.q("SELECT id FROM meetings WHERE deleted_at IS NULL AND notes IS NOT NULL AND id <> ? ORDER BY id DESC LIMIT 1", PBI)[0][0]
+    e.mode(diagrams="pbi", delay=6)
+    e.ctl("select", PBI, wait=1)
+    e.ctl("drawdiagrams", PBI, wait=1.5)
+    during = diagrams_state()["drawing"]
+    e.ctl("select", other, wait=1.5); e.ctl("select", PBI, wait=1.5)
+    back = diagrams_state()["drawing"]
+    s = until_diagrams(lambda s: not s["drawing"], timeout=40)
+    e.mode(diagrams="pbi")
+    e.check("R-17", "Redraw shows 'drawing' until done, also after leaving and coming back",
+            during and back and s["count"] == 2 and not s["error"], f"during {during} back {back} end {s}")
+
+
+def r_18():
+    """A meeting with no process: a redraw returns nothing, the page says so and shows no diagram section."""
+    other = e.q("SELECT id FROM meetings WHERE deleted_at IS NULL AND notes IS NOT NULL AND id <> ? ORDER BY id DESC LIMIT 1", PBI)[0][0]
+    e.mode(diagrams="none")
+    e.ctl("select", other, wait=1)
+    e.ctl("drawdiagrams", other, wait=1.5)
+    s = until_diagrams(lambda s: not s["drawing"] and s["notice"], timeout=40)
+    e.mode(diagrams="pbi")
+    e.check("R-18", "No process → no diagram; the page says it needs none", s["count"] in (0, -1) and s["notice"] and not s["error"], f"{s}")
+
+
+def r_19():
+    """Too big an answer is cut to the rules (9 nodes, 2 focal, edges to real nodes only)."""
+    e.mode(diagrams="big")
+    e.ctl("select", PBI, wait=1); e.ctl("drawdiagrams", PBI, wait=1.5)
+    s = until_diagrams(lambda s: not s["drawing"] and s["titles"] == ["Too many"], timeout=40)
+    row = e.q("SELECT diagrams FROM meeting_diagrams WHERE meeting_id = ?", PBI)[0][0]
+    d = json.loads(row)["diagrams"][0]
+    focal = sum(1 for n in d["nodes"] if n["focal"])
+    ids = {n["id"] for n in d["nodes"]}
+    e.mode(diagrams="pbi")
+    e.ctl("drawdiagrams", PBI, wait=1.5); until_diagrams(lambda s: not s["drawing"] and s["count"] == 2, timeout=40)
+    e.check("R-19", "An over-budget answer is cut to 9 nodes, 2 focal, edges between kept nodes",
+            len(d["nodes"]) == 9 and focal == 2 and all(x["from"] in ids and x["to"] in ids for x in d["edges"]),
+            f"nodes {len(d['nodes'])} focal {focal} edges {len(d['edges'])}")
+
+
+def r_20():
+    """Editing the notes keeps the diagrams but marks them as drawn from the earlier notes."""
+    e.ctl("select", PBI, wait=1)
+    notes = json.loads(e.q("SELECT notes FROM meetings WHERE id = ?", PBI)[0][0])
+    summary = notes.get("summary") or []
+    notes["summary"] = summary + ["(edited)"] if isinstance(summary, list) else summary + " (edited)"
+    e.ctl("editnotes", PBI, json.dumps(notes, ensure_ascii=False), wait=2)
+    s = until_diagrams(lambda s: s["stale"], timeout=10)
+    e.check("R-20", "After editing the notes, the diagrams stay and say they are from the earlier notes", s["count"] == 2 and s["stale"], f"{s}")
+
+
+def r_21():
+    """PDF, Word and Markdown exports carry the diagrams as pictures after the summary."""
+    os.makedirs(OUT, exist_ok=True)
+    ok = {}
+    for fmt in ("pdf", "docx", "md"):
+        path = f"{OUT}/pbi.{fmt}"
+        if os.path.exists(path): os.remove(path)
+        e.ctl("export", "notes", fmt, path, "1", "1", PBI, wait=0.5)
+        ok[fmt] = wait_file(path)
+    md = open(f"{OUT}/pbi.md").read() if ok["md"] else ""
+    pngs = re.findall(r"!\[[^\]]*\]\(<([^>]+diagram-\d\.png)>\)", md)
+    md_files = all(os.path.exists(os.path.join(OUT, p)) for p in pngs) and len(pngs) == 2
+    media = []
+    if ok["docx"]:
+        with zipfile.ZipFile(f"{OUT}/pbi.docx") as z:
+            media = [n for n in z.namelist() if n.startswith("word/media/") and n.endswith(".png")]
+            body = z.read("word/document.xml").decode()
+    pdf = open(f"{OUT}/pbi.pdf", "rb").read() if ok["pdf"] else b""
+    pdf_text = subprocess.run(["/usr/bin/strings", f"{OUT}/pbi.pdf"], capture_output=True, text=True).stdout if ok["pdf"] else ""
+    no_marker = "SHIYINDIAGRAM" not in md and ok["docx"] and "SHIYINDIAGRAM" not in body and "SHIYINDIAGRAM" not in pdf_text
+    summary_first = md.find("Summary") < md.find("Monthly Power BI report refresh") if md else False
+    e.check("R-21", "PDF, Word and Markdown exports include both diagrams after the summary",
+            pdf.startswith(b"%PDF") and len(media) >= 2 and md_files and no_marker and summary_first and b"/Image" in pdf,
+            f"ok {ok}, md pictures {pngs}, docx media {media}, markers gone {no_marker}, order {summary_first}")
+    for k in (0, 1):
+        e.ctl("diagrampng", PBI, k, f"{OUT}/pbi-diagram-{k}.png", wait=1.5)
+
+
+CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21]
 
 
 def main():
     want = set(sys.argv[1:])
     live_before = e.checksum(e.LIVE)
+    e.EXTRA_ARGS[:] = ["-openaiCompatibleStakeholderModel", "stake-model"]
     e.start()
     try:
         for case in CASES:

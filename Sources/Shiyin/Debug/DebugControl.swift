@@ -472,6 +472,22 @@ enum DebugControl {
                    "weaknesses": model.coaching?.decoded?.weaknesses.map(\.title) ?? [], "updatedAt": model.coaching?.updatedAt ?? "",
                    "selection": model.selection.map { Int($0) } ?? -1, "mode": "\(model.sidebarMode)", "person": model.selectedPerson.map { Int($0) } ?? -1,
                    "tab": model.coachingTab.rawValue, "useful": model.coaching?.usefulTitles ?? []], to: args[1])
+        // 會議紀錄的圖（fork）：diagramstate <輸出.json>（畫面上這場會議的圖）；drawdiagrams <會議 id>：等於按「畫圖」；
+        // diagrampng <會議 id> <第幾張，0 起> <輸出.png>：畫面同一個 view 匯出的圖
+        case "diagramstate":
+            let record = model.detail?.diagrams
+            write(["selection": model.selection.map { Int($0) } ?? -1, "drawing": model.detail?.drawingDiagrams ?? false,
+                   "count": record?.diagrams.diagrams.count ?? -1, "kinds": record?.diagrams.diagrams.map(\.kind.rawValue) ?? [],
+                   "titles": record?.diagrams.diagrams.map(\.title) ?? [],
+                   "nodes": record?.diagrams.diagrams.map(\.nodes.count) ?? [],
+                   "stale": record.flatMap { r in model.detail?.notes.map { Diagrams.notesKey($0) != r.notesKey } } ?? false,
+                   "model": record?.model ?? "", "notice": model.noticeMessage ?? "", "error": model.errorMessage ?? ""], to: args[1])
+        case "drawdiagrams": model.selection = id; model.redrawDiagrams()
+        case "diagrampng":
+            if let record = (try? model.db.diagramRecord(id ?? 0)) ?? nil, let k = Int(args[2]), record.diagrams.diagrams.indices.contains(k),
+               let png = DiagramExport.png(record.diagrams.diagrams[k]) {
+                try? png.write(to: URL(fileURLWithPath: args[3]))
+            }
         case "settle": AppDatabase.stakeholderSettleSeconds = Double(args[1]) ?? 60   // settle <秒>：自動的與會者分析要等多久
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
         case "template": model.selection = id; model.setTemplate(args[2])

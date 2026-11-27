@@ -14,6 +14,8 @@ struct ExportBundle {
     var documents: [MeetingDocument] = []
     /// 會議中的畫面（design §83.6）：匯出的會議紀錄最後一節、逐字稿插在時間點、封包
     var screens: [MeetingDocument] = []
+    /// 會議紀錄的圖（fork）：摘要後面一節；沒有圖時 nil
+    var diagrams: DiagramRecord? = nil
 
     func speakerName(_ idx: Int?) -> String? { idx.map { speakers[$0] ?? text.speaker($0) } }
 
@@ -37,6 +39,7 @@ struct ExportText {
     var details: String { language.text(zh: "詳細", en: "Details", ja: "詳細") }
     var review: String { language.text(zh: "待確認", en: "To confirm", ja: "要確認") }
     var screens: String { language.text(zh: "會議中的畫面", en: "Screens shown during the meeting", ja: "会議中の画面") }
+    var diagrams: String { language.text(zh: "圖", en: "Diagrams", ja: "図") }
     /// 本地 MCP 的會議紀錄接在後面的「我的筆記」（design §44.2）
     /// 議題：同畫面上的段落名稱
     var topics: String { language.text(zh: "議題", en: "Topics", ja: "議題") }
@@ -198,11 +201,15 @@ enum NotesExporter {
         case actions(String, [MeetingNotes.ActionItem])
         case topics(String, [MeetingNotes.Topic])
         case review(String, [MeetingNotes.ReviewItem])
+        /// 會議紀錄的圖（fork）：一張一張，圖片在各個匯出格式各自放
+        case diagrams(String, [MeetingDiagrams.Diagram])
     }
 
-    static func blocks(_ notes: MeetingNotes, _ x: ExportText) -> [Block] {
+    /// diagrams：要放的圖（匯出時有圖片的那幾張），放在摘要後面；沒給時跟以前一樣
+    static func blocks(_ notes: MeetingNotes, _ x: ExportText, diagrams: [MeetingDiagrams.Diagram] = []) -> [Block] {
         var out: [Block] = []
         if !notes.summary.isEmpty { out.append(.list(x.section("summary"), notes.summary, style: "summary")) }
+        if !diagrams.isEmpty { out.append(.diagrams(x.diagrams, diagrams)) }
         if !notes.decisions.isEmpty { out.append(.list(x.section("decisions"), notes.decisions, style: "dec")) }
         if !notes.actionItems.isEmpty { out.append(.actions(x.section("actionItems"), notes.actionItems)) }
         if !notes.openQuestions.isEmpty { out.append(.list(x.section("openQuestions"), notes.openQuestions, style: "q")) }
@@ -213,7 +220,8 @@ enum NotesExporter {
     }
 
     /// screenFolder：md 旁邊放畫面的資料夾（design §83.6），最後加一節；nil 時不放
-    static func markdown(_ b: ExportBundle, screenFolder: String? = nil) -> String {
+    /// diagrams：放在旁邊資料夾的圖有幾張（fork）；0 時不放
+    static func markdown(_ b: ExportBundle, screenFolder: String? = nil, diagrams: Int = 0) -> String {
         let m = b.meeting
         let x = b.notesText
         var out = ["# \(m.displayTitle)", "", "*\(kicker(b))*", ""]
@@ -241,9 +249,17 @@ enum NotesExporter {
         let figures = [(x.section("decisions"), notes.decisions.count), (x.section("actionItems"), notes.actionItems.count),
                        (x.section("openQuestions"), notes.openQuestions.count)].filter { $0.1 > 0 }
         if !figures.isEmpty { out += ["", "> " + figures.map { "**\($0.1)** \($0.0)" }.joined(separator: " · ")] }
-        for (i, block) in blocks(notes, x).enumerated() {
+        let shown = screenFolder == nil ? [] : Array((b.diagrams?.diagrams.diagrams ?? []).prefix(diagrams))
+        for (i, block) in blocks(notes, x, diagrams: shown).enumerated() {
             let n = number(i + 1)
             switch block {
+            case let .diagrams(title, list):
+                out += ["", "## \(n) · \(title)"]
+                for (k, d) in list.enumerated() {
+                    out += ["", "### \(d.title)"]
+                    if !d.caption.isEmpty { out += ["", d.caption] }
+                    out += ["", "![\(d.title)](\(TranscriptExporter.markdownPath(screenFolder ?? "", ScreenExport.diagramFileName(k))))"]
+                }
             case let .list(title, items, _):
                 out += ["", "## \(n) · \(title)", ""] + items.map { "- \($0.text)\(t($0.time))" }
             case let .people(title, people):
@@ -293,6 +309,7 @@ enum NotesExporter {
                 out += ["", title.uppercased()]
                 for topic in topics { out += ["[\(topic.start)] \(topic.title)"] + topic.points.map { "  • \($0.text)\(t($0.time))" } }
             case let .review(title, items): out += ["", title.uppercased()] + items.map { "• \($0.question)\(t($0.time))" }
+            case .diagrams: break
             }
         }
         return out.joined(separator: "\n") + "\n"
@@ -300,7 +317,8 @@ enum NotesExporter {
 
     /// 給 Word、剪貼簿：NSAttributedString 不認得 flex 等版面，用表格和簡單的樣式，但同一套字型、顏色、編號
     /// screens：最後一節放畫面的位置標記（design §83.6），簡繁轉換之後才換成圖片
-    static func html(_ b: ExportBundle, screens: Bool = false) -> String {
+    /// diagrams：放幾張圖（fork），位置標記之後換成圖片；0 時不放
+    static func html(_ b: ExportBundle, screens: Bool = false, diagrams: Int = 0) -> String {
         let m = b.meeting
         let x = b.notesText
         func screenSection() -> String {
@@ -324,9 +342,17 @@ enum NotesExporter {
             "<p class=\"li\"><span class=\"mark\">\(mark)</span>&nbsp;&nbsp;&nbsp;\(HTML.escape(text))\(t(time))</p>"
         }
         func items(_ list: [MeetingNotes.Item]) -> String { list.map { bullet($0.text, $0.time) }.joined() + "\n" }
-        for (i, block) in blocks(notes, x).enumerated() {
+        let shown = Array((b.diagrams?.diagrams.diagrams ?? []).prefix(diagrams))
+        for (i, block) in blocks(notes, x, diagrams: shown).enumerated() {
             let h2 = { (title: String) in "<h2><span class=\"no\">\(number(i + 1))</span>&nbsp;&nbsp;\(HTML.escape(title))</h2>\n" }
             switch block {
+            case let .diagrams(title, list):
+                body += h2(title)
+                for (k, d) in list.enumerated() {
+                    body += "<h3>\(HTML.escape(d.title))</h3>\n"
+                    if !d.caption.isEmpty { body += "<p>\(HTML.escape(d.caption))</p>\n" }
+                    body += "<p class=\"diagram\">\(ScreenExport.diagramMarker(k))</p>\n"
+                }
             case let .list(title, list, _): body += h2(title) + items(list)
             case let .people(title, people):
                 body += h2(title)
@@ -347,7 +373,7 @@ enum NotesExporter {
     }
 
     /// PDF：用 WebKit 排版，CSS 完整生效（IBM 簡報的樣子：白底、Plex、藍 60 的重點、細線、編號段落）
-    static func report(_ b: ExportBundle, screens: Bool = false) -> String {
+    static func report(_ b: ExportBundle, screens: Bool = false, diagrams: Int = 0) -> String {
         let m = b.meeting
         let x = b.notesText
         var body = "<header class=\"cover\"><div class=\"kicker\">\(HTML.escape(kicker(b)))</div><h1>\(HTML.escape(m.displayTitle))</h1><div class=\"meta\">"
@@ -373,8 +399,16 @@ enum NotesExporter {
         func list(_ rows: [String], _ style: String) -> (String, String) {
             (ul(Array(rows.prefix(1)), style), ul(Array(rows.dropFirst()), style + " cont"))
         }
-        for (i, block) in blocks(notes, x).enumerated() {
+        let shown = Array((b.diagrams?.diagrams.diagrams ?? []).prefix(diagrams))
+        let all = blocks(notes, x, diagrams: shown)
+        for (i, block) in all.enumerated() {
             switch block {
+            case let .diagrams(title, list):
+                let cards = list.enumerated().map { k, d in
+                    "<div class=\"topic\"><h3>\(HTML.escape(d.title))</h3>" + (d.caption.isEmpty ? "" : "<p class=\"cap\">\(HTML.escape(d.caption))</p>")
+                        + "<p class=\"diagram\">\(ScreenExport.diagramMarker(k))</p></div>"
+                }
+                body += section(title, i + 1, first: cards.first ?? "", rest: cards.dropFirst().joined())
             case let .list(title, items, style):
                 let (first, rest) = list(items.map { li($0.text, $0.time) }, style)
                 body += section(title, i + 1, first: first, rest: rest)
@@ -405,7 +439,7 @@ enum NotesExporter {
             let cards = b.screens.enumerated().map { index, screen in
                 "<div class=\"topic\"><h3><span class=\"start\">\(TimeFormat.string(screen.at ?? 0))</span></h3><p class=\"screen\">\(ScreenExport.marker(index))</p></div>"
             }
-            body += section(x.screens, blocks(notes, x).count + 1, first: cards[0], rest: cards.dropFirst().joined())
+            body += section(x.screens, all.count + 1, first: cards[0], rest: cards.dropFirst().joined())
         }
         return HTML.report(title: m.displayTitle, body: body, footer: x.footer, language: x.language)
     }
@@ -514,6 +548,8 @@ enum HTML {
         .topic{margin:0 0 12pt;break-inside:avoid;page-break-inside:avoid}
         .topic h3{font-weight:500;font-size:10.5pt;margin:0 0 3pt}
         .topic h3 .start{margin-right:8pt;color:#0F62FE;font-weight:500;font-size:8.5pt}
+        .topic .cap{margin:0 0 6pt;color:#525252;font-size:9pt}
+        p.diagram{margin:4pt 0 0}
         .empty{color:#6F6F6F;margin-top:18pt}
         .foot{margin-top:26pt;padding-top:8pt;border-top:1px solid #E0E0E0;font-size:7.5pt;color:#8D8D8D}
         </style></head><body>\(body)<div class="foot">\(escape(footer))</div></body></html>

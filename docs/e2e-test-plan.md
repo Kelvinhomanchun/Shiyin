@@ -57,6 +57,12 @@ background job in the TC-2 group is checked for that.
 | R-13 | New: find more | "Find more uncertain points" runs and keeps the notes |
 | R-14 | New: glossary file | The glossary exports to a file and imports (merged) |
 | R-15 | Transcription | The recorded meeting transcribes on this Mac |
+| R-16 | New: diagrams | Re-summarizing the PBI walkthrough draws a swimlane and a flowchart by itself, on the stakeholder model; the notes page shows them with no click |
+| R-17 | New: diagrams | Redraw says "Drawing…" until done, also after leaving the meeting and coming back |
+| R-18 | New: diagrams | A meeting with no process gets no diagram; the page says it needs none |
+| R-19 | New: diagrams | An over-budget answer is cut to the rules (9 nodes, 2 focal, edges only between kept nodes) |
+| R-20 | New: diagrams | Editing the notes keeps the diagrams and marks them as drawn from earlier notes |
+| R-21 | New: diagrams | PDF, Word and Markdown exports carry both diagrams as pictures after the summary |
 
 ## Last run (2026-11-26)
 
@@ -71,3 +77,11 @@ class of defect is not present.
 `run.py` 19 of 19 and `regression.py` 16 of 16 passed on the merged build; live database unchanged.
 Screens checked by eye at text size 4 and 960 pt: notes toolbar (version history, undo, Fix with AI, Edit), transcript
 search, My coaching, recording bar. The recording bar pushed Stop off-screen with the microphone paused; fixed.
+
+## Last run with meeting diagrams (2026-11-27)
+
+`run.py` 19 of 19 and `regression.py` 22 of 22 passed; live database unchanged.
+Checked by eye: both PBI diagrams as exported PNGs, the notes page at text size 4 and 960 pt in light and dark,
+and the PDF page. Fixes made from that review: the Yes/No exits of a decision no longer jog sideways; at large text
+sizes a wide diagram shrinks to the column (down to 0.75×) instead of scrolling both ways; in the PDF a tall diagram
+is capped near 3/4 of a page so its section heading is not left alone on the page before.

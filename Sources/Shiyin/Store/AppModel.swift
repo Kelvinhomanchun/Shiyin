@@ -99,6 +99,10 @@ struct MeetingDetail: Equatable {
     var selfIdx: Int?
     /// 說話者對到的人物（點名字打開人物頁）
     var speakerPersons: [Int: Int64] = [:]
+    /// 會議紀錄的圖（fork）：還沒畫過、或整理工具判斷不需要圖時是 nil／空的
+    var diagrams: DiagramRecord?
+    /// 這場會議有排隊或正在畫的圖（從工作表讀，離開再回來也對）
+    var drawingDiagrams = false
 
     /// 名字對到的人物：先找這場的說話者，再找認識的人（不分大小寫）
     func personId(named name: String, people: [PersonOverview]) -> Int64? {
@@ -457,6 +461,7 @@ final class AppModel {
         runner.onStakeholderUpdated = { [weak self] personId in self?.stakeholderUpdated(personId) }
         runner.onStakeholdersFinished = { [weak self] job, error in self?.stakeholdersFinished(job, error: error) }
         runner.onCoachingFinished = { [weak self] job, error in self?.coachingFinished(job, error: error) }
+        runner.onDiagramsFinished = { [weak self] job, error in self?.diagramsFinished(job, error: error) }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             // 錄音壓縮成 m4a 後換檔案：接著原本的位置，正在播的繼續播
@@ -754,6 +759,8 @@ final class AppModel {
         loaded.loadSpeakers(speakerRows)
         loaded.loadDocuments((try? db.documents(id)) ?? [])
         loaded.screens = (try? db.screens(id)) ?? []
+        loaded.diagrams = (try? db.diagramRecord(id)) ?? nil
+        loaded.drawingDiagrams = (try? db.hasActiveJob(id, kind: .diagrams)) ?? false
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
         loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
@@ -1582,6 +1589,36 @@ final class AppModel {
         runner.wake()
     }
 
+    // MARK: 會議紀錄的圖（fork）
+
+    /// 「畫圖」「重新畫」：依目前的會議紀錄請整理工具判斷要畫哪些圖（payload 標成手動，不等紀錄定下來）
+    func redrawDiagrams() {
+        guard let id = selection, readyForAction(id) else { return }
+        guard detail?.notes != nil else {
+            noticeMessage = String(localized: "還沒有會議紀錄，整理完才能畫圖")
+            return
+        }
+        guard AppSettings.provider != .none else {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
+        perform(.detail(.meeting)) { _ = try db.enqueueDiagrams(id, payload: #"{"manual":true}"#) }
+        runner.wake()
+    }
+
+    func diagramsFinished(_ job: Job, error: Error?) {
+        let manual = job.payload != nil
+        if let error, manual { errorMessage = String(localized: "畫圖失敗：\(error.localizedDescription)") }
+        guard selection == job.meetingId else { return }
+        reloadDetail(.meeting)
+        if manual, error == nil, detail?.diagrams?.diagrams.isEmpty ?? true {
+            noticeMessage = String(localized: "這場會議不需要圖：沒有流程、步驟或交接可以畫")
+        }
+    }
+
     // MARK: 版本紀錄（R115、design §89）
 
     /// 「版本紀錄」選單：目前的在最上面，再來由新到舊；正在看的那一版打勾
@@ -2259,13 +2296,13 @@ final class AppModel {
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
                             bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId),
-                            screens: try db.screens(meetingId))
+                            screens: try db.screens(meetingId), diagrams: try db.diagramRecord(meetingId).flatMap { $0.diagrams.isEmpty ? nil : $0 })
     }
 
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
         return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes,
-                            documents: d.documents, screens: d.screens)
+                            documents: d.documents, screens: d.screens, diagrams: d.diagrams.flatMap { $0.diagrams.isEmpty ? nil : $0 })
     }
 
     /// 寫出檔案
@@ -2275,12 +2312,22 @@ final class AppModel {
         case .notes:
             // 會議中的畫面（design §83.6）：最後一節；沒有畫面時跟以前一字不差
             switch format {
-            case "pdf": try await HTML.reportPDF(ScreenExport.inlineImages(ExportScript.html(NotesExporter.report(b, screens: true), b), b.screens), title: b.meeting.displayTitle, to: url)
-            case "docx": try await Self.docxWithScreens(ExportScript.html(NotesExporter.html(b, screens: true), b), b.screens).write(to: url)
+            case "pdf":
+                let pictures = DiagramExport.pngs(b)
+                let html = ScreenExport.inlineDiagrams(ScreenExport.inlineImages(
+                    ExportScript.html(NotesExporter.report(b, screens: true, diagrams: pictures.count), b), b.screens), pictures.map(\.png))
+                try await HTML.reportPDF(html, title: b.meeting.displayTitle, to: url)
+            case "docx":
+                let pictures = DiagramExport.pngs(b)
+                try await Self.docxWithScreens(ExportScript.html(NotesExporter.html(b, screens: true, diagrams: pictures.count), b), b.screens,
+                                               diagrams: pictures.map(\.png)).write(to: url)
             default:
                 let folder = ScreenExport.folderName(for: url, language: b.meeting.meetingLanguage)
-                try ExportScript.text(NotesExporter.markdown(b, screenFolder: folder), b).write(to: url, atomically: true, encoding: .utf8)
+                let pictures = DiagramExport.pngs(b)
+                try ExportScript.text(NotesExporter.markdown(b, screenFolder: folder, diagrams: pictures.count), b)
+                    .write(to: url, atomically: true, encoding: .utf8)
                 try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
+                try ScreenExport.writeDiagrams(pictures.map(\.png), next: url, language: b.meeting.meetingLanguage)
             }
         case .mindMap:
             // 心智圖（design §42.4）：段落名稱跟著會議語言，同其他匯出
@@ -2315,12 +2362,13 @@ final class AppModel {
     }
 
     /// Word：照常轉，有畫面時再把位置標記換成圖片（DocxImages，design §83.6）
-    private static func docxWithScreens(_ html: String, _ screens: [MeetingDocument]) async throws -> Data {
+    private static func docxWithScreens(_ html: String, _ screens: [MeetingDocument], diagrams: [Data] = []) async throws -> Data {
         let data = try await HTML.docx(html)
-        guard !screens.isEmpty else { return data }
-        let markers = screens.indices.map(ScreenExport.marker)
+        guard !screens.isEmpty || !diagrams.isEmpty else { return data }
+        // 圖（fork）用另一組標記，跟畫面一起換；圖是 PNG
+        let markers = screens.indices.map(ScreenExport.marker) + diagrams.indices.map(ScreenExport.diagramMarker)
         return try await Task.detached(priority: .userInitiated) {
-            try DocxImages.embed(data, markers: markers, images: screens.map { (try? Data(contentsOf: $0.fileURL)) ?? Data() })
+            try DocxImages.embed(data, markers: markers, images: screens.map { (try? Data(contentsOf: $0.fileURL)) ?? Data() } + diagrams)
         }.value
     }
 
@@ -2485,6 +2533,8 @@ final class AppModel {
             updated.meeting = meeting
             updated.notes = meeting.decodedNotes
             updated.versionCount = (try? db.versionCount(id)) ?? 0
+            updated.diagrams = (try? db.diagramRecord(id)) ?? nil
+            updated.drawingDiagrams = (try? db.hasActiveJob(id, kind: .diagrams)) ?? false
             updated.linkReviewItems()
         }
         if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }

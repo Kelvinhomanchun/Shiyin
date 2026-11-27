@@ -16,6 +16,7 @@ CTL = os.path.expanduser("~/Library/Caches/ShiyinBuild/shiyinctl")
 PORT = 18790
 AILOG = HOME + "/ai.jsonl"
 RESULTS = []
+EXTRA_ARGS = []   # more launch arguments (regression.py sets a separate stakeholder model)
 
 
 def sh(*args, **kw):
@@ -104,7 +105,7 @@ def launch():
     global PROC
     env = dict(os.environ, SHIYIN_HOME=HOME)
     PROC = subprocess.Popen([APP, "-autoSummarize", "NO", "-stakeholderAnalysis", "YES", "-AppleLanguages", "(en)",
-                             "-recordingIsland", "NO"], env=env, stdout=open(HOME + "/app.log", "w"), stderr=subprocess.STDOUT)
+                             "-recordingIsland", "NO", *EXTRA_ARGS], env=env, stdout=open(HOME + "/app.log", "w"), stderr=subprocess.STDOUT)
     time.sleep(7)
     ctl("llmurl", "openaiCompatible", f"http://127.0.0.1:{PORT}/v1")
     ctl("setkey", "openaiCompatible", "fake")

@@ -456,6 +456,19 @@ final class AppDatabase: @unchecked Sendable {
             try db.execute(sql: "ALTER TABLE meetings ADD COLUMN notes_template TEXT")
             try db.execute(sql: "ALTER TABLE notes_versions ADD COLUMN template_id TEXT")
         }
+        // 會議紀錄的圖（fork）：整理完另外畫的流程圖、泳道圖…，一場一份
+        migrator.registerMigration("fork-diagrams") { db in
+            try db.execute(sql: """
+                CREATE TABLE meeting_diagrams (
+                  meeting_id  INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
+                  diagrams    TEXT NOT NULL,
+                  notes_key   TEXT NOT NULL DEFAULT '',
+                  provider    TEXT NOT NULL DEFAULT '',
+                  model       TEXT NOT NULL DEFAULT '',
+                  updated_at  TEXT NOT NULL
+                );
+                """)
+        }
         return migrator
     }
 
@@ -1462,7 +1475,7 @@ final class AppDatabase: @unchecked Sendable {
             let settle = Date().addingTimeInterval(-Self.stakeholderSettleSeconds).ISO8601Format()
             guard var job = try Job.filter(sql: """
                 status = ? AND kind IN (\(kinds.map { _ in "?" }.joined(separator: ","))) AND NOT (
-                    kind IN ('stakeholders', 'coaching') AND payload IS NULL AND (created_at > ? OR EXISTS (
+                    kind IN ('stakeholders', 'coaching', 'diagrams') AND payload IS NULL AND (created_at > ? OR EXISTS (
                         SELECT 1 FROM jobs j WHERE j.meeting_id = jobs.meeting_id AND j.kind IN ('summarize', 'revise')
                             AND j.status IN ('queued', 'running'))))
                 """, arguments: StatementArguments([JobStatus.queued.rawValue] + kinds + [settle]))

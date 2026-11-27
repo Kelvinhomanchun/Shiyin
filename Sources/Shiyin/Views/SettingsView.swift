@@ -233,6 +233,7 @@ struct ProviderSettings: View {
     @AppStorage(AppSettings.providerKey) private var storedProvider = ""
     @AppStorage(AppSettings.autoSummarizeKey) private var autoSummarize = true
     @AppStorage(AppSettings.stakeholderAnalysisKey) private var stakeholderAnalysis = true
+    @AppStorage(AppSettings.meetingDiagramsKey) private var meetingDiagrams = true
     @AppStorage(AppSettings.correctTranscriptKey) private var correctTranscript = true
     @State private var modelName = ""
     @State private var stakeholderModelName = ""
@@ -400,6 +401,9 @@ struct ProviderSettings: View {
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             // 利害關係人分析（fork）
             Toggle("每場會議整理完都更新與會者的利害關係人分析", isOn: $stakeholderAnalysis)
+                .disabled(current == .none)
+            // 會議紀錄的圖（fork）
+            Toggle("會議講到流程、步驟時，整理完自動畫圖（流程圖、泳道圖…）", isOn: $meetingDiagrams)
                 .disabled(current == .none)
             if current != .none && current != .enterprise {
                 // 從整理工具提供的模型裡選（使用者：不要打字）；清單跟「選擇」同一份
