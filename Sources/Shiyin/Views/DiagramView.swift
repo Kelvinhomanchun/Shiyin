@@ -58,7 +58,17 @@ struct DiagramView: View {
     private func draw(_ context: inout GraphicsContext) {
         let p = palette
         // 泳道：欄的底色交錯、上面一列道名
-        for (k, lane) in layout.lanes.enumerated() {
+        for (k, lane) in layout.lanes.enumerated() where lane.horizontal {
+            // 橫的道：一列一條，道名在左邊的欄
+            let rect = CGRect(x: lane.x, y: lane.y, width: lane.w, height: lane.h)
+            if k % 2 == 0 { context.fill(Path(rect), with: .color(p.laneFill)) }
+            context.stroke(Path(rect), with: .color(p.rule), lineWidth: 1)
+            let header = CGRect(x: lane.x, y: lane.y, width: DiagramLayout.laneLabel - 12, height: lane.h)
+            context.fill(Path(header), with: .color(p.laneHeader))
+            let text = Text(lane.name.uppercased()).font(font(10, weight: "semibold")).foregroundStyle(p.soft).tracking(0.8)
+            context.draw(text, in: header.insetBy(dx: 8, dy: max(8, lane.h / 2 - 14)))
+        }
+        for (k, lane) in layout.lanes.enumerated() where !lane.horizontal {
             let rect = CGRect(x: lane.x, y: layout.laneTop, width: lane.w, height: layout.height - layout.laneTop - 8)
             if k % 2 == 0 { context.fill(Path(rect), with: .color(p.laneFill)) }
             context.stroke(Path(rect), with: .color(p.rule), lineWidth: 1)
@@ -128,7 +138,7 @@ struct DiagramView: View {
         // 字：置中
         var lines: [(Text, Double)] = []
         if let number = box.number {
-            lines.append((Text(String(format: "%02d", number)).font(.custom("IBM Plex Sans", size: 10).weight(.semibold))
+            lines.append((Text(number).font(.custom("IBM Plex Sans", size: 10).weight(.semibold))
                 .foregroundStyle(box.focal ? p.accent : p.soft), DiagramLayout.detailLine))
         }
         for l in box.label {
@@ -205,6 +215,8 @@ struct DiagramsSection: View {
     @Environment(AppModel.self) private var model
     @Environment(\.textScale) private var textScale
     let detail: MeetingDetail
+    /// 按了「移除」、等確認的那張
+    private var removing: MeetingDiagrams.Diagram? { model.diagramRemoving.flatMap { id in drawn.first { $0.id == id } } }
 
     private var record: DiagramRecord? { detail.diagrams }
     private var drawn: [MeetingDiagrams.Diagram] { record?.diagrams.diagrams ?? [] }
@@ -252,6 +264,14 @@ struct DiagramsSection: View {
                         ForEach(suggestions) { s in suggestionCard(s) }
                     }
                 }
+            }
+            .confirmationDialog(String(localized: "移除「\(removing?.title ?? "")」？"),
+                                isPresented: Binding(get: { removing != nil }, set: { if !$0 { model.diagramRemoving = nil } })) {
+                Button("移除", role: .destructive) { model.confirmRemoveDiagram() }
+            } message: {
+                Text(removing?.request?.userRequest.isEmpty == false
+                     ? String(localized: "這張圖、你的意見和之前的版本都會拿掉。")
+                     : String(localized: "這張圖、你的意見和之前的版本都會拿掉。整理工具的建議會放回「可以畫的圖」，之後可以再畫。"))
             }
         }
     }
@@ -341,11 +361,14 @@ struct DiagramsSection: View {
                     FloatingMenuButton {
                         [MenuEntry.action(String(localized: "照同樣的要求再畫一次"), icon: "arrow.clockwise") { _ = model.redrawDiagram(d.id, comment: "") },
                          .action(String(localized: "往上移"), icon: "arrow.up", enabled: index > 0) { model.moveDiagram(d.id, by: -1) },
-                         .action(String(localized: "往下移"), icon: "arrow.down", enabled: index < drawn.count - 1) { model.moveDiagram(d.id, by: 1) },
-                         .divider,
-                         .action(String(localized: "移除這張圖"), icon: "trash", destructive: true) { model.removeDiagram(d.id) }]
+                         .action(String(localized: "往下移"), icon: "arrow.down", enabled: index < drawn.count - 1) { model.moveDiagram(d.id, by: 1) }]
                     }
                     .help("更多")
+                    Spacer(minLength: 0)
+                    // 移除放在看得到的地方（使用者找不到 ⋯ 裡的）；意見和舊版本會一起丟掉，先問一次
+                    Button("移除", systemImage: "trash") { model.diagramRemoving = d.id }
+                        .foregroundStyle(.secondary)
+                        .help("移除這張圖（整理工具建議的會放回「可以畫的圖」）")
                 }
             }
             .buttonStyle(.borderless)

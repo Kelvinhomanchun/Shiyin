@@ -1047,15 +1047,23 @@ final class JobRunner {
             let comments = (current?.comments ?? []) + [request.comment].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
             let ask = request.suggestion ?? current?.request
             let prompt = Diagrams.drawPrompt(material, request: ask, current: current, comments: comments)
-            let data = try await callLLM(lane) { onStart in
-                try await LLMClient.generateJSON(provider: provider, model: model, system: Diagrams.drawSystem(language), prompt: prompt,
-                                                 format: Diagrams.drawFormat, onStart: onStart)
-            }
-            guard isStillRunning(job) else { return }
             struct Answer: Decodable { var diagram: MeetingDiagrams.Diagram }
-            let answer: Answer
-            do { answer = try JSONDecoder().decode(Answer.self, from: data) }
-            catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+            func requestDiagram(_ prompt: String) async throws -> Answer? {
+                let data = try await callLLM(lane) { onStart in
+                    try await LLMClient.generateJSON(provider: provider, model: model, system: Diagrams.drawSystem(language), prompt: prompt,
+                                                     format: Diagrams.drawFormat, onStart: onStart)
+                }
+                return try? JSONDecoder().decode(Answer.self, from: data)
+            }
+            // 格式不對時再問一次（用過的模型偶爾漏欄位、多包一層）
+            var answer = try await requestDiagram(prompt)
+            guard isStillRunning(job) else { return }
+            if answer == nil {
+                log.info("diagram answer did not decode, asking again for meeting \(job.meetingId)")
+                answer = try await requestDiagram(prompt + "\n\nIMPORTANT: Return ONLY the JSON object {\"diagram\": {kind, title, caption, nodes, edges}} with every field of the schema on every node (id, ref, label, detail, shape, lane, focal, time) and edge (from, to, label, dashed). Use \"\" or false for anything empty.")  // l10n-skip
+                guard isStillRunning(job) else { return }
+            }
+            guard let answer else { throw LLMError.badAnswer(String(localized: "整理工具回的圖格式不對，請再試一次") + provider.badOutputHint) }
             guard var drawn = Diagrams.cleanDiagram(answer.diagram) else {
                 throw LLMError.badAnswer(String(localized: "整理工具給的圖少於兩個步驟，畫不出來"))
             }

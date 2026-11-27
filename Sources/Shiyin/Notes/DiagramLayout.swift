@@ -14,8 +14,8 @@ enum DiagramLayout {
         var time: String
         var shape: MeetingDiagrams.Shape
         var focal: Bool
-        /// 步驟的編號（01、02…）；其他類型 nil
-        var number: Int?
+        /// 步驟的 ID（1、2a、2b…），印在框的最上面；沒有時 nil
+        var number: String?
         var midX: Double { x + w / 2 }
         var maxX: Double { x + w }
         var maxY: Double { y + h }
@@ -35,6 +35,9 @@ enum DiagramLayout {
     struct Lane: Equatable {
         var name: String
         var x, w: Double
+        /// 橫的泳道（由左往右的流程）：一條道是一列，y、h 是這一列；道名寫在左邊
+        var y: Double = 0, h: Double = 0
+        var horizontal: Bool = false
     }
 
     struct Layout: Equatable {
@@ -67,7 +70,7 @@ enum DiagramLayout {
     }
 
     /// 框的大小：菱形裡的字要窄一點、上下多留空間
-    private static func measure(_ n: MeetingDiagrams.Node, index: Int, number: Int?) -> Box {
+    private static func measure(_ n: MeetingDiagrams.Node, index: Int, number: String?) -> Box {
         let decision = n.shape == .decision
         let w = decision ? decisionWidth : boxWidth
         let inner = decision ? w - 88 : w - 2 * padH
@@ -86,8 +89,8 @@ enum DiagramLayout {
     static func layout(_ d: MeetingDiagrams.Diagram) -> Layout {
         switch d.kind {
         case .steps, .timeline: return row(d)
-        case .swimlane: return layered(d, lanes: true)
-        case .flowchart, .dataFlow: return layered(d, lanes: false)
+        case .swimlane: return d.across ? across(d, lanes: true) : layered(d, lanes: true)
+        case .flowchart, .dataFlow: return d.across ? across(d, lanes: false) : layered(d, lanes: false)
         }
     }
 
@@ -95,7 +98,8 @@ enum DiagramLayout {
 
     private static func row(_ d: MeetingDiagrams.Diagram) -> Layout {
         let timeline = d.kind == .timeline
-        var boxes = d.nodes.enumerated().map { i, n in measure(n, index: i, number: timeline ? nil : i + 1) }
+        // 步驟沒給 ID 時照順序編 1、2、3；時間軸不編
+        var boxes = d.nodes.enumerated().map { i, n in measure(n, index: i, number: n.ref.isEmpty ? (timeline ? nil : "\(i + 1)") : n.ref) }
         var lines: [Line] = []
         var axes: [(y: Double, x0: Double, x1: Double)] = []
         var y = margin
@@ -173,7 +177,7 @@ enum DiagramLayout {
                 if !moved { break }
             }
         }
-        var boxes = d.nodes.enumerated().map { i, n in measure(n, index: i, number: nil) }
+        var boxes = d.nodes.enumerated().map { i, n in measure(n, index: i, number: n.ref.isEmpty ? nil : n.ref) }
         let ranks = (rank.max() ?? 0) + 1
         var order: [[Int]] = (0..<ranks).map { r in (0..<count).filter { rank[$0] == r } }
         let gap = d.edges.contains { !$0.label.isEmpty } ? labeledRankGap : rankGap
@@ -332,6 +336,161 @@ enum DiagramLayout {
         return layout
     }
 
+    // MARK: 由左往右（使用者要橫的）
+
+    /// 層變成欄、泳道變成列。連線從框的右緣出去、左緣進來，在兩欄之間的通道轉彎；往回的走最下面
+    static let laneLabel = 120.0
+
+    private static func across(_ d: MeetingDiagrams.Diagram, lanes useLanes: Bool) -> Layout {
+        let count = d.nodes.count
+        let index = Dictionary(d.nodes.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let edges = d.edges.compactMap { e -> (Int, Int, MeetingDiagrams.Edge)? in
+            guard let a = index[e.from], let b = index[e.to] else { return nil }
+            return (a, b, e)
+        }
+        var state = Array(repeating: 0, count: count)
+        var back = Set<Int>()
+        let out = (0..<count).map { a in edges.enumerated().filter { $0.element.0 == a }.map { ($0.offset, $0.element.1) } }
+        func visit(_ a: Int) {
+            state[a] = 1
+            for (e, b) in out[a] { if state[b] == 1 { back.insert(e) } else if state[b] == 0 { visit(b) } }
+            state[a] = 2
+        }
+        for a in 0..<count where state[a] == 0 { visit(a) }
+        let forward = edges.enumerated().filter { !back.contains($0.offset) }.map { ($0.element.0, $0.element.1) }
+        var rank = Array(repeating: 0, count: count)
+        func relax() {
+            for _ in 0..<count {
+                var changed = false
+                for (a, b) in forward where rank[b] < rank[a] + 1 { rank[b] = rank[a] + 1; changed = true }
+                if !changed { break }
+            }
+        }
+        relax()
+        var laneNames: [String] = []
+        if useLanes {
+            for n in d.nodes where !laneNames.contains(n.lane) { laneNames.append(n.lane) }
+            for _ in 0..<count {
+                var moved = false
+                for lane in laneNames {
+                    let members = (0..<count).filter { d.nodes[$0].lane == lane }.sorted { (rank[$0], $0) < (rank[$1], $1) }
+                    for (a, b) in zip(members, members.dropFirst()) where rank[b] <= rank[a] { rank[b] = rank[a] + 1; moved = true }
+                }
+                relax()
+                if !moved { break }
+            }
+        }
+        var boxes = d.nodes.enumerated().map { i, n in measure(n, index: i, number: n.ref.isEmpty ? nil : n.ref) }
+        let ranks = (rank.max() ?? 0) + 1
+        var order: [[Int]] = (0..<ranks).map { r in (0..<count).filter { rank[$0] == r } }
+        let gapX = d.edges.contains { !$0.label.isEmpty } ? 88.0 : 64.0, gapY = 28.0
+        let left = margin + (useLanes ? laneLabel : 0)
+
+        // 欄：每一欄的寬是裡面最寬的框
+        var colX: [Double] = [], colW: [Double] = []
+        var x = left
+        for r in 0..<ranks {
+            let w = order[r].map { boxes[$0].w }.max() ?? boxWidth
+            colX.append(x); colW.append(w)
+            for i in order[r] { boxes[i].x = x + (w - boxes[i].w) / 2 }
+            x += w + gapX
+        }
+        var lanes: [Lane] = []
+        if useLanes {
+            // 每條道的高：同一欄裡這條道最多疊幾個框
+            var y = margin
+            for name in laneNames {
+                let members = (0..<count).filter { d.nodes[$0].lane == name }
+                let h = members.map { boxes[$0].h }.max() ?? 40
+                let top = y
+                for i in members { boxes[i].y = top + lanePad + (h - boxes[i].h) / 2 }
+                let laneH = h + 2 * lanePad
+                lanes.append(Lane(name: name, x: margin, w: 0, y: top, h: laneH, horizontal: true))
+                y += laneH
+            }
+        } else {
+            // 照前一欄的位置排（重心），每欄置中
+            func place() {
+                let heights = order.map { col in col.reduce(0) { $0 + boxes[$1].h } + gapY * Double(max(col.count - 1, 0)) }
+                let total = heights.max() ?? 0
+                for (r, col) in order.enumerated() {
+                    var y = margin + (total - heights[r]) / 2
+                    for i in col { boxes[i].y = y; y += boxes[i].h + gapY }
+                }
+            }
+            place()
+            for _ in 0..<2 {
+                for r in 1..<max(ranks, 1) {
+                    let center: (Int) -> Double = { i in
+                        let parents = forward.filter { $0.1 == i }.map { boxes[$0.0].y + boxes[$0.0].h / 2 }
+                        return parents.isEmpty ? boxes[i].y + boxes[i].h / 2 : parents.reduce(0, +) / Double(parents.count)
+                    }
+                    order[r].sort { (center($0), $0) < (center($1), $1) }
+                }
+                place()
+            }
+        }
+        let rightEdge = boxes.map(\.maxX).max() ?? 0
+        let bottom = useLanes ? (lanes.last.map { $0.y + $0.h } ?? 0) : (boxes.map(\.maxY).max() ?? 0)
+        for k in lanes.indices { lanes[k].w = rightEdge + lanePad - margin }
+
+        // 接點：右緣出去、左緣進來，照另一端的 y 排
+        var outPorts: [Int: [Int]] = [:], inPorts: [Int: [Int]] = [:]
+        for (e, (a, b, _)) in edges.enumerated() where !back.contains(e) {
+            outPorts[a, default: []].append(e); inPorts[b, default: []].append(e)
+        }
+        func midY(_ i: Int) -> Double { boxes[i].y + boxes[i].h / 2 }
+        func portY(_ box: Box, _ list: [Int], _ e: Int, other: (Int) -> Double) -> Double {
+            if box.shape == .decision { return box.y + box.h / 2 }
+            let sorted = list.sorted { (other($0), $0) < (other($1), $1) }
+            let k = Double(sorted.firstIndex(of: e) ?? 0)
+            return box.y + box.h * (k + 1) / Double(sorted.count + 1)
+        }
+        var gapUse: [Int: Int] = [:]
+        func channelX(after r: Int) -> Double {
+            let k = gapUse[r, default: 0]; gapUse[r] = k + 1
+            let offsets = [0.0, -10, 10, -20, 20]
+            return colX[r] + colW[r] + gapX / 2 + offsets[min(k, offsets.count - 1)]
+        }
+        func clearH(y: Double, from x0: Double, to x1: Double, except: Set<Int>) -> Bool {
+            !boxes.contains { b in !except.contains(b.index) && y > b.y - 4 && y < b.maxY + 4 && max(x0, x1) > b.x && min(x0, x1) < b.maxX }
+        }
+        var lines: [Line] = []
+        var lowest = bottom + 20
+        for (e, (a, b, edge)) in edges.enumerated() {
+            let sa = boxes[a], sb = boxes[b]
+            var pts: [Point]
+            if back.contains(e) {
+                // 往回：從下緣出去，走最下面，從下緣進來
+                let y = lowest; lowest += 12
+                pts = [Point(x: sa.midX + 6, y: sa.maxY), Point(x: sa.midX + 6, y: y), Point(x: sb.midX - 6, y: y), Point(x: sb.midX - 6, y: sb.maxY)]
+            } else {
+                let y0 = portY(sa, outPorts[a] ?? [], e) { midY(edges[$0].1) }
+                let y1 = portY(sb, inPorts[b] ?? [], e) { midY(edges[$0].0) }
+                let x0 = sa.maxX, x1 = sb.x
+                if abs(y0 - y1) < 0.5, clearH(y: y0, from: x0, to: x1, except: [a, b]) {
+                    pts = [Point(x: x0, y: y0), Point(x: x1, y: y1)]
+                } else if rank[b] == rank[a] + 1 {
+                    let xc = channelX(after: rank[a])
+                    pts = [Point(x: x0, y: y0), Point(x: xc, y: y0), Point(x: xc, y: y1), Point(x: x1, y: y1)]
+                } else {
+                    // 跳過幾欄：在出發那欄後面轉下去，沿著目標的高度走，被框擋到時繞到最下面
+                    let xc = channelX(after: rank[a]), xe = colX[rank[b]] - gapX / 2
+                    if clearH(y: y1, from: xc, to: x1, except: [a, b]) {
+                        pts = [Point(x: x0, y: y0), Point(x: xc, y: y0), Point(x: xc, y: y1), Point(x: x1, y: y1)]
+                    } else {
+                        let y = lowest; lowest += 12
+                        pts = [Point(x: x0, y: y0), Point(x: xc, y: y0), Point(x: xc, y: y), Point(x: xe, y: y), Point(x: xe, y: y1), Point(x: x1, y: y1)]
+                    }
+                }
+            }
+            var line = Line(points: simplify(pts), dashed: edge.dashed, arrow: true, label: edge.label)
+            if !edge.label.isEmpty { placeLabel(&line, side: 1) }
+            lines.append(line)
+        }
+        return finish(boxes: boxes, lines: lines, lanes: lanes, axes: [])
+    }
+
     /// 去掉重複、在同一直線上的點
     private static func simplify(_ pts: [Point]) -> [Point] {
         var out: [Point] = []
@@ -369,7 +528,7 @@ enum DiagramLayout {
             for p in l.points { maxX = max(maxX, p.x); maxY = max(maxY, p.y); minX = min(minX, p.x) }
             if let at = l.labelAt { maxX = max(maxX, at.x + l.labelSize.w); minX = min(minX, at.x) }
         }
-        for lane in lanes { maxX = max(maxX, lane.x + lane.w); minX = min(minX, lane.x) }
+        for lane in lanes { maxX = max(maxX, lane.x + lane.w); minX = min(minX, lane.x); if lane.horizontal { maxY = max(maxY, lane.y + lane.h) } }
         let dx = margin - minX
         var boxes = boxes, lines = lines, lanes = lanes
         for i in boxes.indices { boxes[i].x += dx }

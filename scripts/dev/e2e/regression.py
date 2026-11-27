@@ -390,6 +390,8 @@ def r_21():
         e.ctl("export", "notes", fmt, path, "0", "1", PBI, wait=0.5)
         ok[fmt] = wait_file(path)
     md = open(f"{OUT}/pbi.md").read() if ok["md"] else ""
+    # the picture must really be in the PDF (it once printed as a blank space)
+    pdf_images = open(f"{OUT}/pbi.pdf", "rb").read().count(b"/Image") if ok["pdf"] else 0
     pngs = re.findall(r"!\[[^\]]*\]\(<([^>]+diagram-\d\.png)>\)", md)
     md_files = all(os.path.exists(os.path.join(OUT, p)) for p in pngs) and len(pngs) >= 1
     media, body = [], ""
@@ -405,17 +407,49 @@ def r_21():
     with_times = re.findall(r"`\d{1,2}:\d{2}`", open(f"{OUT}/pbi-times.md").read())
     e.ctl("diagrampng", PBI, 0, f"{OUT}/pbi-diagram-0.png", wait=1.5)
     # Remove: gone from the page, back in the suggestions
+    # through the visible Remove button and its confirmation, the way the user does it
     before = diagrams_state()
     e.ctl("diagramremove", PBI, 0, wait=1.5)
+    mid = diagrams_state()
+    asked = mid["count"] == before["count"] and mid["removing"] != ""   # not removed until confirmed
+    e.ctl("diagramremovecancel", wait=0.8)
+    cancelled = diagrams_state()["count"] == before["count"]
+    e.ctl("diagramremove", PBI, 0, wait=1.0); e.ctl("diagramremoveconfirm", wait=1.5)
+    pressed = {"cancel keeps it": cancelled}
     after = diagrams_state()
     e.check("R-21", "Exports have no times by default (diagrams included), diagrams follow the summary; Remove puts it back as a suggestion",
-            ok["pdf"] and len(media) >= 1 and md_files and not times_md and not times_docx and summary_first and with_times
-            and after["count"] == before["count"] - 1 and "Monthly Power BI report refresh" in after["suggestions"],
-            f"ok {ok}, md times {times_md[:3]}, docx times {times_docx[:3]}, with times {len(with_times)}, pictures {pngs} media {media}, "
-            f"remove {before['count']}→{after['count']} suggestions {after['suggestions']}")
+            ok["pdf"] and pdf_images >= 1 and len(media) >= 1 and md_files and not times_md and not times_docx and summary_first and with_times
+            and asked and cancelled and after["count"] == before["count"] - 1 and "Monthly Power BI report refresh" in after["suggestions"],
+            f"ok {ok}, pdf images {pdf_images}, md times {times_md[:3]}, docx times {times_docx[:3]}, with times {len(with_times)}, pictures {pngs} media {media}, "
+            f"remove {before['count']}→{after['count']} (asked first {asked}, presses {pressed}) suggestions {after['suggestions']}")
 
 
-CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21]
+def r_22():
+    """Diagram rules: verb-first labels and step IDs asked for, IDs written in labels are split out, 'horizontal' lays it out across, a malformed first answer is retried."""
+    e.ctl("select", PBI, wait=1)
+    if not diagrams_state()["count"]:   # R-21 removed it: draw the suggestion it put back
+        e.mode(diagrams="pbi")
+        e.ctl("diagramdraw", PBI, 0, wait=1)
+        until_diagrams(lambda s: not s["jobs"] and s["count"], timeout=40)
+    e.mode(diagrams="pbi", diagram_refs="inlabel", diagram_bad_first=True)
+    e.ctl("diagramredraw", PBI, 0, "Present it horizontally", wait=1.5)
+    s = until_diagrams(lambda s: not s["jobs"], timeout=40)
+    e.mode(diagrams="pbi")
+    calls = e.ai_calls("diagram-draw")
+    system = calls[-1].get("system", "") if calls else ""
+    rules = "VERB + OBJECT" in system and "ref: a step ID" in system and 'ref' in calls[-1].get("schema", "") and 'across' in calls[-1].get("schema", "") if calls else False
+    retried = len(calls) >= 2 and "Return ONLY the JSON object" in calls[-1].get("tail", "")
+    refs, labels = (s["refs"] or [[]])[0], (s["labels"] or [[]])[0]
+    split = refs[:2] == ["", "1"] and not any(l[:2].strip().rstrip(".").isdigit() for l in labels)
+    across = (s["directions"] or [""])[0] == "across"
+    e.ctl("diagrampng", PBI, 0, f"{OUT}/pbi-across.png", wait=1.5)
+    png = os.path.exists(f"{OUT}/pbi-across.png")
+    e.check("R-22", "Step IDs and verb-first labels are asked for; an ID typed into the label becomes the step ID; horizontal lays it out across; a bad answer is retried",
+            rules and retried and split and across and png and not s["error"],
+            f"rules {rules}, retried {retried} ({len(calls)} calls), refs {refs}, labels {labels}, across {across}, png {png}, error {s['error']!r}")
+
+
+CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21, r_22]
 
 
 def main():

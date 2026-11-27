@@ -488,10 +488,11 @@ enum DebugControl {
                    "suggested": record?.suggested ?? false,
                    "suggestions": record?.suggestions.map(\.title) ?? [],
                    "count": drawn.count, "kinds": drawn.map(\.kind.rawValue), "titles": drawn.map(\.title),
-                   "nodes": drawn.map(\.nodes.count), "labels": drawn.map { $0.nodes.map(\.label) },
+                   "nodes": drawn.map(\.nodes.count), "labels": drawn.map { $0.nodes.map(\.label) }, "refs": drawn.map { $0.nodes.map(\.ref) },
+                   "directions": drawn.map(\.direction),
                    "comments": drawn.map(\.comments), "undo": drawn.map { !(record?.history[$0.id] ?? []).isEmpty },
                    "stale": drawn.map { record?.isStale($0, notes: model.detail?.notes) ?? false },
-                   "sheet": model.diagramComment?.id ?? "",
+                   "sheet": model.diagramComment?.id ?? "", "removing": model.diagramRemoving ?? "",
                    "model": record?.model ?? "", "notice": model.noticeMessage ?? "", "error": model.errorMessage ?? ""], to: args[1])
         case "diagramsuggest": model.selection = id; model.suggestDiagrams()
         case "diagramdraw", "diagramdismiss":
@@ -507,10 +508,12 @@ enum DebugControl {
                 case "diagramredraw": _ = model.redrawDiagram(list[k].id, comment: args.count > 3 ? args[3] : "")
                 case "diagramundo": model.undoDiagram(list[k].id)
                 case "diagramopen": model.diagramComment = DiagramCommentRequest(meetingId: id ?? 0, diagramId: list[k].id)
-                default: model.removeDiagram(list[k].id)
+                default: model.diagramRemoving = list[k].id   // 等於按「移除」，對話框跳出來，diagramremoveconfirm 才真的移除
                 }
             }
         case "diagramclose": model.diagramComment = nil
+        case "diagramremoveconfirm": model.confirmRemoveDiagram()   // 確認對話框的「移除」
+        case "diagramremovecancel": model.diagramRemoving = nil
         case "diagrampng":
             if let record = (try? model.db.diagramRecord(id ?? 0)) ?? nil, let k = Int(args[2]), record.diagrams.diagrams.indices.contains(k),
                let png = DiagramExport.png(record.diagrams.diagrams[k]) {

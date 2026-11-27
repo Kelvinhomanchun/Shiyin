@@ -33,6 +33,27 @@ struct MeetingDiagrams: Codable, Hashable {
         var focal: Bool
         /// 逐字稿的時間點 mm:ss，點了播放
         var time: String
+        /// 步驟的編號（1、2、3a、3b…），印在框的上面；開始、結束、資料、系統不編號（使用者要的：每一步有 ID）
+        var ref: String = ""
+
+        enum CodingKeys: String, CodingKey { case id, label, detail, shape, lane, focal, time, ref }
+
+        init(id: String, label: String, detail: String, shape: Shape, lane: String, focal: Bool, time: String, ref: String = "") {
+            self.id = id; self.label = label; self.detail = detail; self.shape = shape; self.lane = lane; self.focal = focal
+            self.time = time; self.ref = ref
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(String.self, forKey: .id)
+            label = try c.decode(String.self, forKey: .label)
+            detail = (try? c.decode(String.self, forKey: .detail)) ?? ""
+            shape = (try? c.decode(Shape.self, forKey: .shape)) ?? .step
+            lane = (try? c.decode(String.self, forKey: .lane)) ?? ""
+            focal = (try? c.decode(Bool.self, forKey: .focal)) ?? false
+            time = (try? c.decode(String.self, forKey: .time)) ?? ""
+            ref = (try? c.decode(String.self, forKey: .ref)) ?? ""
+        }
     }
 
     struct Edge: Codable, Hashable {
@@ -42,6 +63,18 @@ struct MeetingDiagrams: Codable, Hashable {
         var label: String
         /// 虛線：選擇性、之後才做、回傳
         var dashed: Bool
+
+        enum CodingKeys: String, CodingKey { case from, to, label, dashed }
+
+        init(from: String, to: String, label: String, dashed: Bool) { self.from = from; self.to = to; self.label = label; self.dashed = dashed }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            from = try c.decode(String.self, forKey: .from)
+            to = try c.decode(String.self, forKey: .to)
+            label = (try? c.decode(String.self, forKey: .label)) ?? ""
+            dashed = (try? c.decode(Bool.self, forKey: .dashed)) ?? false
+        }
     }
 
     struct Diagram: Codable, Hashable {
@@ -51,6 +84,9 @@ struct MeetingDiagrams: Codable, Hashable {
         var caption: String
         var nodes: [Node]
         var edges: [Edge]
+        /// 流程的方向：down 由上往下（預設）、across 由左往右（使用者要橫的時候）
+        var direction: String = "down"
+        var across: Bool { direction == "across" }
         // 以下 KelNote 自己記的，不是整理工具給的
         /// 這張圖的代號（重新畫、復原、移除用）
         var id: String = ""
@@ -65,7 +101,7 @@ struct MeetingDiagrams: Codable, Hashable {
             (self.kind, self.title, self.caption, self.nodes, self.edges) = (kind, title, caption, nodes, edges)
         }
 
-        enum CodingKeys: String, CodingKey { case kind, title, caption, nodes, edges, id, comments, request, notesKey }
+        enum CodingKeys: String, CodingKey { case kind, title, caption, nodes, edges, direction, id, comments, request, notesKey }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -74,6 +110,7 @@ struct MeetingDiagrams: Codable, Hashable {
             caption = (try? c.decode(String.self, forKey: .caption)) ?? ""
             nodes = try c.decode([Node].self, forKey: .nodes)
             edges = (try? c.decode([Edge].self, forKey: .edges)) ?? []
+            direction = (try? c.decode(String.self, forKey: .direction)) == "across" ? "across" : "down"
             id = (try? c.decode(String.self, forKey: .id)) ?? ""
             comments = (try? c.decode([String].self, forKey: .comments)) ?? []
             request = try? c.decode(Suggestion.self, forKey: .request)
@@ -146,6 +183,9 @@ struct MeetingDiagrams: Codable, Hashable {
                 n.detail = Diagrams.clean(n.detail)
                 n.lane = d.kind == .swimlane ? Diagrams.clean(n.lane) : ""
                 n.time = TimeFormat.clean(n.time)
+                n.ref = String(Diagrams.clean(n.ref).trimmingCharacters(in: CharacterSet(charactersIn: ".:)、 ")).prefix(6))  // l10n-skip
+                if n.shape == .start || n.shape == .end { n.ref = "" }
+                (n.ref, n.label) = Diagrams.splitRef(n.ref, n.label)
                 guard !n.id.isEmpty, !n.label.isEmpty, seen.insert(n.id).inserted else { return nil }
                 return n
             }
@@ -194,7 +234,7 @@ struct MeetingDiagrams: Codable, Hashable {
             var d = d
             d.title = r(d.title)
             d.caption = r(d.caption)
-            d.nodes = d.nodes.map { var n = $0; n.label = r(n.label); n.detail = r(n.detail); n.lane = r(n.lane); return n }
+            d.nodes = d.nodes.map { var n = $0; n.label = r(n.label); n.detail = r(n.detail); n.lane = r(n.lane); n.ref = r(n.ref); return n }
             d.edges = d.edges.map { var e = $0; e.label = r(e.label); return e }
             d.comments = d.comments.map(r)
             return d
@@ -253,6 +293,15 @@ enum Diagrams {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// 「1a. Generate extracts」這種把編號寫在名稱裡的：編號拿出來當 ref、名稱只留動作（ref 已經有時只拿掉名稱裡重複的）
+    static func splitRef(_ ref: String, _ label: String) -> (String, String) {
+        let pattern = try! Regex(#"^\s*(?:Step\s*|步驟\s*)?([0-9]{1,2}[A-Za-z]?(?:\.[0-9]{1,2}[A-Za-z]?)?)\s*[.:)、]\s+(.+)$"#)  // l10n-skip
+        guard let m = try? pattern.firstMatch(in: label), let r1 = m[1].substring, let r2 = m[2].substring else { return (ref, label) }
+        let found = String(r1), rest = String(r2)
+        if ref.isEmpty || ref.caseInsensitiveCompare(found) == .orderedSame { return (found, rest) }
+        return (ref, label)
+    }
+
     /// 會議紀錄內容的雜湊（FNV-1a）：圖是不是根據目前這一版紀錄畫的
     static func notesKey(_ notes: MeetingNotes) -> String {
         var hash: UInt64 = 0xcbf29ce484222325
@@ -269,9 +318,9 @@ enum Diagrams {
 
     /// 一張圖（畫、重新畫）
     static let diagramSchema: String = {
-        let node = #"{"type":"object","additionalProperties":false,"required":["id","label","detail","shape","lane","focal","time"],"properties":{"id":{"type":"string"},"label":{"type":"string"},"detail":{"type":"string"},"shape":{"type":"string","enum":["step","decision","start","end","data","system"]},"lane":{"type":"string"},"focal":{"type":"boolean"},"time":{"type":"string"}}}"#
+        let node = #"{"type":"object","additionalProperties":false,"required":["id","ref","label","detail","shape","lane","focal","time"],"properties":{"id":{"type":"string"},"ref":{"type":"string"},"label":{"type":"string"},"detail":{"type":"string"},"shape":{"type":"string","enum":["step","decision","start","end","data","system"]},"lane":{"type":"string"},"focal":{"type":"boolean"},"time":{"type":"string"}}}"#
         let edge = #"{"type":"object","additionalProperties":false,"required":["from","to","label","dashed"],"properties":{"from":{"type":"string"},"to":{"type":"string"},"label":{"type":"string"},"dashed":{"type":"boolean"}}}"#
-        return #"{"type":"object","additionalProperties":false,"required":["diagram"],"properties":{"diagram":{"type":"object","additionalProperties":false,"required":["kind","title","caption","nodes","edges"],"properties":{"kind":{"type":"string","enum":["#
+        return #"{"type":"object","additionalProperties":false,"required":["diagram"],"properties":{"diagram":{"type":"object","additionalProperties":false,"required":["kind","title","caption","direction","nodes","edges"],"properties":{"direction":{"type":"string","enum":["down","across"]},"kind":{"type":"string","enum":["#
             + kindsEnum + #"]},"title":{"type":"string"},"caption":{"type":"string"},"nodes":{"type":"array","items":"# + node
             + #"},"edges":{"type":"array","items":"# + edge + "}}}}}"
     }()
@@ -288,12 +337,15 @@ enum Diagrams {
                                                       toolDescription: "Save suggestions for diagrams that would supplement the meeting notes")  // l10n-skip
 
     private static let kindGuide = """
-    - flowchart: a process with at least one decision or branch (shape "decision" for the question; label each exit, e.g. Yes / No).
+    - flowchart: a process with at least one real decision or branch. Begin with one start node (the trigger) and finish with \
+      end node(s) (the outcome). A decision is a yes/no question (shape "decision", label ending in "?") and every exit is labelled \
+      (Yes / No, or the condition). Parallel work that later joins is two branches, not a decision.
     - steps: a short ordered method with 3 to 7 stages and no branches; one node per stage, in order; no edges needed.
-    - swimlane: a process that moves between 2 to 5 roles, teams or systems; set lane to the actor who does each step, and the \
-      hand-offs between lanes are the edges that matter.
+    - swimlane: a process that moves between 2 to 5 roles, teams or systems; set lane to the actor who does each step. A lane is \
+      a real hand-off (someone who actually receives work), not a department named for completeness. The edges that cross lanes \
+      are the hand-offs; label them with what is handed over.
     - dataFlow: where data comes from, what transforms it, and where it ends up (shape "data" for files or tables, "system" for \
-      systems and tools).
+      systems and tools, "step" for a transformation someone or something does).
     - timeline: events or phases in time order, e.g. a migration plan or a parallel run; one node per event, in order; no edges needed.
     """
 
@@ -329,8 +381,9 @@ enum Diagrams {
 
     static func drawSystem(_ language: MeetingLanguage) -> String {
         """
-        You are an information designer who draws one diagram to supplement meeting notes. KelNote lays it out and draws it; you \
-        give only the structure: kind, title, caption, nodes and edges.
+        You are a senior business analyst and information designer who draws one process diagram to supplement meeting notes, \
+        following BPMN-style process-modelling practice. KelNote lays it out and draws it; you give only the structure: kind, title, \
+        caption, nodes and edges.
 
         Kinds:
         \(kindGuide)
@@ -338,19 +391,34 @@ enum Diagrams {
         Rules:
         1. Draw exactly what the request asks for. If the user gave comments on an earlier version, follow every comment; the \
            latest comment wins when two disagree. Keep what the comments do not ask to change.
-        2. At most 9 nodes and 12 edges. Every node is a distinct idea: merge nodes that always travel together, and leave out steps \
-           that add nothing.
-        3. Mark focal true on at most 2 nodes: the most consequential step, the bottleneck, or what the meeting decided to change.
-        4. label: a short name for the step, 2 to 6 words, starting with a verb for actions ("Download source files"). detail: one \
-           short line of specifics from the meeting (file names, systems, who, how long), or an empty string. Never invent detail.
-        5. Edge labels are optional, at most 14 characters (Yes, No, Monthly, Excel file). dashed true for optional, later, return \
-           or asynchronous paths.
-        6. time: when this step is discussed in the transcript, mm:ss (or h:mm:ss over an hour), else an empty string. Times are \
-           shown on screen only, never in exported files.
-        7. ids are short and unique (n1, n2…); edges refer to them.
-        8. Use only what the meeting says, except facts the user states in a comment, which you follow as given.
-        9. title: a short name for the diagram; caption: one sentence saying what it shows.
-        10. \(languageRule(language))
+        2. Model how the work really happens as described in the meeting (the as-is), including manual workarounds. Do not mix in \
+           a future or planned process unless the request asks for it; if it does, keep it clearly separate (its own branch or \
+           lane, or say so in the caption).
+        3. One level of detail across the whole diagram: business tasks done by one actor at one time (no click-by-click UI steps, \
+           no whole departments as a single box). At most 9 nodes and 12 edges; merge steps that always happen together and leave \
+           out steps that add nothing.
+        4. Step labels are VERB + OBJECT in the imperative, 2 to 6 words: "Download claim owner files", "Append both extracts", \
+           "Refresh Power BI model". Never a noun phrase ("Data download"), a system name alone, or a status. Decisions are \
+           questions: "Cut-off gap found?". Start and end nodes name the trigger and the outcome ("Month-end reached", "Reports \
+           sent"). Data and system nodes are nouns ("Claim owner file", "Power BI").
+        5. ref: a step ID for every step and decision, in reading order: 1, 2, 3… Parallel branches that run side by side share \
+           the number with a letter (2a, 2b) and rejoin at the next number. Start, end, data and system nodes have ref "". Do not \
+           repeat the ID inside the label.
+        6. detail: one short line of specifics from the meeting (file names, systems, who, how long, how often), or "". Never \
+           invent detail; anything unclear stays out.
+        7. Mark focal true on at most 2 nodes: the bottleneck, the riskiest manual step, or what the meeting decided to change.
+        8. Edge labels are optional, at most 14 characters (Yes, No, Monthly, Excel file). Every exit of a decision is labelled. \
+           dashed true for optional, later, return or asynchronous paths.
+        9. time: when this step is discussed in the transcript, mm:ss (or h:mm:ss over an hour), else "". Times are shown on \
+           screen only, never in exported files.
+        10. ids are short and unique (n1, n2…); edges refer to ids, not refs.
+        11. Use only what the meeting says, except facts the user states in a comment, which you follow as given.
+        12. direction: "down" (top to bottom, the default) or "across" (left to right). Use "across" when the user asks for a \
+            horizontal layout, or for a short process with parallel branches that reads better side by side. Steps and \
+            timelines ignore it.
+        13. title: a short name for the process, ideally verb + object or "<object> process"; caption: one sentence saying what it \
+            shows, from which trigger to which outcome.
+        14. \(languageRule(language))
         """
     }
 

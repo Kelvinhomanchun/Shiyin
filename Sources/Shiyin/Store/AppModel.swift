@@ -397,6 +397,8 @@ final class AppModel {
     var refineDraft: [String: String] = [:]
     /// fork：「提意見重新畫」「自己描述一張圖」的彈窗；沒送出時打的字留著
     var diagramComment: DiagramCommentRequest?
+    /// 按了「移除」、還沒確認的圖（id）
+    var diagramRemoving: String?
     var diagramDraft: [String: String] = [:]
     var rediarizeMeetingId: Int64?
     /// 匯出對話框要匯出的會議：打開時記下，對話框開著時選取的會議換了也不變（design §20.9、R18.9）
@@ -1687,6 +1689,13 @@ final class AppModel {
             }
         }
         noticeMessage = String(localized: "已移除這張圖")
+    }
+
+    /// 確認對話框的「移除」
+    func confirmRemoveDiagram() {
+        guard let id = diagramRemoving else { return }
+        diagramRemoving = nil
+        removeDiagram(id)
     }
 
     /// 移到上面或下面（匯出也是這個順序）

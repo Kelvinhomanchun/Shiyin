@@ -17764,6 +17764,23 @@
         }
       }
     },
+    "整理工具回的圖格式不對，請再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工具回的图格式不对，请再试一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The diagram came back in the wrong format. Please try again."
+          }
+        }
+      }
+    },
     "整理工具目前設定為「不整理」。要產生會議紀錄，請到設定選擇 Claude、Codex 或 API。": {
       "extractionState": "manual",
       "localizations": {
@@ -25130,19 +25147,19 @@
         }
       }
     },
-    "移除這張圖": {
+    "移除這張圖（整理工具建議的會放回「可以畫的圖」）": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "移除这张图"
+            "value": "移除这张图（整理工具建议的会放回“可以画的图”）"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remove Diagram"
+            "value": "Remove this diagram (a suggested one goes back to Suggested diagrams)"
           }
         }
       }
@@ -30760,6 +30777,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "这场录音不再提示这件事"
+          }
+        }
+      }
+    },
+    "這張圖、你的意見和之前的版本都會拿掉。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这张图、你的意见和之前的版本都会拿掉。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The diagram, your comments and earlier versions will be removed."
+          }
+        }
+      }
+    },
+    "這張圖、你的意見和之前的版本都會拿掉。整理工具的建議會放回「可以畫的圖」，之後可以再畫。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这张图、你的意见和之前的版本都会拿掉。整理工具的建议会放回“可以画的图”，之后可以再画。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The diagram, your comments and earlier versions will be removed. The suggestion goes back to Suggested diagrams so you can draw it again later."
           }
         }
       }

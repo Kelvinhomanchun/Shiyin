@@ -827,6 +827,11 @@ final class ReportPrinter: NSObject, WKNavigationDelegate {
         }
         // 字型載完才排版（@font-face 是非同步的）
         _ = try? await web.evaluateJavaScript("document.fonts.ready.then(() => true)")
+        // 圖片（會議紀錄的圖、畫面）解碼完才印；大的圖還沒解碼時印出來是一塊空白（fork）
+        _ = try? await web.callAsyncJavaScript(
+            "await Promise.all(Array.from(document.images).map(i => i.decode().catch(() => null))); return true",
+            contentWorld: .page)
+        try? await Task.sleep(for: .milliseconds(150))
         let info = NSPrintInfo()
         info.paperSize = NSSize(width: 595, height: 842)
         info.topMargin = 54; info.bottomMargin = 60; info.leftMargin = 56; info.rightMargin = 56

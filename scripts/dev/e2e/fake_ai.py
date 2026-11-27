@@ -90,6 +90,19 @@ def diagram_draw(prompt):
     if "The user asked for this diagram" in prompt:
         pick = dict(d[0], title="Shing's monthly steps", kind="steps", edges=[])
     pick = json.loads(json.dumps(pick))
+    pick["direction"] = "down"
+    # step IDs in reading order (the second answer writes them into the label, as some models do)
+    k = 0
+    for n in pick["nodes"]:
+        if n["shape"] in ("step", "decision"):
+            k += 1; n["ref"] = str(k)
+            if MODE.get("diagram_refs") == "inlabel": n["label"], n["ref"] = f"{k}. {n['label']}", ""
+        else: n["ref"] = ""
+    if "comments on the diagram" in prompt and "horizontal" in prompt.lower():
+        pick["direction"] = "across"
+    if MODE.get("diagram_bad_first") and not COUNT.get("bad_sent"):
+        COUNT["bad_sent"] = 1
+        return {"diagram": {"title": "broken"}}
     if "comments on the diagram" in prompt and "only draw" in prompt.lower():
         # the comment asks for the current behaviour only: drop the last step, mark it in the title
         pick["nodes"] = pick["nodes"][:-1]
@@ -111,7 +124,7 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
         if self.path == "/__mode":
-            MODE.clear(); MODE.update(body); return self.reply(MODE)
+            MODE.clear(); MODE.update(body); COUNT.pop("bad_sent", None); return self.reply(MODE)
         system = body["messages"][0]["content"]; prompt = body["messages"][-1]["content"]
         schema = json.dumps(body.get("response_format", {}))
         mid = first_meeting(prompt)
@@ -132,7 +145,7 @@ class H(BaseHTTPRequestHandler):
         elif '"keywords"' in schema: kind, out = "keywords", {"keywords": ["e2e"]}
         elif '"citations"' in schema: kind, out = "answer", {"answer": "a", "found": True, "citations": []}
         else: kind, out = "notes", notes()
-        with open(LOG, "a") as f: f.write(json.dumps({"kind": kind, "model": body.get("model", ""), "system": system[:300], "prompt": prompt[:4000], "tail": prompt[-3000:]}, ensure_ascii=False) + "\n")
+        with open(LOG, "a") as f: f.write(json.dumps({"kind": kind, "model": body.get("model", ""), "system": system[:6000], "schema": schema[:4000], "prompt": prompt[:4000], "tail": prompt[-3000:]}, ensure_ascii=False) + "\n")
         if MODE.get("delay"): time.sleep(float(MODE["delay"]))
         self.reply({"choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": json.dumps(out, ensure_ascii=False)}}]})
 

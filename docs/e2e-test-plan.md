@@ -63,6 +63,7 @@ background job in the TC-2 group is checked for that.
 | R-19 | Diagrams | Comment and Redraw sends the current diagram plus every comment, keeps the comments on the card, and Restore previous version brings the old one back |
 | R-20 | Diagrams | Fix with AI asking about a diagram leaves the notes alone and opens the redraw sheet with the comment; editing the notes marks a diagram as drawn from earlier notes |
 | R-21 | Exports | Notes exports (Markdown, Word, PDF) and diagram pictures carry no recording times unless "Include recording times" is on; diagrams follow the summary; removing a diagram puts its suggestion back |
+| R-22 | Diagrams | The drawing rules ask for verb + object step labels and step IDs (1, 2a, 2b…); an ID the AI types into the label becomes the step ID; "horizontal" lays the diagram out left to right; a malformed first answer is asked again |
 
 ## Last run (2026-11-26)
 
@@ -92,4 +93,11 @@ Nothing is drawn automatically any more: suggest → draw → comment → redraw
 R-16 to R-21 were rewritten for this; see the table. Exports drop recording times by default.
 Checked by eye at text size 4 and 960 pt, light and dark: the empty section, the suggestion cards, a drawn and
 redrawn swimlane with its comment list, and the redraw sheet, in Chinese and English.
+
+## Last run with diagram rules and PDF fix (2026-11-27)
+
+`run.py` 19 of 19 and `regression.py` 23 of 23 passed (new R-22); live database unchanged.
+Fixed: PDF exports printed the diagram as a blank space (the image had not been decoded when the page was printed); R-21 now
+checks that the PDF really holds an image. Remove is a visible button on each diagram, with a confirmation.
+Checked by eye: the left-to-right swimlane with step IDs, and the PDF page with the diagram.
 
