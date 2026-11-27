@@ -139,6 +139,22 @@ extension AppModel {
                 ? TemplateDefinition.sectionLabel(id, language: meeting.notesOutputLanguage, prompt: true) : id
             focus = "[\(label)] " + text + ((request.time ?? "").isEmpty ? "" : " (\(request.time ?? ""))")
         }
+        // 講的是圖（fork）：會議紀錄裡沒有圖，改成開「重新畫」或「自己描述一張圖」，打的字帶過去
+        if request.text == nil, Self.isAboutDiagram(trimmed), let detail, detail.meeting.id == request.meetingId {
+            let drawn = detail.diagrams?.diagrams.diagrams ?? []
+            let target = DiagramCommentRequest(meetingId: request.meetingId, diagramId: drawn.count == 1 ? drawn[0].id : nil)
+            diagramDraft[target.id] = trimmed
+            refineDraft[request.id] = nil
+            noticeMessage = drawn.count == 1
+                ? String(localized: "圖是另外畫的：已經把你的意見放進「重新畫」，確認後送出")
+                : String(localized: "圖是另外畫的：已經把你的描述放進「自己描述一張圖」，確認後送出")
+            refineRequest = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(350))
+                self.diagramComment = target
+            }
+            return true
+        }
         refineDraft[request.id] = trimmed
         perform {
             let payload = String(decoding: try JSONEncoder().encode(RevisePayload(answers: [], instruction: trimmed, focus: focus)), as: UTF8.self)
@@ -146,5 +162,12 @@ extension AppModel {
         }
         runner.wake()
         return true
+    }
+
+    /// 修正指示是不是在講圖（流程圖、泳道圖…）：是的話不改會議紀錄
+    static func isAboutDiagram(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        let words = ["diagram", "flowchart", "flow chart", "swimlane", "swim lane", "流程圖", "泳道", "畫圖", "示意圖", "流程图", "画图", "フローチャート", "図"]  // l10n-skip
+        return words.contains { lower.contains($0) }
     }
 }

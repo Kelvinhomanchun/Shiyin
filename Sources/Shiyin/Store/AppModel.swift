@@ -101,8 +101,14 @@ struct MeetingDetail: Equatable {
     var speakerPersons: [Int: Int64] = [:]
     /// 會議紀錄的圖（fork）：還沒畫過、或整理工具判斷不需要圖時是 nil／空的
     var diagrams: DiagramRecord?
-    /// 這場會議有排隊或正在畫的圖（從工作表讀，離開再回來也對）
-    var drawingDiagrams = false
+    /// 這場會議排隊或正在做的畫圖工作（從工作表讀，離開再回來也對）
+    var diagramJobs: [DiagramJob] = []
+    var suggestingDiagrams: Bool { diagramJobs.contains { $0.mode == .suggest } }
+    /// 正在畫的建議（建議的 id）、正在重新畫的圖（圖的 id）
+    var drawingSuggestions: Set<String> { Set(diagramJobs.compactMap { $0.mode == .draw ? $0.suggestion?.id : nil }) }
+    var redrawingDiagrams: Set<String> { Set(diagramJobs.compactMap { $0.mode == .redraw ? $0.diagramId : nil }) }
+    /// 畫一張新的圖（使用者自己描述的）
+    var drawingNew: Bool { diagramJobs.contains { $0.mode == .draw && $0.suggestion?.userRequest.isEmpty == false } }
 
     /// 名字對到的人物：先找這場的說話者，再找認識的人（不分大小寫）
     func personId(named name: String, people: [PersonOverview]) -> Int64? {
@@ -389,6 +395,9 @@ final class AppModel {
     /// 修正失敗時留著使用者打的字，重開彈窗時填回去（不讓打的字不見）
     /// 用 RefineRequest.id 當鍵：條目的指示只填回同一條，不會跑到整份的彈窗
     var refineDraft: [String: String] = [:]
+    /// fork：「提意見重新畫」「自己描述一張圖」的彈窗；沒送出時打的字留著
+    var diagramComment: DiagramCommentRequest?
+    var diagramDraft: [String: String] = [:]
     var rediarizeMeetingId: Int64?
     /// 匯出對話框要匯出的會議：打開時記下，對話框開著時選取的會議換了也不變（design §20.9、R18.9）
     var exportMeetingId: Int64?
@@ -760,7 +769,7 @@ final class AppModel {
         loaded.loadDocuments((try? db.documents(id)) ?? [])
         loaded.screens = (try? db.screens(id)) ?? []
         loaded.diagrams = (try? db.diagramRecord(id)) ?? nil
-        loaded.drawingDiagrams = (try? db.hasActiveJob(id, kind: .diagrams)) ?? false
+        loaded.diagramJobs = (try? db.activeDiagramJobs(id)) ?? []
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
         loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
@@ -1591,31 +1600,120 @@ final class AppModel {
 
     // MARK: 會議紀錄的圖（fork）
 
-    /// 「畫圖」「重新畫」：依目前的會議紀錄請整理工具判斷要畫哪些圖（payload 標成手動，不等紀錄定下來）
-    func redrawDiagrams() {
-        guard let id = selection, readyForAction(id) else { return }
-        guard detail?.notes != nil else {
+    /// 畫圖的動作都要：有會議紀錄、沒在錄音、整理工具設定好
+    private func diagramReady() -> Int64? {
+        guard let id = selection, readyForAction(id) else { return nil }
+        guard detail?.notes.map({ !$0.isEmpty }) == true else {
             noticeMessage = String(localized: "還沒有會議紀錄，整理完才能畫圖")
-            return
+            return nil
         }
+        guard detail?.meeting.deletedAt == nil else { return nil }
         guard AppSettings.provider != .none else {
             errorMessage = AppSettings.needsProviderSetup
                 ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
                 : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
-            return
+            return nil
         }
-        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return }
-        perform(.detail(.meeting)) { _ = try db.enqueueDiagrams(id, payload: #"{"manual":true}"#) }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return nil }
+        return id
+    }
+
+    private func queueDiagramJob(_ id: Int64, _ job: DiagramJob) {
+        perform(.detail(.meeting)) { try db.enqueueDiagrams(id, job) }
         runner.wake()
     }
 
+    /// 「建議可以畫的圖」：整理工具看會議紀錄和逐字稿，說哪些段落畫成圖比較清楚（不畫）
+    func suggestDiagrams() {
+        guard let id = diagramReady(), detail?.suggestingDiagrams != true else { return }
+        queueDiagramJob(id, DiagramJob(mode: .suggest))
+    }
+
+    /// 畫一個建議（或自己描述的圖）
+    func drawSuggestion(_ suggestion: MeetingDiagrams.Suggestion) {
+        guard let id = diagramReady(), detail?.drawingSuggestions.contains(suggestion.id) != true else { return }
+        queueDiagramJob(id, DiagramJob(mode: .draw, suggestion: suggestion))
+    }
+
+    /// 「自己描述一張圖」：使用者打字說要畫什麼
+    func drawDescribed(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let id = diagramReady() else { return false }
+        let suggestion = MeetingDiagrams.Suggestion(id: Diagrams.newId(), kind: .flowchart, title: String(trimmed.prefix(60)), why: "",
+                                                    focus: "", time: "", userRequest: trimmed)
+        queueDiagramJob(id, DiagramJob(mode: .draw, suggestion: suggestion))
+        return true
+    }
+
+    /// 不要這個建議
+    func dismissSuggestion(_ suggestionId: String) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) { try db.updateDiagrams(id) { $0.suggestions.removeAll { $0.id == suggestionId } } }
+    }
+
+    /// 「依我的意見重新畫」：意見留在這張圖上，之後再改也一起給整理工具；改之前的版本可以復原
+    func redrawDiagram(_ diagramId: String, comment: String) -> Bool {
+        let trimmed = comment.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let id = diagramReady(), detail?.redrawingDiagrams.contains(diagramId) != true else { return false }
+        queueDiagramJob(id, DiagramJob(mode: .redraw, diagramId: diagramId, comment: trimmed.isEmpty ? nil : trimmed))
+        return true
+    }
+
+    /// 換回重新畫之前的那一版（意見也回到那時候）
+    func undoDiagram(_ diagramId: String) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateDiagrams(id) { r in
+                guard var list = r.history[diagramId], let previous = list.popLast(),
+                      let k = r.diagrams.diagrams.firstIndex(where: { $0.id == diagramId }) else { return }
+                r.diagrams.diagrams[k] = previous
+                r.history[diagramId] = list.isEmpty ? nil : list
+            }
+        }
+    }
+
+    /// 移除一張圖：不放進會議紀錄頁和匯出；原本是建議的話放回建議
+    func removeDiagram(_ diagramId: String) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateDiagrams(id) { r in
+                guard let k = r.diagrams.diagrams.firstIndex(where: { $0.id == diagramId }) else { return }
+                let removed = r.diagrams.diagrams.remove(at: k)
+                r.history[diagramId] = nil
+                if var back = removed.request, back.userRequest.isEmpty {
+                    back.id = Diagrams.newId()
+                    r.suggestions.insert(back, at: 0)
+                }
+            }
+        }
+        noticeMessage = String(localized: "已移除這張圖")
+    }
+
+    /// 移到上面或下面（匯出也是這個順序）
+    func moveDiagram(_ diagramId: String, by offset: Int) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateDiagrams(id) { r in
+                guard let k = r.diagrams.diagrams.firstIndex(where: { $0.id == diagramId }) else { return }
+                let to = k + offset
+                guard r.diagrams.diagrams.indices.contains(to) else { return }
+                r.diagrams.diagrams.swapAt(k, to)
+            }
+        }
+    }
+
     func diagramsFinished(_ job: Job, error: Error?) {
-        let manual = job.payload != nil
-        if let error, manual { errorMessage = String(localized: "畫圖失敗：\(error.localizedDescription)") }
+        let request = DiagramJob.decode(job.payload)
+        if let error {
+            switch request?.mode {
+            case .suggest: errorMessage = String(localized: "找不到建議：\(error.localizedDescription)")
+            default: errorMessage = String(localized: "畫圖失敗：\(error.localizedDescription)")
+            }
+        }
         guard selection == job.meetingId else { return }
         reloadDetail(.meeting)
-        if manual, error == nil, detail?.diagrams?.diagrams.isEmpty ?? true {
-            noticeMessage = String(localized: "這場會議不需要圖：沒有流程、步驟或交接可以畫")
+        if request?.mode == .suggest, error == nil, detail?.diagrams?.suggestions.isEmpty ?? true {
+            noticeMessage = String(localized: "這場會議沒有適合畫成圖的地方。可以自己描述一張圖")
         }
     }
 
@@ -2315,16 +2413,16 @@ final class AppModel {
             case "pdf":
                 let pictures = DiagramExport.pngs(b)
                 let html = ScreenExport.inlineDiagrams(ScreenExport.inlineImages(
-                    ExportScript.html(NotesExporter.report(b, screens: true, diagrams: pictures.count), b), b.screens), pictures.map(\.png))
+                    ExportScript.html(NotesExporter.report(b, screens: true, diagrams: pictures.count, times: times), b), b.screens), pictures.map(\.png))
                 try await HTML.reportPDF(html, title: b.meeting.displayTitle, to: url)
             case "docx":
                 let pictures = DiagramExport.pngs(b)
-                try await Self.docxWithScreens(ExportScript.html(NotesExporter.html(b, screens: true, diagrams: pictures.count), b), b.screens,
+                try await Self.docxWithScreens(ExportScript.html(NotesExporter.html(b, screens: true, diagrams: pictures.count, times: times), b), b.screens,
                                                diagrams: pictures.map(\.png)).write(to: url)
             default:
                 let folder = ScreenExport.folderName(for: url, language: b.meeting.meetingLanguage)
                 let pictures = DiagramExport.pngs(b)
-                try ExportScript.text(NotesExporter.markdown(b, screenFolder: folder, diagrams: pictures.count), b)
+                try ExportScript.text(NotesExporter.markdown(b, screenFolder: folder, diagrams: pictures.count, times: times), b)
                     .write(to: url, atomically: true, encoding: .utf8)
                 try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
                 try ScreenExport.writeDiagrams(pictures.map(\.png), next: url, language: b.meeting.meetingLanguage)
@@ -2534,7 +2632,7 @@ final class AppModel {
             updated.notes = meeting.decodedNotes
             updated.versionCount = (try? db.versionCount(id)) ?? 0
             updated.diagrams = (try? db.diagramRecord(id)) ?? nil
-            updated.drawingDiagrams = (try? db.hasActiveJob(id, kind: .diagrams)) ?? false
+            updated.diagramJobs = (try? db.activeDiagramJobs(id)) ?? []
             updated.linkReviewItems()
         }
         if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }

@@ -469,6 +469,14 @@ final class AppDatabase: @unchecked Sendable {
                 );
                 """)
         }
+        // 使用者決定畫哪些圖（fork）：整理工具的建議、每張圖之前的版本
+        migrator.registerMigration("fork-diagrams-suggest") { db in
+            try db.execute(sql: """
+                ALTER TABLE meeting_diagrams ADD COLUMN suggestions TEXT NOT NULL DEFAULT '[]';
+                ALTER TABLE meeting_diagrams ADD COLUMN suggested INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE meeting_diagrams ADD COLUMN history TEXT NOT NULL DEFAULT '{}';
+                """)
+        }
         return migrator
     }
 
@@ -1475,7 +1483,7 @@ final class AppDatabase: @unchecked Sendable {
             let settle = Date().addingTimeInterval(-Self.stakeholderSettleSeconds).ISO8601Format()
             guard var job = try Job.filter(sql: """
                 status = ? AND kind IN (\(kinds.map { _ in "?" }.joined(separator: ","))) AND NOT (
-                    kind IN ('stakeholders', 'coaching', 'diagrams') AND payload IS NULL AND (created_at > ? OR EXISTS (
+                    kind IN ('stakeholders', 'coaching') AND payload IS NULL AND (created_at > ? OR EXISTS (
                         SELECT 1 FROM jobs j WHERE j.meeting_id = jobs.meeting_id AND j.kind IN ('summarize', 'revise')
                             AND j.status IN ('queued', 'running'))))
                 """, arguments: StatementArguments([JobStatus.queued.rawValue] + kinds + [settle]))

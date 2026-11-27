@@ -96,6 +96,8 @@ def start():
     with sqlite3.connect(HOME + "/shiyin.sqlite") as c:
         c.execute("UPDATE jobs SET status = 'done' WHERE status IN ('queued', 'running')")
         c.execute("UPDATE coaching SET useful = '[]', rejected = '[]'")   # start from no marks (copy only)
+        if c.execute("SELECT 1 FROM sqlite_master WHERE name = 'meeting_diagrams'").fetchone():
+            c.execute("DELETE FROM meeting_diagrams")   # start with no diagrams (copy only)
     global FAKE, PROC
     FAKE = subprocess.Popen([sys.executable, "-I", HERE + "/fake_ai.py", AILOG, str(PORT)])
     launch()

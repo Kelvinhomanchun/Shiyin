@@ -12,8 +12,11 @@ struct DiagramView: View {
     var onSeek: ((Double) -> Void)? = nil
 
     init(diagram: MeetingDiagrams.Diagram, exporting: Bool = false, onSeek: ((Double) -> Void)? = nil) {
-        self.diagram = diagram
-        self.layout = DiagramLayout.layout(diagram)
+        // 匯出的圖不放錄音的時間點（檔案可能給客戶，fork）；畫面上留著，點了播放
+        var shown = diagram
+        if exporting { shown.nodes = shown.nodes.map { var n = $0; n.time = ""; return n } }
+        self.diagram = shown
+        self.layout = DiagramLayout.layout(shown)
         self.exporting = exporting
         self.onSeek = onSeek
     }
@@ -194,39 +197,286 @@ struct DiagramPalette {
     var laneHeader: Color { dark ? Color(hex: "#262626") : Color(hex: "#F4F4F4") }
 }
 
-/// 會議紀錄頁上「圖」那一段：每張圖一個標題、一句說明、圖（比欄寬寬時左右捲）
+/// 會議紀錄頁上「圖」那一段（fork）：不會自己畫，使用者決定。
+/// 1. 「建議可以畫的圖」：整理工具指出哪些段落畫成圖比較清楚（為什麼、哪一段），使用者按「畫」或「不需要」；也可以自己描述一張
+/// 2. 畫好的圖：下面列出說過的意見，「提意見重新畫」把意見一起給整理工具、改之前的版本可以「復原」、⋯ 裡移動或移除
+/// 3. 匯出只放畫好的圖（不放時間點）
 struct DiagramsSection: View {
     @Environment(AppModel.self) private var model
     @Environment(\.textScale) private var textScale
     let detail: MeetingDetail
-    let record: DiagramRecord
+
+    private var record: DiagramRecord? { detail.diagrams }
+    private var drawn: [MeetingDiagrams.Diagram] { record?.diagrams.diagrams ?? [] }
+    private var suggestions: [MeetingDiagrams.Suggestion] { record?.suggestions ?? [] }
+    private var locked: Bool { detail.meeting.deletedAt != nil || model.viewingNotes != nil }
+    /// 使用者自己描述、正在畫的（還沒有卡片）
+    private var describing: [MeetingDiagrams.Suggestion] {
+        detail.diagramJobs.compactMap { $0.mode == .draw ? $0.suggestion : nil }.filter { s in !suggestions.contains { $0.id == s.id } }
+    }
 
     var body: some View {
-        let stale = detail.notes.map { Diagrams.notesKey($0) != record.notesKey } ?? false
         NotesSection(title: String(localized: "圖")) {
-            Button(detail.drawingDiagrams ? String(localized: "畫圖中…") : String(localized: "重新畫"), systemImage: "arrow.clockwise") { model.redrawDiagrams() }
-                .buttonStyle(.borderless)
-                .font(.callout)
-                .disabled(detail.drawingDiagrams || detail.meeting.deletedAt != nil)
-                .help("請整理工具依目前的會議紀錄重新判斷要畫哪些圖")
+            HStack(spacing: 14) {
+                Button(detail.suggestingDiagrams ? String(localized: "找可以畫的地方…") : String(localized: "建議可以畫的圖"),
+                       systemImage: "sparkles") { model.suggestDiagrams() }
+                    .disabled(detail.suggestingDiagrams || locked)
+                    .help("請整理工具看會議紀錄和逐字稿，建議哪些段落畫成圖比較清楚；你決定要畫哪一張")
+                Button("自己描述一張圖…", systemImage: "square.and.pencil") { model.diagramComment = DiagramCommentRequest(meetingId: detail.meeting.id!, diagramId: nil) }
+                    .disabled(locked)
+                    .help("寫下要畫什麼，例如：Shing 每個月產生報表的步驟，分成 AMS 和 Shing 兩條道")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(locked ? Color.secondary : Color.celadon)
+            .font(.callout)
         } content: {
             VStack(alignment: .leading, spacing: 18) {
-                if stale {
-                    Label("這些圖是依之前的會議紀錄畫的", systemImage: "clock.arrow.circlepath")
-                        .font(.callout)
+                if drawn.isEmpty && suggestions.isEmpty && describing.isEmpty && !detail.suggestingDiagrams {
+                    Text(record?.suggested == true
+                         ? String(localized: "整理工具覺得這場會議沒有適合畫成圖的地方。要的話可以自己描述一張。")
+                         : String(localized: "講到流程、步驟或交接的會議，畫成圖比較容易看懂。按「建議可以畫的圖」，整理工具會指出可以畫的段落，你決定要畫哪些；不會自己畫。"))
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                ForEach(Array(record.diagrams.diagrams.enumerated()), id: \.offset) { _, diagram in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(diagram.title).contentTitleFont(16)
-                        if !diagram.caption.isEmpty {
-                            Text(diagram.caption).foregroundStyle(.secondary)
-                        }
-                        DiagramFrame(view: DiagramView(diagram: diagram, onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil),
-                                     textScale: textScale)
+                if detail.suggestingDiagrams {
+                    Label("正在找這場會議裡可以畫成圖的地方…", systemImage: "hourglass").foregroundStyle(.secondary)
+                }
+                ForEach(drawn, id: \.id) { d in diagramCard(d) }
+                ForEach(describing, id: \.id) { s in
+                    Label("正在畫「\(s.title)」…", systemImage: "hourglass").foregroundStyle(.secondary)
+                }
+                if !suggestions.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(drawn.isEmpty ? String(localized: "可以畫的圖") : String(localized: "還可以畫的圖"))
+                            .font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+                        ForEach(suggestions) { s in suggestionCard(s) }
                     }
                 }
             }
+        }
+    }
+
+    // MARK: 建議
+
+    private func suggestionCard(_ s: MeetingDiagrams.Suggestion) -> some View {
+        let drawing = detail.drawingSuggestions.contains(s.id)
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: Self.icon(s.kind)).foregroundStyle(Color.celadon).frame(width: 20).padding(.top, 2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(s.title).fontWeight(.semibold)
+                Text(Self.kindName(s.kind)).font(.callout).foregroundStyle(.secondary)
+                if !s.why.isEmpty { Text(s.why).fixedSize(horizontal: false, vertical: true) }
+                if !s.focus.isEmpty || !s.time.isEmpty {
+                    HStack(spacing: 6) {
+                        if !s.focus.isEmpty { Text(s.focus).foregroundStyle(.secondary).lineLimit(2) }
+                        if let seconds = TimeFormat.seconds(s.time), model.player.isLoaded {
+                            Button(s.time) { model.player.seek(to: seconds) }.buttonStyle(.borderless).foregroundStyle(Color.celadon)
+                                .help("從 \(s.time) 播放")
+                        } else if !s.time.isEmpty { Text(s.time).foregroundStyle(.secondary) }
+                    }
+                    .font(.callout)
+                }
+                HStack(spacing: 14) {
+                    if drawing {
+                        ProgressView().controlSize(.small)
+                        Text("畫圖中…").foregroundStyle(.secondary)
+                    } else {
+                        Button("畫這張圖", systemImage: "pencil.and.outline") { model.drawSuggestion(s) }
+                            .foregroundStyle(Color.celadon)
+                            .disabled(locked)
+                        Button("不需要") { model.dismissSuggestion(s.id) }
+                            .foregroundStyle(.secondary)
+                            .disabled(locked)
+                            .help("把這個建議拿掉")
+                    }
+                }
+                .buttonStyle(.borderless)
+                .font(.callout)
+                .padding(.top, 2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Color.celadon.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: 畫好的圖
+
+    private func diagramCard(_ d: MeetingDiagrams.Diagram) -> some View {
+        let redrawing = detail.redrawingDiagrams.contains(d.id)
+        let canUndo = !(record?.history[d.id] ?? []).isEmpty
+        let index = drawn.firstIndex { $0.id == d.id } ?? 0
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(d.title).contentTitleFont(16)
+            if !d.caption.isEmpty { Text(d.caption).foregroundStyle(.secondary) }
+            if record?.isStale(d, notes: detail.notes) == true {
+                Label("這張圖是依之前的會議紀錄畫的", systemImage: "clock.arrow.circlepath").font(.callout).foregroundStyle(.secondary)
+            }
+            DiagramFrame(view: DiagramView(diagram: d, onSeek: model.player.isLoaded ? { model.player.seek(to: $0) } : nil), textScale: textScale)
+                .opacity(redrawing ? 0.4 : 1)
+            if !d.comments.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("你的意見（重新畫時都會一起考慮）").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+                    ForEach(Array(d.comments.enumerated()), id: \.offset) { k, c in
+                        Text("\(k + 1). \(c)").font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.top, 2)
+            }
+            HStack(spacing: 14) {
+                if redrawing {
+                    ProgressView().controlSize(.small)
+                    Text("依你的意見重新畫…").foregroundStyle(.secondary)
+                } else {
+                    Button("提意見重新畫…", systemImage: "text.bubble") {
+                        model.diagramComment = DiagramCommentRequest(meetingId: detail.meeting.id!, diagramId: d.id)
+                    }
+                    .foregroundStyle(Color.celadon)
+                    .help("說哪裡要改（只畫現在的做法、分成幾條道、少幾步…），整理工具照你的意見重新畫")
+                    if canUndo {
+                        Button("復原上一版", systemImage: "arrow.uturn.backward") { model.undoDiagram(d.id) }
+                            .foregroundStyle(Color.celadon)
+                            .help("換回重新畫之前的那張圖")
+                    }
+                    FloatingMenuButton {
+                        [MenuEntry.action(String(localized: "照同樣的要求再畫一次"), icon: "arrow.clockwise") { _ = model.redrawDiagram(d.id, comment: "") },
+                         .action(String(localized: "往上移"), icon: "arrow.up", enabled: index > 0) { model.moveDiagram(d.id, by: -1) },
+                         .action(String(localized: "往下移"), icon: "arrow.down", enabled: index < drawn.count - 1) { model.moveDiagram(d.id, by: 1) },
+                         .divider,
+                         .action(String(localized: "移除這張圖"), icon: "trash", destructive: true) { model.removeDiagram(d.id) }]
+                    }
+                    .help("更多")
+                }
+            }
+            .buttonStyle(.borderless)
+            .font(.callout)
+            .disabled(locked)
+        }
+    }
+
+    static func icon(_ kind: MeetingDiagrams.Kind) -> String {
+        switch kind {
+        case .flowchart: "arrow.triangle.branch"
+        case .steps: "list.number"
+        case .swimlane: "rectangle.split.3x1"
+        case .dataFlow: "arrow.left.arrow.right"
+        case .timeline: "calendar.day.timeline.left"
+        }
+    }
+
+    static func kindName(_ kind: MeetingDiagrams.Kind) -> String {
+        switch kind {
+        case .flowchart: String(localized: "流程圖（有判斷、分支）")
+        case .steps: String(localized: "步驟")
+        case .swimlane: String(localized: "泳道圖（誰做哪一步、怎麼交接）")
+        case .dataFlow: String(localized: "資料流向")
+        case .timeline: String(localized: "時間軸")
+        }
+    }
+}
+
+/// 「提意見重新畫」「自己描述一張圖」的彈窗
+struct DiagramCommentRequest: Identifiable, Equatable {
+    var meetingId: Int64
+    /// nil：自己描述一張新的圖
+    var diagramId: String?
+    var id: String { "\(meetingId)-\(diagramId ?? "new")" }
+}
+
+struct DiagramCommentSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let request: DiagramCommentRequest
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    private var diagram: MeetingDiagrams.Diagram? { request.diagramId.flatMap { model.detail?.diagrams?.diagram($0) } }
+
+    private var suggestions: [String] {
+        if diagram != nil {
+            return [String(localized: "只畫現在的做法，不要畫之後的計畫"),
+                    String(localized: "分成幾條道，每條是一個人或團隊："),
+                    String(localized: "少幾步，合併成主要的步驟"),
+                    String(localized: "補上漏掉的步驟："),
+                    String(localized: "重點應該是：")]
+        }
+        return [String(localized: "畫成泳道圖：誰做哪一步、怎麼交接"),
+                String(localized: "畫成步驟："),
+                String(localized: "畫成流程圖，包括判斷的地方："),
+                String(localized: "畫出資料從哪裡來、到哪裡去")]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SheetHeader(title: diagram.map { String(localized: "重新畫「\($0.title)」") } ?? String(localized: "自己描述一張圖"),
+                        subtitle: diagram == nil
+                            ? String(localized: "寫下要畫什麼、畫成哪一種圖。整理工具會對照會議紀錄和逐字稿來畫。")
+                            : String(localized: "說哪裡要改。之前的意見也會一起考慮，改之前的那張可以復原。"))
+            if let diagram, !diagram.comments.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("之前的意見").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+                    ForEach(Array(diagram.comments.enumerated()), id: \.offset) { k, c in
+                        Text("\(k + 1). \(c)").font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SheetFieldLabel(diagram == nil ? String(localized: "要畫什麼") : String(localized: "要怎麼改"))
+                ZStack(alignment: .topLeading) {
+                    if text.isEmpty {
+                        Text(diagram == nil
+                             ? String(localized: "例如：Shing 每個月產生 Power BI 報表的步驟，從 AMS 給檔案到匯出報表")
+                             : String(localized: "例如：只畫 Shing 現在的做法，不用畫新系統；下載和改檔名合成一步"))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 10).padding(.vertical, 9)
+                            .allowsHitTesting(false)
+                    }
+                    TextEditor(text: $text)
+                        .font(.system(size: 14))
+                        .scrollContentBackground(.hidden)
+                        .padding(5)
+                        .focused($focused)
+                        .accessibilityLabel(Text(diagram == nil ? "要畫什麼" : "要怎麼改"))
+                }
+                .frame(minHeight: 96, maxHeight: 180)
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused ? Color.secondary.opacity(0.6) : Color.secondary.opacity(0.25)))
+                FlowLayout(spacing: 6) {
+                    ForEach(suggestions, id: \.self) { s in
+                        Button(s) {
+                            text = text.isEmpty ? s : text + (text.hasSuffix("\n") ? "" : "\n") + s
+                            focused = true
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(Color.secondary.opacity(0.1), in: Capsule())
+                        .help("放進輸入框，再自己補完")
+                    }
+                }
+            }
+            HStack(spacing: 10) {
+                Text("⌘↩ 送出").font(.caption).foregroundStyle(.tertiary)
+                Spacer()
+                Button("取消") {
+                    model.diagramDraft[request.id] = text.isEmpty ? nil : text
+                    dismiss()
+                }
+                .buttonStyle(SheetPillButtonStyle(.secondary))
+                .keyboardShortcut(.cancelAction)
+                Button(diagram == nil ? String(localized: "畫圖") : String(localized: "重新畫")) {
+                    let sent = request.diagramId.map { model.redrawDiagram($0, comment: text) } ?? model.drawDescribed(text)
+                    if sent { model.diagramDraft[request.id] = nil; dismiss() }
+                }
+                .buttonStyle(SheetPillButtonStyle(.primary))
+                .keyboardShortcut(.return, modifiers: .command)
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .sheetChrome(width: 520)
+        .onAppear {
+            if let draft = model.diagramDraft[request.id] { text = draft }
+            focused = true
         }
     }
 }

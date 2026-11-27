@@ -286,98 +286,133 @@ def until_diagrams(cond, timeout=60):
 
 
 def r_16():
-    """After notes are re-made, a diagram is drawn automatically on the stakeholder model and shows with no click."""
+    """Notes are re-made: nothing is drawn or suggested by itself; the section only offers the button."""
     e.mode(diagrams="pbi")
     e.ctl("select", PBI, wait=1.5)
-    n0 = len(e.ai_calls("diagrams"))
-    e.ctl("resummarize", PBI, wait=1)
-    s = until_diagrams(lambda s: s["count"] == 2 and not s["drawing"], timeout=90)
-    calls = e.ai_calls("diagrams")[n0:]
-    e.check("R-16", "Re-summarize draws the diagrams by itself, on the stakeholder model, and the notes page shows them",
-            s["selection"] == PBI and s["kinds"] == ["swimlane", "flowchart"] and calls and calls[-1]["model"] == "stake-model"
-            and s["model"] == "stake-model" and not s["stale"],
-            f"state {s}, calls {[c['model'] for c in calls]}")
+    n0 = len(e.ai_calls("diagram"))
+    e.ctl("resummarize", PBI, wait=1); idle(60)
+    s = diagrams_state()
+    e.check("R-16", "Re-summarize draws nothing and suggests nothing by itself",
+            len(e.ai_calls("diagram")) == n0 and s["jobs"] == 0 and not s["suggestions"],
+            f"diagram AI calls {len(e.ai_calls('diagram')) - n0}, state {s}")
 
 
 def r_17():
-    """Redraw: it says drawing while it runs, still says so after leaving the meeting and coming back, then shows the result."""
+    """Suggest: shows 'finding…', still so after leaving and coming back, then lists the suggestions on the stakeholder model."""
     other = e.q("SELECT id FROM meetings WHERE deleted_at IS NULL AND notes IS NOT NULL AND id <> ? ORDER BY id DESC LIMIT 1", PBI)[0][0]
-    e.mode(diagrams="pbi", delay=6)
-    e.ctl("select", PBI, wait=1)
-    e.ctl("drawdiagrams", PBI, wait=1.5)
-    during = diagrams_state()["drawing"]
+    e.mode(diagrams="pbi", delay=9)
+    e.ctl("select", PBI, wait=1); e.ctl("diagramsuggest", PBI, wait=1.5)
+    during = diagrams_state()["suggesting"]
     e.ctl("select", other, wait=1.5); e.ctl("select", PBI, wait=1.5)
-    back = diagrams_state()["drawing"]
-    s = until_diagrams(lambda s: not s["drawing"], timeout=40)
+    back = diagrams_state()["suggesting"]
+    s = until_diagrams(lambda s: not s["suggesting"] and s["suggestions"], timeout=40)
     e.mode(diagrams="pbi")
-    e.check("R-17", "Redraw shows 'drawing' until done, also after leaving and coming back",
-            during and back and s["count"] == 2 and not s["error"], f"during {during} back {back} end {s}")
+    call = (e.ai_calls("diagram-suggest") or [{}])[-1]
+    e.check("R-17", "Suggest shows progress across leaving and coming back, then lists suggestions (nothing drawn)",
+            during and back and len(s["suggestions"]) == 2 and s["count"] == 0 and call.get("model") == "stake-model",
+            f"during {during} back {back} end {s}")
 
 
 def r_18():
-    """A meeting with no process: a redraw returns nothing, the page says so and shows no diagram section."""
+    """Draw one suggestion: it becomes a diagram and leaves the list; dismiss the other; a meeting with nothing to draw says so."""
+    e.mode(diagrams="pbi", delay=4)
+    e.ctl("select", PBI, wait=1); e.ctl("diagramdraw", PBI, 0, wait=1.5)
+    drawing = diagrams_state()["drawingSuggestions"]
+    s = until_diagrams(lambda s: s["count"] == 1 and not s["jobs"], timeout=40)
+    e.mode(diagrams="pbi")
+    drawn_ok = s["kinds"] == ["swimlane"] and s["suggestions"] == ["Parallel run data handling"]
+    e.ctl("diagramdismiss", PBI, 0, wait=1.5)
+    after = diagrams_state()
     other = e.q("SELECT id FROM meetings WHERE deleted_at IS NULL AND notes IS NOT NULL AND id <> ? ORDER BY id DESC LIMIT 1", PBI)[0][0]
     e.mode(diagrams="none")
-    e.ctl("select", other, wait=1)
-    e.ctl("drawdiagrams", other, wait=1.5)
-    s = until_diagrams(lambda s: not s["drawing"] and s["notice"], timeout=40)
+    e.ctl("select", other, wait=1); e.ctl("diagramsuggest", other, wait=1.5)
+    none = until_diagrams(lambda s: not s["suggesting"] and s["suggested"], timeout=40)
     e.mode(diagrams="pbi")
-    e.check("R-18", "No process → no diagram; the page says it needs none", s["count"] in (0, -1) and s["notice"] and not s["error"], f"{s}")
+    e.check("R-18", "Draw a suggestion, dismiss another; a meeting with nothing to draw says so",
+            drawing == 1 and drawn_ok and after["suggestions"] == [] and after["count"] == 1
+            and none["count"] == 0 and none["notice"] and not none["error"],
+            f"drawing {drawing}, drawn {s}, after dismiss {after['suggestions']}, none {none}")
 
 
 def r_19():
-    """Too big an answer is cut to the rules (9 nodes, 2 focal, edges to real nodes only)."""
-    e.mode(diagrams="big")
-    e.ctl("select", PBI, wait=1); e.ctl("drawdiagrams", PBI, wait=1.5)
-    s = until_diagrams(lambda s: not s["drawing"] and s["titles"] == ["Too many"], timeout=40)
-    row = e.q("SELECT diagrams FROM meeting_diagrams WHERE meeting_id = ?", PBI)[0][0]
-    d = json.loads(row)["diagrams"][0]
-    focal = sum(1 for n in d["nodes"] if n["focal"])
-    ids = {n["id"] for n in d["nodes"]}
+    """Comment → redraw: the comment is sent with the current diagram, kept on the diagram, and the old version can be restored."""
+    e.ctl("select", PBI, wait=1)
+    before = diagrams_state()
+    e.mode(diagrams="pbi", delay=4)
+    e.ctl("diagramredraw", PBI, 0, "Only draw the existing behaviour of Shing, no need to consider the new claim system", wait=1.5)
+    busy = diagrams_state()["redrawing"]
+    s = until_diagrams(lambda s: not s["jobs"] and s["titles"] and s["titles"][0].endswith("(current)"), timeout=40)
     e.mode(diagrams="pbi")
-    e.ctl("drawdiagrams", PBI, wait=1.5); until_diagrams(lambda s: not s["drawing"] and s["count"] == 2, timeout=40)
-    e.check("R-19", "An over-budget answer is cut to 9 nodes, 2 focal, edges between kept nodes",
-            len(d["nodes"]) == 9 and focal == 2 and all(x["from"] in ids and x["to"] in ids for x in d["edges"]),
-            f"nodes {len(d['nodes'])} focal {focal} edges {len(d['edges'])}")
+    call = (e.ai_calls("diagram-draw") or [{}])[-1]
+    sent = "comments on the diagram" in call.get("tail", "") and "current version of the diagram" in call.get("tail", "")
+    e.ctl("diagramredraw", PBI, 0, "Merge download and rename", wait=1.5)
+    s2 = until_diagrams(lambda s: not s["jobs"] and len(s["comments"][0]) == 2, timeout=40)
+    second = (e.ai_calls("diagram-draw") or [{}])[-1].get("tail", "")
+    both = "Only draw the existing" in second and "Merge download" in second
+    e.ctl("diagramundo", PBI, 0, wait=1.5)
+    undone = diagrams_state()
+    e.check("R-19", "Redraw with comments: all comments sent and kept; Undo brings the earlier version back",
+            busy == 1 and s["nodes"][0] == before["nodes"][0] - 1 and sent and both and s2["undo"] == [True]
+            and len(undone["comments"][0]) == 1 and undone["titles"][0].endswith("(current)"),
+            f"busy {busy}, after {s['titles']} {s['nodes']}, sent {sent}, both {both}, undone {undone['comments']}")
 
 
 def r_20():
-    """Editing the notes keeps the diagrams but marks them as drawn from the earlier notes."""
+    """Fix with AI asked about the diagram: the notes are not touched, the comment lands in the redraw sheet."""
     e.ctl("select", PBI, wait=1)
+    v0 = e.q("SELECT count(*) FROM notes_versions WHERE meeting_id = ?", PBI)[0][0]
+    n0 = len(e.ai_calls("notes"))
+    e.ctl("refine", "open", wait=1); e.ctl("refine", "send", "For the diagram, only draw the existing behaviour of Shing", wait=2.5)
+    s = diagrams_state()
+    v1 = e.q("SELECT count(*) FROM notes_versions WHERE meeting_id = ?", PBI)[0][0]
+    e.ctl("diagramclose", wait=1)
+    # Editing the notes marks the diagram as from earlier notes
     notes = json.loads(e.q("SELECT notes FROM meetings WHERE id = ?", PBI)[0][0])
     summary = notes.get("summary") or []
-    notes["summary"] = summary + ["(edited)"] if isinstance(summary, list) else summary + " (edited)"
+    notes["summary"] = summary + [{"text": "(edited)", "time": ""}] if isinstance(summary, list) else summary + " (edited)"
     e.ctl("editnotes", PBI, json.dumps(notes, ensure_ascii=False), wait=2)
-    s = until_diagrams(lambda s: s["stale"], timeout=10)
-    e.check("R-20", "After editing the notes, the diagrams stay and say they are from the earlier notes", s["count"] == 2 and s["stale"], f"{s}")
+    stale = until_diagrams(lambda s: any(s["stale"]), timeout=10)
+    e.check("R-20", "A diagram request in Fix with AI opens the redraw sheet and leaves the notes alone; edited notes mark the diagram",
+            s["sheet"].startswith(f"{PBI}-") and s["sheet"] != f"{PBI}-new" and v1 == v0 and len(e.ai_calls("notes")) == n0
+            and any(stale["stale"]),
+            f"sheet {s['sheet']!r} notice {s['notice']!r}, versions {v0}→{v1}, stale {stale['stale']}")
 
 
 def r_21():
-    """PDF, Word and Markdown exports carry the diagrams as pictures after the summary."""
+    """Exports: no recording times anywhere (notes or diagram pictures) unless asked; diagrams after the summary; remove puts it back as a suggestion."""
     os.makedirs(OUT, exist_ok=True)
+    e.ctl("select", PBI, wait=1)
+    e.ctl("diagramdraw", PBI, 0, wait=1) if diagrams_state()["suggestions"] else None
     ok = {}
     for fmt in ("pdf", "docx", "md"):
         path = f"{OUT}/pbi.{fmt}"
         if os.path.exists(path): os.remove(path)
-        e.ctl("export", "notes", fmt, path, "1", "1", PBI, wait=0.5)
+        e.ctl("export", "notes", fmt, path, "0", "1", PBI, wait=0.5)
         ok[fmt] = wait_file(path)
     md = open(f"{OUT}/pbi.md").read() if ok["md"] else ""
     pngs = re.findall(r"!\[[^\]]*\]\(<([^>]+diagram-\d\.png)>\)", md)
-    md_files = all(os.path.exists(os.path.join(OUT, p)) for p in pngs) and len(pngs) == 2
-    media = []
+    md_files = all(os.path.exists(os.path.join(OUT, p)) for p in pngs) and len(pngs) >= 1
+    media, body = [], ""
     if ok["docx"]:
         with zipfile.ZipFile(f"{OUT}/pbi.docx") as z:
             media = [n for n in z.namelist() if n.startswith("word/media/") and n.endswith(".png")]
             body = z.read("word/document.xml").decode()
-    pdf = open(f"{OUT}/pbi.pdf", "rb").read() if ok["pdf"] else b""
-    pdf_text = subprocess.run(["/usr/bin/strings", f"{OUT}/pbi.pdf"], capture_output=True, text=True).stdout if ok["pdf"] else ""
-    no_marker = "SHIYINDIAGRAM" not in md and ok["docx"] and "SHIYINDIAGRAM" not in body and "SHIYINDIAGRAM" not in pdf_text
-    summary_first = md.find("Summary") < md.find("Monthly Power BI report refresh") if md else False
-    e.check("R-21", "PDF, Word and Markdown exports include both diagrams after the summary",
-            pdf.startswith(b"%PDF") and len(media) >= 2 and md_files and no_marker and summary_first and b"/Image" in pdf,
-            f"ok {ok}, md pictures {pngs}, docx media {media}, markers gone {no_marker}, order {summary_first}")
-    for k in (0, 1):
-        e.ctl("diagrampng", PBI, k, f"{OUT}/pbi-diagram-{k}.png", wait=1.5)
+    times_md = re.findall(r"`\d{1,2}:\d{2}`", md)
+    times_docx = re.findall(r">\d{1,2}:\d{2}<", body)
+    summary_first = md.find("Summary") < md.find("Monthly Power BI") if md else False
+    # With times asked for, they come back
+    e.ctl("export", "notes", "md", f"{OUT}/pbi-times.md", "1", "1", PBI, wait=0.5); wait_file(f"{OUT}/pbi-times.md")
+    with_times = re.findall(r"`\d{1,2}:\d{2}`", open(f"{OUT}/pbi-times.md").read())
+    e.ctl("diagrampng", PBI, 0, f"{OUT}/pbi-diagram-0.png", wait=1.5)
+    # Remove: gone from the page, back in the suggestions
+    before = diagrams_state()
+    e.ctl("diagramremove", PBI, 0, wait=1.5)
+    after = diagrams_state()
+    e.check("R-21", "Exports have no times by default (diagrams included), diagrams follow the summary; Remove puts it back as a suggestion",
+            ok["pdf"] and len(media) >= 1 and md_files and not times_md and not times_docx and summary_first and with_times
+            and after["count"] == before["count"] - 1 and "Monthly Power BI report refresh" in after["suggestions"],
+            f"ok {ok}, md times {times_md[:3]}, docx times {times_docx[:3]}, with times {len(with_times)}, pictures {pngs} media {media}, "
+            f"remove {before['count']}→{after['count']} suggestions {after['suggestions']}")
 
 
 CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21]

@@ -57,12 +57,12 @@ background job in the TC-2 group is checked for that.
 | R-13 | New: find more | "Find more uncertain points" runs and keeps the notes |
 | R-14 | New: glossary file | The glossary exports to a file and imports (merged) |
 | R-15 | Transcription | The recorded meeting transcribes on this Mac |
-| R-16 | New: diagrams | Re-summarizing the PBI walkthrough draws a swimlane and a flowchart by itself, on the stakeholder model; the notes page shows them with no click |
-| R-17 | New: diagrams | Redraw says "Drawing…" until done, also after leaving the meeting and coming back |
-| R-18 | New: diagrams | A meeting with no process gets no diagram; the page says it needs none |
-| R-19 | New: diagrams | An over-budget answer is cut to the rules (9 nodes, 2 focal, edges only between kept nodes) |
-| R-20 | New: diagrams | Editing the notes keeps the diagrams and marks them as drawn from earlier notes |
-| R-21 | New: diagrams | PDF, Word and Markdown exports carry both diagrams as pictures after the summary |
+| R-16 | Diagrams | Re-making the notes draws and suggests nothing by itself; the Diagrams section only offers Suggest Diagrams and Describe a Diagram |
+| R-17 | Diagrams | Suggest says "Finding…" until done, also after leaving the meeting and coming back; suggestions come from the stakeholder model |
+| R-18 | Diagrams | Draw This turns a suggestion into a diagram and takes it off the list; Not needed drops one; a meeting with nothing to draw says so and offers Describe a Diagram |
+| R-19 | Diagrams | Comment and Redraw sends the current diagram plus every comment, keeps the comments on the card, and Restore previous version brings the old one back |
+| R-20 | Diagrams | Fix with AI asking about a diagram leaves the notes alone and opens the redraw sheet with the comment; editing the notes marks a diagram as drawn from earlier notes |
+| R-21 | Exports | Notes exports (Markdown, Word, PDF) and diagram pictures carry no recording times unless "Include recording times" is on; diagrams follow the summary; removing a diagram puts its suggestion back |
 
 ## Last run (2026-11-26)
 
@@ -85,3 +85,11 @@ Checked by eye: both PBI diagrams as exported PNGs, the notes page at text size 
 and the PDF page. Fixes made from that review: the Yes/No exits of a decision no longer jog sideways; at large text
 sizes a wide diagram shrinks to the column (down to 0.75×) instead of scrolling both ways; in the PDF a tall diagram
 is capped near 3/4 of a page so its section heading is not left alone on the page before.
+
+## Last run with user-driven diagrams (2026-11-27)
+
+Nothing is drawn automatically any more: suggest → draw → comment → redraw → restore, plus Describe a Diagram.
+R-16 to R-21 were rewritten for this; see the table. Exports drop recording times by default.
+Checked by eye at text size 4 and 960 pt, light and dark: the empty section, the suggestion cards, a drawn and
+redrawn swimlane with its comment list, and the redraw sheet, in Chinese and English.
+

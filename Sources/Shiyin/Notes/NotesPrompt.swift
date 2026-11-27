@@ -300,6 +300,7 @@ enum NotesPrompt {
         - 使用者明確告訴你的事實（例如正確的名字、數字、決定）照使用者說的寫，即使逐字稿聽錯了。
         - 指示是要刪除、合併、換段落或改負責人、期限時照做。
         - 指示跟會議紀錄無關或做不到時，紀錄維持原樣，並在 reviewItems 加一題說明原因。
+        - 圖（流程圖、泳道圖等）另外在 KelNote 的「圖」那一段畫，不在會議紀錄裡：指示裡關於圖的部分略過，不要因此加 reviewItems。
         - 原本的 reviewItems 保留；被這次修改解決的題目移除。
         """, en: """
         Revise the meeting notes according to the user's instruction and return the complete notes (same JSON format):
@@ -308,6 +309,7 @@ enum NotesPrompt {
         - Facts the user states explicitly (for example a correct name, number or decision) are written as the user says, even if the transcript misheard them.
         - If the instruction asks to delete, merge or move items, or change an owner or due date, do it.
         - If the instruction is unrelated to the notes or cannot be done, keep the notes unchanged and add one reviewItems question explaining why.
+        - Diagrams (flowcharts, swimlanes and so on) are drawn separately in KelNote's Diagrams section, not in the notes: skip any part of the instruction about a diagram, and do not add a reviewItems question for it.
         - Keep the existing reviewItems; remove those this change resolves.
         """, ja: """
         ユーザーの指示にもとづいて議事録を修正し、議事録全体を同じ JSON 形式で返してください：
@@ -316,6 +318,7 @@ enum NotesPrompt {
         - ユーザーがはっきり述べた事実（正しい名前・数字・決定など）は、文字起こしが聞き間違えていてもユーザーの言うとおりに書く。
         - 削除・統合・移動、担当者や期限の変更を求められたらそのとおりにする。
         - 指示が議事録と無関係、または実行できない場合は議事録を変えず、理由を説明する質問を reviewItems に 1 つ加える。
+        - 図（フローチャート、スイムレーン図など）は KelNote の「図」セクションで別に描き、議事録には含めない。図についての指示は無視し、そのために reviewItems を加えない。
         - 既存の reviewItems は残し、今回の修正で解決したものは削除する。
         """)
         return text

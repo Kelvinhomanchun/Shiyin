@@ -472,17 +472,45 @@ enum DebugControl {
                    "weaknesses": model.coaching?.decoded?.weaknesses.map(\.title) ?? [], "updatedAt": model.coaching?.updatedAt ?? "",
                    "selection": model.selection.map { Int($0) } ?? -1, "mode": "\(model.sidebarMode)", "person": model.selectedPerson.map { Int($0) } ?? -1,
                    "tab": model.coachingTab.rawValue, "useful": model.coaching?.usefulTitles ?? []], to: args[1])
-        // 會議紀錄的圖（fork）：diagramstate <輸出.json>（畫面上這場會議的圖）；drawdiagrams <會議 id>：等於按「畫圖」；
-        // diagrampng <會議 id> <第幾張，0 起> <輸出.png>：畫面同一個 view 匯出的圖
+        // 會議紀錄的圖（fork）：diagramstate <輸出.json>（畫面上這場會議的圖、建議、意見、正在做的）；
+        // diagramsuggest <id>：按「建議可以畫的圖」；diagramdraw <id> <第幾個建議，0 起>：按「畫這張圖」；
+        // diagramdismiss <id> <第幾個建議>：「不需要」；diagramdescribe <id> <描述>：自己描述一張；
+        // diagramredraw <id> <第幾張> <意見>：提意見重新畫；diagramundo / diagramremove <id> <第幾張>；
+        // diagrampng <id> <第幾張> <輸出.png>：匯出用的圖
         case "diagramstate":
             let record = model.detail?.diagrams
-            write(["selection": model.selection.map { Int($0) } ?? -1, "drawing": model.detail?.drawingDiagrams ?? false,
-                   "count": record?.diagrams.diagrams.count ?? -1, "kinds": record?.diagrams.diagrams.map(\.kind.rawValue) ?? [],
-                   "titles": record?.diagrams.diagrams.map(\.title) ?? [],
-                   "nodes": record?.diagrams.diagrams.map(\.nodes.count) ?? [],
-                   "stale": record.flatMap { r in model.detail?.notes.map { Diagrams.notesKey($0) != r.notesKey } } ?? false,
+            let drawn = record?.diagrams.diagrams ?? []
+            write(["selection": model.selection.map { Int($0) } ?? -1,
+                   "suggesting": model.detail?.suggestingDiagrams ?? false,
+                   "drawingSuggestions": model.detail?.drawingSuggestions.count ?? 0,
+                   "redrawing": model.detail?.redrawingDiagrams.count ?? 0,
+                   "jobs": model.detail?.diagramJobs.count ?? 0,
+                   "suggested": record?.suggested ?? false,
+                   "suggestions": record?.suggestions.map(\.title) ?? [],
+                   "count": drawn.count, "kinds": drawn.map(\.kind.rawValue), "titles": drawn.map(\.title),
+                   "nodes": drawn.map(\.nodes.count), "labels": drawn.map { $0.nodes.map(\.label) },
+                   "comments": drawn.map(\.comments), "undo": drawn.map { !(record?.history[$0.id] ?? []).isEmpty },
+                   "stale": drawn.map { record?.isStale($0, notes: model.detail?.notes) ?? false },
+                   "sheet": model.diagramComment?.id ?? "",
                    "model": record?.model ?? "", "notice": model.noticeMessage ?? "", "error": model.errorMessage ?? ""], to: args[1])
-        case "drawdiagrams": model.selection = id; model.redrawDiagrams()
+        case "diagramsuggest": model.selection = id; model.suggestDiagrams()
+        case "diagramdraw", "diagramdismiss":
+            model.selection = id
+            if let k = Int(args[2]), let list = model.detail?.diagrams?.suggestions, list.indices.contains(k) {
+                if args[0] == "diagramdraw" { model.drawSuggestion(list[k]) } else { model.dismissSuggestion(list[k].id) }
+            }
+        case "diagramdescribe": model.selection = id; _ = model.drawDescribed(args[2])
+        case "diagramredraw", "diagramundo", "diagramremove", "diagramopen":
+            model.selection = id
+            if let k = Int(args[2]), let list = model.detail?.diagrams?.diagrams.diagrams, list.indices.contains(k) {
+                switch args[0] {
+                case "diagramredraw": _ = model.redrawDiagram(list[k].id, comment: args.count > 3 ? args[3] : "")
+                case "diagramundo": model.undoDiagram(list[k].id)
+                case "diagramopen": model.diagramComment = DiagramCommentRequest(meetingId: id ?? 0, diagramId: list[k].id)
+                default: model.removeDiagram(list[k].id)
+                }
+            }
+        case "diagramclose": model.diagramComment = nil
         case "diagrampng":
             if let record = (try? model.db.diagramRecord(id ?? 0)) ?? nil, let k = Int(args[2]), record.diagrams.diagrams.indices.contains(k),
                let png = DiagramExport.png(record.diagrams.diagrams[k]) {
@@ -1221,7 +1249,11 @@ enum DebugControl {
         // windowshot <視窗 id 或編號> <輸出.png>：app 自己把視窗的內容畫成圖（螢幕上鎖、視窗在桌面層或別的桌面也畫得出來，
         // 輸入框這些 AppKit 元件照樣畫；snapshot 的 ImageRenderer 畫不出來）
         case "windowshot":
-            guard args.count > 2, let window = NSApp.windows.first(where: { $0.identifier?.rawValue == args[1] || "\($0.windowNumber)" == args[1] }),
+            // windowshot sheet <檔>：截主視窗上面開著的表單（sheet 是另一個視窗）
+            let target = args.count > 1 && args[1] == "sheet"
+                ? NSApp.windows.compactMap(\.attachedSheet).first
+                : NSApp.windows.first(where: { args.count > 1 && ($0.identifier?.rawValue == args[1] || "\($0.windowNumber)" == args[1]) })
+            guard args.count > 2, let window = target,
                   let view = window.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { break }
             view.cacheDisplay(in: view.bounds, to: rep)
             // 畫出來的內容沒有視窗的底色（材質、背景是視窗伺服器畫的），先鋪上視窗的底色再疊上去

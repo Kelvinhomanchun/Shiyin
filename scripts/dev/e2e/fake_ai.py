@@ -76,6 +76,27 @@ def diagrams():
             "edges": [edge("a", "b"), edge("b", "c", "Yes"), edge("b", "d", "No"), edge("c", "e"), edge("d", "e"), edge("e", "f")]}
     return {"diagrams": [swim, flow]}
 
+def diagram_suggestions():
+    if MODE.get("diagrams") == "none": return {"suggestions": []}
+    return {"suggestions": [
+        {"kind": "swimlane", "title": "Monthly Power BI report refresh", "why": "Shows who does each step and where the files change hands.",
+         "focus": "Topics: current report generation", "time": "02:32"},
+        {"kind": "flowchart", "title": "Parallel run data handling", "why": "The branch between the two claim systems is easier to follow as a picture.",
+         "focus": "Topics: parallel run", "time": "13:48"}]}
+
+def diagram_draw(prompt):
+    d = diagrams()["diagrams"]
+    pick = d[1] if ("Parallel run" in prompt and "Monthly Power BI" not in prompt) else d[0]
+    if "The user asked for this diagram" in prompt:
+        pick = dict(d[0], title="Shing's monthly steps", kind="steps", edges=[])
+    pick = json.loads(json.dumps(pick))
+    if "comments on the diagram" in prompt and "only draw" in prompt.lower():
+        # the comment asks for the current behaviour only: drop the last step, mark it in the title
+        pick["nodes"] = pick["nodes"][:-1]
+        pick["edges"] = [e for e in pick["edges"] if e["to"] in {n["id"] for n in pick["nodes"]}]
+        pick["title"] = pick["title"] + " (current)"
+    return {"diagram": pick}
+
 def first_meeting(prompt):
     import re
     m = re.search(r"[Mm]eeting (\d+)", prompt)
@@ -101,7 +122,8 @@ class H(BaseHTTPRequestHandler):
                 full = not MODE.get("stakeholder_thin_always") and (retry or not MODE.get("stakeholder_thin_first"))
             kind, out = "stakeholder" + ("-retry" if retry else ""), stakeholder(mid, full)
         elif "executive coach" in system or prompt.startswith("The user:"): kind, out = "coaching", coaching(mid)
-        elif '"diagrams"' in schema: kind, out = "diagrams", diagrams()
+        elif '"suggestions"' in schema: kind, out = "diagram-suggest", diagram_suggestions()
+        elif '"diagram"' in schema: kind, out = "diagram-draw", diagram_draw(prompt)
         elif '"speakerNames"' in schema:
             s = MODE.get("speaker_name"); kind = "speakerNames"
             out = {"speakerNames": [dict(s, reason="said so", time="00:01")] if s else []}
@@ -110,7 +132,7 @@ class H(BaseHTTPRequestHandler):
         elif '"keywords"' in schema: kind, out = "keywords", {"keywords": ["e2e"]}
         elif '"citations"' in schema: kind, out = "answer", {"answer": "a", "found": True, "citations": []}
         else: kind, out = "notes", notes()
-        with open(LOG, "a") as f: f.write(json.dumps({"kind": kind, "model": body.get("model", ""), "system": system[:300], "prompt": prompt[:4000]}, ensure_ascii=False) + "\n")
+        with open(LOG, "a") as f: f.write(json.dumps({"kind": kind, "model": body.get("model", ""), "system": system[:300], "prompt": prompt[:4000], "tail": prompt[-3000:]}, ensure_ascii=False) + "\n")
         if MODE.get("delay"): time.sleep(float(MODE["delay"]))
         self.reply({"choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": json.dumps(out, ensure_ascii=False)}}]})
 

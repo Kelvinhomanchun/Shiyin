@@ -9,6 +9,7 @@ struct ExportSheet: View {
     @State private var item: ExportItem = .notes
     @State private var format = "md"
     @State private var times = true
+    @AppStorage("exportNotesTimes") private var notesTimes = false
     @State private var speakers = true
     @State private var working = false
     /// 「分享…」的位置：分享選單（Mail、AirDrop、訊息；R7.5）從按鈕下面打開
@@ -32,6 +33,12 @@ struct ExportSheet: View {
                     SheetMenuField(options: item.formats.map { ($0, formatLabel($0)) }, selection: $format)
                         .disabled(item.formats.count == 1)
                 }
+            }
+            if item == .notes {
+                // 會議紀錄（fork）：預設不放時間點，給客戶的檔案看不到 12:34 這種錄音的位置；圖裡一律不放
+                Toggle("包含錄音的時間點", isOn: $notesTimes)
+                    .toggleStyle(.checkbox)
+                    .help("每一條後面的 mm:ss。要分享給客戶時建議不要勾")
             }
             if item == .transcript {
                 HStack(spacing: 18) {
@@ -108,7 +115,7 @@ struct ExportSheet: View {
         working = true
         defer { working = false }
         do {
-            try await model.export(item, format: format, times: times, speakers: speakers, meetingId: try meetingId(), to: url)
+            try await model.export(item, format: format, times: item == .notes ? notesTimes : times, speakers: speakers, meetingId: try meetingId(), to: url)
             model.noticeMessage = String(localized: "已匯出 \(url.lastPathComponent)")
             dismiss()
         } catch {
@@ -125,7 +132,7 @@ struct ExportSheet: View {
         guard let dir = try? Paths.makeTempDirectory() else { return nil }
         let url = dir.appendingPathComponent(model.suggestedFilename(item, format: format, meeting: bundle?.meeting))
         do {
-            try await model.export(item, format: format, times: times, speakers: speakers, meetingId: try meetingId(), to: url)
+            try await model.export(item, format: format, times: item == .notes ? notesTimes : times, speakers: speakers, meetingId: try meetingId(), to: url)
             return url
         } catch {
             model.errorMessage = error.localizedDescription

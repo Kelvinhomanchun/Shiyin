@@ -98,8 +98,6 @@ enum AppSettings {
     }
     static var autoSummarize: Bool { flag(autoSummarizeKey, default: true) }
     static var stakeholderAnalysis: Bool { flag(stakeholderAnalysisKey, default: true) }
-    static let meetingDiagramsKey = "meetingDiagrams"   // fork：會議整理完判斷要不要畫流程圖等，預設開
-    static var meetingDiagrams: Bool { flag(meetingDiagramsKey, default: true) }
     static var mcpEnabled: Bool { flag(mcpEnabledKey, default: false) }
     static var compressAudio: Bool { flag(compressAudioKey, default: true) }
     static var diarize: Bool { flag(diarizeKey, default: true) }
@@ -1010,30 +1008,76 @@ final class JobRunner {
         log.info("coaching updated from \(materials.count) meetings")
     }
 
-    /// 會議紀錄的圖（fork）：用人物分析的模型（比較會判斷要畫什麼）；不需要圖時存空的，畫面不顯示那一段
+    /// 會議紀錄的圖（fork）：使用者按了才做，用人物分析的模型。
+    /// suggest：建議可以畫哪些段落（不畫）；draw：照一個建議或使用者的描述畫一張；redraw：照使用者的意見改一張（之前的版本留著可以復原）
     private func diagrams(_ job: Job, lane: JobLane) async throws {
         let provider = AppSettings.provider
-        guard provider != .none, let meeting = try db.meeting(job.meetingId), meeting.deletedAt == nil,
-              let notes = meeting.decodedNotes, !notes.isEmpty else { return }
+        guard provider != .none, let request = DiagramJob.decode(job.payload), let meeting = try db.meeting(job.meetingId),
+              meeting.deletedAt == nil, let notes = meeting.decodedNotes, !notes.isEmpty else { return }
         running[lane]?.provider = provider
-        running[lane]?.stage = String(localized: "畫圖")
+        running[lane]?.stage = request.mode == .suggest ? String(localized: "找可以畫成圖的地方") : String(localized: "畫圖")
         let language = meeting.notesOutputLanguage
-        let prompt = Diagrams.prompt(meeting: meeting, notes: notes, segments: try db.segments(job.meetingId),
-                                     speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }))
+        let material = Diagrams.material(meeting: meeting, notes: notes, segments: try db.segments(job.meetingId),
+                                         speakers: Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) }))
         let model = AppSettings.stakeholderModel
-        let data = try await callLLM(lane) { onStart in
-            try await LLMClient.generateJSON(provider: provider, model: model, system: Diagrams.system(language), prompt: prompt,
-                                             format: Diagrams.format, onStart: onStart)
+        let simplified = AppSettings.simplifiedChinese(for: language)
+        let record = try db.diagramRecord(job.meetingId)
+        switch request.mode {
+        case .suggest:
+            let prompt = Diagrams.suggestPrompt(material, existing: record?.diagrams.diagrams ?? [])
+            let data = try await callLLM(lane) { onStart in
+                try await LLMClient.generateJSON(provider: provider, model: model, system: Diagrams.suggestSystem(language), prompt: prompt,
+                                                 format: Diagrams.suggestFormat, onStart: onStart)
+            }
+            guard isStillRunning(job) else { return }
+            var list: [MeetingDiagrams.Suggestion]
+            do { list = Diagrams.cleanSuggestions(try JSONDecoder().decode(MeetingDiagrams.Suggestions.self, from: data).suggestions) }
+            catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+            if simplified { list = list.map { var s = $0; s.title = ChineseScript.toSimplified(s.title); s.why = ChineseScript.toSimplified(s.why); return s } }
+            try db.updateDiagrams(job.meetingId) { r in
+                // 使用者自己描述、還沒畫的留著；整理工具的建議換成新的
+                r.suggestions = r.suggestions.filter { !$0.userRequest.isEmpty } + list
+                r.suggested = true
+                r.provider = provider.rawValue; r.model = model
+            }
+            log.info("diagram suggestions: \(list.count) for meeting \(job.meetingId)")
+        case .draw, .redraw:
+            let current = request.diagramId.flatMap { record?.diagram($0) }
+            if request.mode == .redraw, current == nil { return }   // 圖已經被移除了
+            let comments = (current?.comments ?? []) + [request.comment].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            let ask = request.suggestion ?? current?.request
+            let prompt = Diagrams.drawPrompt(material, request: ask, current: current, comments: comments)
+            let data = try await callLLM(lane) { onStart in
+                try await LLMClient.generateJSON(provider: provider, model: model, system: Diagrams.drawSystem(language), prompt: prompt,
+                                                 format: Diagrams.drawFormat, onStart: onStart)
+            }
+            guard isStillRunning(job) else { return }
+            struct Answer: Decodable { var diagram: MeetingDiagrams.Diagram }
+            let answer: Answer
+            do { answer = try JSONDecoder().decode(Answer.self, from: data) }
+            catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+            guard var drawn = Diagrams.cleanDiagram(answer.diagram) else {
+                throw LLMError.badAnswer(String(localized: "整理工具給的圖少於兩個步驟，畫不出來"))
+            }
+            if simplified { drawn = MeetingDiagrams(diagrams: [drawn]).mappingText(ChineseScript.toSimplified).diagrams[0] }
+            drawn.id = current?.id ?? Diagrams.newId()
+            drawn.comments = comments
+            drawn.request = ask
+            drawn.notesKey = Diagrams.notesKey(notes)
+            let drawnCopy = drawn
+            try db.updateDiagrams(job.meetingId) { r in
+                if let current, let k = r.diagrams.diagrams.firstIndex(where: { $0.id == current.id }) {
+                    r.history[current.id, default: []].append(r.diagrams.diagrams[k])
+                    r.history[current.id] = Array(r.history[current.id]!.suffix(10))
+                    r.diagrams.diagrams[k] = drawnCopy
+                } else {
+                    r.diagrams.diagrams.append(drawnCopy)
+                }
+                if let used = request.suggestion { r.suggestions.removeAll { $0.id == used.id } }
+                r.provider = provider.rawValue; r.model = model
+            }
+            log.info("diagram \(request.mode.rawValue): \(drawn.nodes.count) nodes for meeting \(job.meetingId)")
         }
-        guard isStillRunning(job) else { return }
-        var decoded: MeetingDiagrams
-        do { decoded = try JSONDecoder().decode(MeetingDiagrams.self, from: data).validated() }
-        catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
-        if AppSettings.simplifiedChinese(for: language) { decoded = decoded.mappingText(ChineseScript.toSimplified) }
-        // 畫的期間紀錄被改了也照樣存；key 記的是畫的時候根據的那一版
-        try db.saveDiagrams(job.meetingId, DiagramRecord(diagrams: decoded, notesKey: Diagrams.notesKey(notes), provider: provider.rawValue,
-                                                         model: model, updatedAt: Clock.now()))
-        log.info("diagrams: \(decoded.diagrams.count) for meeting \(job.meetingId)")
     }
 
     private static func idsJSON(_ ids: Set<Int64>) -> String {
@@ -1157,8 +1201,6 @@ final class JobRunner {
         if AppSettings.summarizerReady, try db.enqueueStakeholderRefresh(job.meetingId) { wake() }
         // 我的表現：我在這場會議，教練建議也更新（同樣等會議紀錄定下來）
         if AppSettings.summarizerReady, try db.enqueueCoachingRefresh(job.meetingId) { wake() }
-        // 會議紀錄的圖（fork）：講到流程、步驟的會議，整理工具判斷要不要畫
-        if AppSettings.summarizerReady, AppSettings.meetingDiagrams, try db.enqueueDiagrams(job.meetingId) { wake() }
         // 整理完有標題了，照資料夾的條件放（design §72）
         if let folder = try db.autoFile(job.meetingId) { onOrganized?(job.meetingId, folder) }
         return answers != nil || hadDraft == 0

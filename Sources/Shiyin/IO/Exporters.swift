@@ -221,15 +221,16 @@ enum NotesExporter {
 
     /// screenFolder：md 旁邊放畫面的資料夾（design §83.6），最後加一節；nil 時不放
     /// diagrams：放在旁邊資料夾的圖有幾張（fork）；0 時不放
-    static func markdown(_ b: ExportBundle, screenFolder: String? = nil, diagrams: Int = 0) -> String {
+    /// times：每一條後面的時間點；給客戶的檔案可以不放（fork）
+    static func markdown(_ b: ExportBundle, screenFolder: String? = nil, diagrams: Int = 0, times: Bool = true) -> String {
         let m = b.meeting
         let x = b.notesText
         var out = ["# \(m.displayTitle)", "", "*\(kicker(b))*", ""]
         func screens() {
             guard let screenFolder, !b.screens.isEmpty else { return }
             out += ["", "## \(x.screens)"]
-            for (screen, name) in zip(b.screens, ScreenExport.fileNames(b.screens)) {
-                let time = TimeFormat.string(screen.at ?? 0)
+            for (k, (screen, name)) in zip(b.screens, ScreenExport.fileNames(b.screens)).enumerated() {
+                let time = times ? TimeFormat.string(screen.at ?? 0) : "\(k + 1)"
                 out += ["", "### \(time)", "", "![\(time)](\(TranscriptExporter.markdownPath(screenFolder, name)))"]
             }
         }
@@ -245,7 +246,7 @@ enum NotesExporter {
             out += ["", "---", "", "*\(x.footer)*"]
             return out.joined(separator: "\n") + "\n"
         }
-        func t(_ time: String) -> String { time.isEmpty ? "" : " `\(time)`" }
+        func t(_ time: String) -> String { time.isEmpty || !times ? "" : " `\(time)`" }
         let figures = [(x.section("decisions"), notes.decisions.count), (x.section("actionItems"), notes.actionItems.count),
                        (x.section("openQuestions"), notes.openQuestions.count)].filter { $0.1 > 0 }
         if !figures.isEmpty { out += ["", "> " + figures.map { "**\($0.1)** \($0.0)" }.joined(separator: " · ")] }
@@ -266,9 +267,13 @@ enum NotesExporter {
                 out += ["", "## \(n) · \(title)"]
                 for person in people { out += ["", "**\(person.name)**", ""] + person.points.map { "- \($0.text)\(t($0.time))" } }
             case let .actions(title, items):
-                out += ["", "## \(n) · \(title)", "", "| \(x.owner) | \(x.task) | \(x.due) | \(x.time) |", "|---|---|---|---|"]
+                if times {
+                    out += ["", "## \(n) · \(title)", "", "| \(x.owner) | \(x.task) | \(x.due) | \(x.time) |", "|---|---|---|---|"]
+                } else {
+                    out += ["", "## \(n) · \(title)", "", "| \(x.owner) | \(x.task) | \(x.due) |", "|---|---|---|"]
+                }
                 for item in items {
-                    out.append("| **\(cell(item.owner.isEmpty ? x.unassigned : item.owner))** | \(cell(item.task)) | \(cell(item.due)) | \(cell(item.time)) |")
+                    out.append("| **\(cell(item.owner.isEmpty ? x.unassigned : item.owner))** | \(cell(item.task)) | \(cell(item.due)) |" + (times ? " \(cell(item.time)) |" : ""))
                 }
             case let .topics(title, topics):
                 out += ["", "## \(n) · \(title)"]
@@ -318,13 +323,13 @@ enum NotesExporter {
     /// 給 Word、剪貼簿：NSAttributedString 不認得 flex 等版面，用表格和簡單的樣式，但同一套字型、顏色、編號
     /// screens：最後一節放畫面的位置標記（design §83.6），簡繁轉換之後才換成圖片
     /// diagrams：放幾張圖（fork），位置標記之後換成圖片；0 時不放
-    static func html(_ b: ExportBundle, screens: Bool = false, diagrams: Int = 0) -> String {
+    static func html(_ b: ExportBundle, screens: Bool = false, diagrams: Int = 0, times: Bool = true) -> String {
         let m = b.meeting
         let x = b.notesText
         func screenSection() -> String {
             guard screens, !b.screens.isEmpty else { return "" }
             return "<h2>\(x.screens)</h2>\n" + b.screens.enumerated().map { index, screen in
-                "<h3><span class=\"time\">\(TimeFormat.string(screen.at ?? 0))</span></h3>\n<p class=\"screen\">\(ScreenExport.marker(index))</p>\n"
+                "<h3><span class=\"time\">\(times ? TimeFormat.string(screen.at ?? 0) : "\(index + 1)")</span></h3>\n<p class=\"screen\">\(ScreenExport.marker(index))</p>\n"
             }.joined()
         }
         var body = "<p class=\"kicker\">\(HTML.escape(kicker(b)))</p>\n<h1>\(HTML.escape(m.displayTitle))</h1>\n"
@@ -336,7 +341,7 @@ enum NotesExporter {
             let section = screenSection()
             return HTML.document(title: m.displayTitle, body: body + "<p>\(x.noNotes)</p>" + (section.isEmpty ? "" : "\n" + section), language: x.language)
         }
-        func t(_ time: String) -> String { time.isEmpty ? "" : "&nbsp;&nbsp;<span class=\"time\">\(time)</span>" }
+        func t(_ time: String) -> String { time.isEmpty || !times ? "" : "&nbsp;&nbsp;<span class=\"time\">\(time)</span>" }
         // Word 的清單縮排很寬：改成方塊符號加懸掛縮排的段落（同 PDF 的樣子）
         func bullet(_ text: String, _ time: String, _ mark: String = "■") -> String {
             "<p class=\"li\"><span class=\"mark\">\(mark)</span>&nbsp;&nbsp;&nbsp;\(HTML.escape(text))\(t(time))</p>"
@@ -363,7 +368,10 @@ enum NotesExporter {
                 body += "</table>\n"
             case let .topics(title, topics):
                 body += h2(title)
-                for topic in topics { body += "<h3><span class=\"time\">\(topic.start)</span>&nbsp;&nbsp;\(HTML.escape(topic.title))</h3>\n" + items(topic.points) }
+                for topic in topics {
+                    let start = times && !topic.start.isEmpty ? "<span class=\"time\">\(topic.start)</span>&nbsp;&nbsp;" : ""
+                    body += "<h3>\(start)\(HTML.escape(topic.title))</h3>\n" + items(topic.points)
+                }
             case let .review(title, list):
                 body += h2(title) + list.map { bullet($0.question, $0.time, "□") }.joined() + "\n"
             }
@@ -373,7 +381,7 @@ enum NotesExporter {
     }
 
     /// PDF：用 WebKit 排版，CSS 完整生效（IBM 簡報的樣子：白底、Plex、藍 60 的重點、細線、編號段落）
-    static func report(_ b: ExportBundle, screens: Bool = false, diagrams: Int = 0) -> String {
+    static func report(_ b: ExportBundle, screens: Bool = false, diagrams: Int = 0, times: Bool = true) -> String {
         let m = b.meeting
         let x = b.notesText
         var body = "<header class=\"cover\"><div class=\"kicker\">\(HTML.escape(kicker(b)))</div><h1>\(HTML.escape(m.displayTitle))</h1><div class=\"meta\">"
@@ -389,7 +397,7 @@ enum NotesExporter {
         if figures.count >= 2 {
             body += "<div class=\"figs\">" + figures.map { "<div class=\"fig\"><div class=\"n\">\($0.1)</div><div class=\"l\">\(HTML.escape($0.0))</div></div>" }.joined() + "</div>\n"
         }
-        func t(_ time: String) -> String { time.isEmpty ? "" : "<span class=\"t\">\(time)</span>" }
+        func t(_ time: String) -> String { time.isEmpty || !times ? "" : "<span class=\"t\">\(time)</span>" }
         func li(_ text: String, _ time: String) -> String { "<li>\(HTML.escape(text))\(t(time))</li>" }
         func ul(_ rows: [String], _ style: String) -> String { rows.isEmpty ? "" : "<ul class=\"\(style)\">" + rows.joined() + "</ul>" }
         /// 段落標題跟第一項放在一起不拆頁（WebKit 列印不管 break-after，標題會單獨留在頁尾）
@@ -427,7 +435,8 @@ enum NotesExporter {
                 body += section(title, i + 1, first: first, rest: rest)
             case let .topics(title, topics):
                 let cards = topics.map { topic in
-                    "<div class=\"topic\"><h3><span class=\"start\">\(topic.start)</span>\(HTML.escape(topic.title))</h3>\(ul(topic.points.map { li($0.text, $0.time) }, ""))</div>"
+                    "<div class=\"topic\"><h3>" + (times && !topic.start.isEmpty ? "<span class=\"start\">\(topic.start)</span>" : "")
+                        + "\(HTML.escape(topic.title))</h3>\(ul(topic.points.map { li($0.text, $0.time) }, ""))</div>"
                 }
                 body += section(title, i + 1, first: cards.first ?? "", rest: cards.dropFirst().joined())
             case let .review(title, items):
@@ -437,7 +446,7 @@ enum NotesExporter {
         }
         if screens, !b.screens.isEmpty {
             let cards = b.screens.enumerated().map { index, screen in
-                "<div class=\"topic\"><h3><span class=\"start\">\(TimeFormat.string(screen.at ?? 0))</span></h3><p class=\"screen\">\(ScreenExport.marker(index))</p></div>"
+                "<div class=\"topic\"><h3><span class=\"start\">\(times ? TimeFormat.string(screen.at ?? 0) : "\(index + 1)")</span></h3><p class=\"screen\">\(ScreenExport.marker(index))</p></div>"
             }
             body += section(x.screens, all.count + 1, first: cards[0], rest: cards.dropFirst().joined())
         }
