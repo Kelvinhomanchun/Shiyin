@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import GRDB
 import Observation
+import UniformTypeIdentifiers
 
 /// 列表與標題列顯示的狀態
 enum MeetingStatus: Equatable {
@@ -1689,6 +1690,58 @@ final class AppModel {
             }
         }
         noticeMessage = String(localized: "已移除這張圖")
+    }
+
+    /// 下載一張圖（fork）：存檔對話框，檔名是「日期 會議名 – 圖名」；給客戶的，白底、不放錄音時間點
+    func downloadDiagram(_ diagram: MeetingDiagrams.Diagram, format: DiagramExport.Format, to url: URL? = nil) {
+        guard let meeting = detail?.meeting else { return }
+        let d = DiagramExport.forExport(diagram, meeting: meeting)
+        if let url { writeDiagram(d, format: format, to: url); return }
+        // 存檔對話框掛在主視窗上（不卡住整個 app）
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = diagramFilename(d, meeting: meeting, format: format)
+        panel.allowedContentTypes = [UTType(filenameExtension: format.rawValue) ?? .data]
+        panel.canCreateDirectories = true
+        let save: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let target = panel.url else { return }
+            self?.writeDiagram(d, format: format, to: target)
+        }
+        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" }) ?? NSApp.mainWindow {
+            panel.beginSheetModal(for: window, completionHandler: save)
+        } else {
+            save(panel.runModal())
+        }
+    }
+
+    private func writeDiagram(_ d: MeetingDiagrams.Diagram, format: DiagramExport.Format, to target: URL) {
+        guard let data = DiagramExport.data(d, format) else {
+            errorMessage = String(localized: "這張圖存不起來，請再試一次")
+            return
+        }
+        do {
+            try data.write(to: target, options: .atomic)
+            noticeMessage = String(localized: "已存成 \(target.lastPathComponent)")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 拷貝圖片：貼到簡報、Word、郵件；同時放 PNG（三倍）和 PDF（向量，Keynote、Pages 會用）
+    func copyDiagram(_ diagram: MeetingDiagrams.Diagram, to board: NSPasteboard = .general) {
+        guard let meeting = detail?.meeting else { return }
+        let d = DiagramExport.forExport(diagram, meeting: meeting)
+        board.clearContents()
+        let item = NSPasteboardItem()
+        if let png = DiagramExport.png(d, scale: 3) { item.setData(png, forType: .png) }
+        if let pdf = DiagramExport.pdf(d) { item.setData(pdf, forType: .pdf) }
+        board.writeObjects([item])
+        noticeMessage = String(localized: "已拷貝「\(d.title)」")
+    }
+
+    func diagramFilename(_ d: MeetingDiagrams.Diagram, meeting: Meeting, format: DiagramExport.Format) -> String {
+        let base = "\(meeting.meetingDate) \(d.title.isEmpty ? meeting.displayTitle : d.title)"  // l10n-skip
+            .replacingOccurrences(of: "/", with: "／").replacingOccurrences(of: ":", with: "：")  // l10n-skip
+        return "\(base).\(format.rawValue)"
     }
 
     /// 確認對話框的「移除」

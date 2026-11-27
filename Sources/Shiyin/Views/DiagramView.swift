@@ -358,6 +358,13 @@ struct DiagramsSection: View {
                             .foregroundStyle(Color.celadon)
                             .help("換回重新畫之前的那張圖")
                     }
+                    // 下載（給客戶的檔：白底、不放錄音時間點）；不受 locked 影響，舊版紀錄、垃圾桶裡的也能下載
+                    FloatingMenuLabelButton(title: String(localized: "下載"), systemImage: "arrow.down.circle",
+                                            help: String(localized: "存成圖片、PDF 或可以改的 draw.io 檔"), debugKey: "diagramdownload-\(index)") {
+                        DiagramExport.Format.allCases.map { f in
+                            MenuEntry.action(DiagramExport.title(f), icon: DiagramExport.icon(f)) { model.downloadDiagram(d, format: f) }
+                        } + [.divider, .action(String(localized: "拷貝圖片"), icon: "doc.on.doc") { model.copyDiagram(d) }]
+                    }
                     FloatingMenuButton {
                         [MenuEntry.action(String(localized: "照同樣的要求再畫一次"), icon: "arrow.clockwise") { _ = model.redrawDiagram(d.id, comment: "") },
                          .action(String(localized: "往上移"), icon: "arrow.up", enabled: index > 0) { model.moveDiagram(d.id, by: -1) },
@@ -524,14 +531,89 @@ private struct DiagramFrame: View {
     }
 }
 
-/// 匯出：跟畫面同一個 DiagramView，白底，兩倍解析度的 PNG
+/// 匯出：跟畫面同一個 DiagramView，白底。PNG 給 Word、PDF 匯出用兩倍；下載的圖三倍（投影片放大也清楚）
 @MainActor
 enum DiagramExport {
-    static func png(_ diagram: MeetingDiagrams.Diagram) -> Data? {
+    static func png(_ diagram: MeetingDiagrams.Diagram, scale: Double = 2) -> Data? {
+        guard let image = cgImage(diagram, scale: scale) else { return nil }
+        let rep = NSBitmapImageRep(cgImage: image)
+        // 下載的圖記下解析度（216 dpi），放進 Word、PowerPoint 是原本的大小，不會大三倍；匯出用的兩倍照舊
+        if scale != 2 { rep.size = NSSize(width: Double(image.width) / scale, height: Double(image.height) / scale) }
+        return rep.representation(using: .png, properties: [:])
+    }
+
+    static func cgImage(_ diagram: MeetingDiagrams.Diagram, scale: Double) -> CGImage? {
         let renderer = ImageRenderer(content: DiagramView(diagram: diagram, exporting: true))
-        renderer.scale = 2
-        guard let image = renderer.cgImage else { return nil }
-        return NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
+        renderer.scale = scale
+        return renderer.cgImage
+    }
+
+    /// JPEG：白底（沒有透明），品質 0.92
+    static func jpeg(_ diagram: MeetingDiagrams.Diagram, scale: Double = 3) -> Data? {
+        guard let image = cgImage(diagram, scale: scale) else { return nil }
+        let rep = NSBitmapImageRep(cgImage: image)
+        rep.size = NSSize(width: Double(image.width) / scale, height: Double(image.height) / scale)
+        return rep.representation(using: .jpeg, properties: [.compressionFactor: 0.92])
+    }
+
+    /// PDF：向量（放大不會糊），字嵌進檔案；頁面就是圖的大小
+    static func pdf(_ diagram: MeetingDiagrams.Diagram) -> Data? {
+        let renderer = ImageRenderer(content: DiagramView(diagram: diagram, exporting: true))
+        let data = NSMutableData()
+        var ok = false
+        renderer.render { size, draw in
+            var box = CGRect(origin: .zero, size: size)
+            guard let consumer = CGDataConsumer(data: data as CFMutableData),
+                  let context = CGContext(consumer: consumer, mediaBox: &box,
+                                          [kCGPDFContextTitle: diagram.title, kCGPDFContextCreator: "KelNote"] as CFDictionary)  // l10n-skip
+            else { return }
+            context.beginPDFPage(nil)
+            draw(context)
+            context.endPDFPage()
+            context.closePDF()
+            ok = true
+        }
+        return ok ? data as Data : nil
+    }
+
+    enum Format: String, CaseIterable, Identifiable {
+        case png, jpg, svg, pdf, drawio
+        var id: String { rawValue }
+    }
+
+    static func title(_ f: Format) -> String {
+        switch f {
+        case .png: return String(localized: "PNG（簡報、Word 用）")
+        case .jpg: return String(localized: "JPEG（電子郵件用）")
+        case .svg: return String(localized: "SVG（向量，網頁、Figma 用）")
+        case .pdf: return String(localized: "PDF（向量，列印、寄給客戶）")
+        case .drawio: return String(localized: "draw.io（可以再改）")
+        }
+    }
+
+    static func icon(_ f: Format) -> String {
+        switch f {
+        case .png, .jpg: return "photo"
+        case .svg: return "square.on.circle"
+        case .pdf: return "doc.richtext"
+        case .drawio: return "pencil.and.outline"
+        }
+    }
+
+    static func data(_ diagram: MeetingDiagrams.Diagram, _ format: Format) -> Data? {
+        switch format {
+        case .png: return png(diagram, scale: 3)
+        case .jpg: return jpeg(diagram)
+        case .svg: return DiagramFiles.svg(diagram)
+        case .pdf: return pdf(diagram)
+        case .drawio: return DiagramFiles.drawio(diagram)
+        }
+    }
+
+    /// 匯出、下載用的圖：簡體會議轉成簡體
+    static func forExport(_ diagram: MeetingDiagrams.Diagram, meeting: Meeting) -> MeetingDiagrams.Diagram {
+        guard AppSettings.simplifiedChinese(for: meeting.notesOutputLanguage) else { return diagram }
+        return MeetingDiagrams(diagrams: [diagram]).mappingText(ChineseScript.toSimplified).diagrams.first ?? diagram
     }
 
     /// 匯出檔用的圖：簡體會議轉成簡體；圖不是依目前的紀錄畫的照樣放（畫面上有註明）

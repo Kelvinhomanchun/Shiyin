@@ -2211,6 +2211,23 @@
         }
       }
     },
+    "JPEG（電子郵件用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JPEG（电子邮件用）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JPEG (for email)"
+          }
+        }
+      }
+    },
     "NVIDIA 的模型，最多分 8 人。英文會議的測試（AMI）中，沒被插話的句子標對 77% → 90%；中文會議會分出比較多人，還在觀察。超過 8 人的會議、模型還沒下載好時用標準的。": {
       "extractionState": "manual",
       "localizations": {
@@ -2317,6 +2334,23 @@
         }
       }
     },
+    "PDF（向量，列印、寄給客戶）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF（向量，打印、寄给客户）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF (vector, for print and clients)"
+          }
+        }
+      }
+    },
     "PNG 圖片": {
       "extractionState": "manual",
       "localizations": {
@@ -2330,6 +2364,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "PNG 图片"
+          }
+        }
+      }
+    },
+    "PNG（簡報、Word 用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG（演示文稿、Word 用）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG (for slides and Word)"
           }
         }
       }
@@ -2436,6 +2487,23 @@
         }
       }
     },
+    "SVG（向量，網頁、Figma 用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG（向量，网页、Figma 用）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG (vector, for web and Figma)"
+          }
+        }
+      }
+    },
     "Word 檔加圖片失敗（%@ 結束代碼 %d）": {
       "extractionState": "manual",
       "localizations": {
@@ -2523,6 +2591,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "codex 没有返回结果（退出代码 %d）"
+          }
+        }
+      }
+    },
+    "draw.io（可以再改）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "draw.io（可以再改）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "draw.io (editable)"
           }
         }
       }
@@ -10885,6 +10970,23 @@
         }
       }
     },
+    "存成圖片、PDF 或可以改的 draw.io 檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存成图片、PDF 或可以改的 draw.io 文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as an image, a PDF or an editable draw.io file"
+          }
+        }
+      }
+    },
     "存成文字檔，一行一個詞": {
       "extractionState": "manual",
       "localizations": {
@@ -12004,6 +12106,23 @@
         }
       }
     },
+    "已存成 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已存成 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved as %@"
+          }
+        }
+      }
+    },
     "已安裝，看不出登入狀態": {
       "extractionState": "manual",
       "localizations": {
@@ -12286,6 +12405,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已拆成两句。要撤销的话，在逐字稿按右键选“撤销”。"
+          }
+        }
+      }
+    },
+    "已拷貝「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已拷贝“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied “%@”"
           }
         }
       }
@@ -15619,6 +15755,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "拷贝"
+          }
+        }
+      }
+    },
+    "拷貝圖片": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拷贝图片"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Image"
           }
         }
       }
@@ -30811,6 +30964,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "The diagram, your comments and earlier versions will be removed. The suggestion goes back to Suggested diagrams so you can draw it again later."
+          }
+        }
+      }
+    },
+    "這張圖存不起來，請再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这张图存不起来，请再试一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save this diagram. Please try again."
           }
         }
       }

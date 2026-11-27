@@ -494,6 +494,8 @@ struct FloatingMenuLabelButton: View {
     var help: String?
     /// 窄的時候只留圖示（fork）
     var compact = false
+    /// DEBUG 用來打開這個按鈕的選單（floatopen <key>）；空的不登記
+    var debugKey = ""
     let entries: () -> [MenuEntry]
     @State private var box = MenuAnchorBox()
 
@@ -509,8 +511,23 @@ struct FloatingMenuLabelButton: View {
         .buttonStyle(.borderless)
         .foregroundStyle(Color.celadon)
         .help(help ?? "")
+        #if DEBUG
+        .onAppear { if !debugKey.isEmpty { FloatingMenuButtons.registry[debugKey] = (box, entries) } }
+        #endif
     }
 }
+
+#if DEBUG
+/// DEBUG：有 debugKey 的按鈕，floatopen 照真的按一下打開它的選單
+@MainActor
+enum FloatingMenuButtons {
+    static var registry: [String: (MenuAnchorBox, () -> [MenuEntry])] = [:]
+    static func open(_ key: String) {
+        guard let (box, entries) = registry[key], let view = box.view else { return }
+        FloatingMenuController.shared.show(entries(), below: view)
+    }
+}
+#endif
 
 /// 列右邊的「⋯」：打開自己畫的選單，掛在按鈕下面
 struct FloatingMenuButton: View {

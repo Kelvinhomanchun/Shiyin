@@ -449,7 +449,56 @@ def r_22():
             f"rules {rules}, retried {retried} ({len(calls)} calls), refs {refs}, labels {labels}, across {across}, png {png}, error {s['error']!r}")
 
 
-CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21, r_22]
+def svg_crossings(path):
+    """Count real crossings between the connector lines of a downloaded SVG (stroke-width 1.5 paths, the straight parts)."""
+    text = open(path).read()
+    segs = []
+    for d in re.findall(r'<path d="([^"]+)" fill="none"', text):
+        pts = [tuple(map(float, m)) for m in re.findall(r"[ML]([-\d.]+) ([-\d.]+)", d)]
+        line = [(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+        segs.append([(a, b) for a, b in line if abs(a[0] - b[0]) < 0.01 or abs(a[1] - b[1]) < 0.01])
+    def cross(s, t):
+        sh, th = abs(s[0][1] - s[1][1]) < 0.01, abs(t[0][1] - t[1][1]) < 0.01
+        if sh == th: return False
+        h, v = (s, t) if sh else (t, s)
+        y, x = h[0][1], v[0][0]
+        return min(h[0][0], h[1][0]) + 1 < x < max(h[0][0], h[1][0]) - 1 and min(v[0][1], v[1][1]) + 1 < y < max(v[0][1], v[1][1]) - 1
+    return sum(cross(a, b) for i in range(len(segs)) for j in range(i + 1, len(segs)) for a in segs[i] for b in segs[j])
+
+
+def r_23():
+    """Download menu: every format is written and readable, client-facing (no recording times), Copy puts PNG + PDF on the pasteboard; arrows don't cross."""
+    e.ctl("select", PBI, wait=1)
+    if not diagrams_state()["count"]:
+        e.mode(diagrams="pbi")
+        e.ctl("diagramdraw", PBI, 0, wait=1)
+        until_diagrams(lambda s: not s["jobs"] and s["count"], timeout=40)
+    e.ctl("tab", "summary", wait=1)
+    d = f"{OUT}/download"
+    shutil.rmtree(d, ignore_errors=True); os.makedirs(d)
+    e.ctl("floatopen", "diagramdownload-0", wait=1)
+    menu = state()["floatingMenu"]
+    e.ctl("floatclose", wait=0.5)
+    for f in ["png", "jpg", "svg", "pdf", "drawio"]:
+        e.ctl("diagramdownload", PBI, 0, f, f"{d}/out.{f}", wait=1.5)
+    e.ctl("diagramcopy", PBI, 0, d, wait=1.5)
+    head = {f: open(f"{d}/out.{f}", "rb").read(8) if os.path.exists(f"{d}/out.{f}") else b"" for f in ["png", "jpg", "svg", "pdf", "drawio"]}
+    formats = head["png"].startswith(b"\x89PNG") and head["jpg"].startswith(b"\xff\xd8") and head["pdf"].startswith(b"%PDF") \
+        and head["svg"].startswith(b"<?xml") and head["drawio"].startswith(b"<?xml")
+    svg = open(f"{d}/out.svg").read() if head["svg"] else ""
+    drawio = open(f"{d}/out.drawio").read() if head["drawio"] else ""
+    no_times = not re.search(r"\b\d\d:\d\d ·", svg + drawio)
+    editable = drawio.count('vertex="1"') >= 3 and ' source="n' in drawio and ' target="n' in drawio
+    pdf = open(f"{d}/out.pdf", "rb").read() if head["pdf"] else b""
+    vector = b"IBMPlexSans" in pdf and len(pdf) < 400_000
+    copied = os.path.exists(f"{d}/copy.png") and os.path.exists(f"{d}/copy.pdf")
+    crossings = svg_crossings(f"{d}/out.svg") if svg else -1
+    e.check("R-23", "Download menu writes PNG, JPEG, SVG, PDF and draw.io for clients (no recording times, draw.io editable, PDF vector); Copy Image; no crossing arrows",
+            len(menu) == 7 and formats and no_times and editable and vector and copied and crossings == 0,
+            f"menu {menu}, formats {formats}, no times {no_times}, editable {editable}, vector {vector}, copied {copied}, crossings {crossings}")
+
+
+CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21, r_22, r_23]
 
 
 def main():

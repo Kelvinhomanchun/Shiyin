@@ -118,6 +118,7 @@ enum DebugControl {
         // 自己畫的選單（R105）：floatpick <項目>（子選單「移到資料夾 ▸ 客戶」）選開著的那一項；floatclose 關掉
         case "floatpick": if args.count > 1 { FloatingMenuController.shared.debugPick(args.dropFirst().joined(separator: " ")) }
         case "floatclose": FloatingMenuController.shared.close()
+        case "floatopen": if args.count > 1 { FloatingMenuButtons.open(args[1]) }   // floatopen <key>：等於按那個按鈕（例如 diagramdownload-0）
         // floatperson <人物 id> <x> <y> [子選單位置]：在螢幕的 (x, y)（左下原點）打開那個人的選單，給了位置就打開那一項的子選單（長名單捲動的驗收）
         case "floatperson":
             if args.count > 3, let pid = Int64(args[1]), let x = Double(args[2]), let y = Double(args[3]),
@@ -518,6 +519,38 @@ enum DebugControl {
             if let record = (try? model.db.diagramRecord(id ?? 0)) ?? nil, let k = Int(args[2]), record.diagrams.diagrams.indices.contains(k),
                let png = DiagramExport.png(record.diagrams.diagrams[k]) {
                 try? png.write(to: URL(fileURLWithPath: args[3]))
+            }
+        case "diagramdownload":   // diagramdownload <id> <第幾張> <png|jpg|svg|pdf|drawio> <輸出檔>：等於下載選單（不跳存檔對話框）
+            model.selection = id
+            if let k = Int(args[2]), let list = model.detail?.diagrams?.diagrams.diagrams, list.indices.contains(k),
+               let f = DiagramExport.Format(rawValue: args[3]) {
+                model.downloadDiagram(list[k], format: f, to: URL(fileURLWithPath: args[4]))
+            }
+        case "diagramcopy":   // diagramcopy <id> <第幾張> <輸出資料夾>：拷貝圖片，拷到自己的剪貼簿（不動使用者的），寫出 copy.png、copy.pdf
+            model.selection = id
+            if let k = Int(args[2]), let list = model.detail?.diagrams?.diagrams.diagrams, list.indices.contains(k) {
+                let board = NSPasteboard(name: NSPasteboard.Name("KelNoteDebug"))
+                model.copyDiagram(list[k], to: board)
+                let dir = URL(fileURLWithPath: args[3])
+                try? board.data(forType: .png)?.write(to: dir.appendingPathComponent("copy.png"))
+                try? board.data(forType: .pdf)?.write(to: dir.appendingPathComponent("copy.pdf"))
+                board.releaseGlobally()
+            }
+        case "savepanelcancel":   // 關掉主視窗上的存檔對話框（按「取消」）
+            for w in NSApp.windows { if let sheet = w.attachedSheet as? NSSavePanel { sheet.cancel(nil) } }
+        case "diagramrenderall":   // diagramrenderall <diagrams.json> <輸出資料夾>：每張圖存成全部的格式（排版用，不碰資料庫）
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: args[1])), let list = MeetingDiagrams.decode(String(decoding: data, as: UTF8.self)) {
+                for (k, d) in list.diagrams.enumerated() {
+                    for f in DiagramExport.Format.allCases {
+                        try? DiagramExport.data(d, f)?.write(to: URL(fileURLWithPath: args[2]).appendingPathComponent("d\(k).\(f.rawValue)"))
+                    }
+                }
+            }
+        case "diagramrender":   // diagramrender <diagrams.json> <輸出資料夾>：把 JSON 裡每張圖畫成 PNG（排版用，不碰資料庫）
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: args[1])), let list = MeetingDiagrams.decode(String(decoding: data, as: UTF8.self)) {
+                for (k, d) in list.diagrams.enumerated() {
+                    if let png = DiagramExport.png(d) { try? png.write(to: URL(fileURLWithPath: args[2]).appendingPathComponent("d\(k).png")) }
+                }
             }
         case "settle": AppDatabase.stakeholderSettleSeconds = Double(args[1]) ?? 60   // settle <秒>：自動的與會者分析要等多久
         case "stakeholdermeeting": if let id { _ = try? model.db.enqueue(id, kind: .stakeholders); model.runner.wake() }   // stakeholdermeeting <會議 id>：更新這場會議的與會者
