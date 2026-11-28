@@ -225,18 +225,19 @@ enum JobKind: String, Codable, CaseIterable {
     case stakeholders   // 利害關係人分析（fork）：更新這場會議裡每個人的分析；payload 有 personId 時只做那個人、從全部會議重做
     case coaching   // 我的表現（fork）：從我的所有會議寫整體的教練建議；payload 有 rebuild 時從頭重寫
     case diagrams   // 會議紀錄的圖（fork）：整理完判斷要不要畫流程圖等，畫了存在 meeting_diagrams
+    case workshop   // 工作坊（fork）：依準備的草稿、問題和逐字稿整理驗證結果、需求、RAID，存在 workshop_plans
 
     /// 轉錄線、整理線、輔助線（design §21.2）：校正、猜說話者在輔助線，跟整理同時跑
     var lane: JobLane {
         switch self {
         case .transcribe, .compress, .rediarize: return .transcribe
         case .summarize, .revise: return .llm
-        case .correct, .nameSpeakers, .clean, .stakeholders, .coaching, .diagrams: return .assist
+        case .correct, .nameSpeakers, .clean, .stakeholders, .coaching, .diagrams, .workshop: return .assist
         }
     }
 
     /// 要用整理工具的工作（design §34）
-    var usesSummarizer: Bool { self == .summarize || self == .revise || self == .correct || self == .nameSpeakers || self == .clean || self == .stakeholders || self == .coaching || self == .diagrams }
+    var usesSummarizer: Bool { self == .summarize || self == .revise || self == .correct || self == .nameSpeakers || self == .clean || self == .stakeholders || self == .coaching || self == .diagrams || self == .workshop }
 
     /// 背景的輔助工作：不發通知、不改會議的狀態
     var isAuxiliary: Bool { self == .compress || self == .correct || self == .nameSpeakers || self == .rediarize || self == .clean || self == .stakeholders || self == .coaching || self == .diagrams }

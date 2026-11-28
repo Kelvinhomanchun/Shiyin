@@ -260,6 +260,7 @@ final class JobRunner {
     @ObservationIgnored var onCoachingFinished: ((Job, Error?) -> Void)?
     /// 會議紀錄的圖畫完（fork）：畫面上的「圖」那一段更新
     @ObservationIgnored var onDiagramsFinished: ((Job, Error?) -> Void)?
+    @ObservationIgnored var onWorkshopFinished: ((Job, Error?) -> Void)?
     /// 正式版取代了使用者改過的草稿（design §21.3）
     @ObservationIgnored var onEditedDraftReplaced: ((Int64) -> Void)?
     /// 重新辨識說話者做完（分出幾位）或失敗（design §23.3）
@@ -367,6 +368,7 @@ final class JobRunner {
             case .stakeholders: try await stakeholders(job, lane: lane)
             case .coaching: try await coaching(job, lane: lane)
             case .diagrams: try await diagrams(job, lane: lane)
+            case .workshop: try await workshop(job, lane: lane)
             case .nameSpeakers: await nameSpeakers(job, lane: lane)
             case .rediarize: try await rediarize(job, lane: lane)
             }
@@ -402,6 +404,7 @@ final class JobRunner {
             if job.kind == .stakeholders { onStakeholdersFinished?(job, failure) }
             if job.kind == .coaching { onCoachingFinished?(job, failure) }
             if job.kind == .diagrams { onDiagramsFinished?(job, failure) }
+            if job.kind == .workshop { onWorkshopFinished?(job, failure) }
         }
         onChange?()
     }
@@ -1085,6 +1088,96 @@ final class JobRunner {
                 r.provider = provider.rawValue; r.model = model
             }
             log.info("diagram \(request.mode.rawValue): \(drawn.nodes.count) nodes for meeting \(job.meetingId)")
+        }
+    }
+
+    /// 工作坊（fork）：使用者按了才做，用人物分析的模型。
+    /// analyze：依準備的草稿、問題和逐字稿整理驗證結果、需求、RAID（使用者確認過的項目不動）；draftFromText：把貼上的文字整理成草稿流程
+    private func workshop(_ job: Job, lane: JobLane) async throws {
+        let provider = AppSettings.provider
+        guard provider != .none, let request = WorkshopJob.decode(job.payload), let meeting = try db.meeting(job.meetingId),
+              meeting.deletedAt == nil else { return }
+        running[lane]?.provider = provider
+        running[lane]?.stage = request.mode == .analyze ? String(localized: "整理工作坊") : String(localized: "把文字整理成流程")
+        let language = meeting.notesOutputLanguage
+        let model = AppSettings.stakeholderModel
+        let simplified = AppSettings.simplifiedChinese(for: language)
+        let record = try db.workshop(job.meetingId) ?? WorkshopRecord(plan: WorkshopPlan(), analysis: nil)
+        switch request.mode {
+        case .draftFromText:
+            let text = request.text ?? record.plan.draftText
+            guard !text.isEmpty else { return }
+            let comments = record.plan.draftComments + [request.comment].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            var prompt = "Process description" + (request.source.map { " (\($0))" } ?? "") + ":\n\n" + text
+            if let current = record.plan.draft, record.plan.hasDraft, !comments.isEmpty {
+                var shown = current; shown.comments = []; shown.request = nil; shown.id = ""; shown.notesKey = ""
+                prompt += "\n\nThe current draft (JSON):\n" + MeetingDiagrams(diagrams: [shown]).jsonString()
+            }
+            if !comments.isEmpty {
+                prompt += "\n\nThe analyst's comments on the draft, oldest first; apply all of them:\n" + comments.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+            }
+            prompt += "\n\nReturn the draft diagram."
+            struct Answer: Decodable { var diagram: MeetingDiagrams.Diagram }
+            func ask(_ prompt: String) async throws -> Answer? {
+                let data = try await callLLM(lane) { onStart in
+                    try await LLMClient.generateJSON(provider: provider, model: model, system: Workshop.draftSystem(language), prompt: prompt,
+                                                     format: Diagrams.drawFormat, onStart: onStart)
+                }
+                return try? JSONDecoder().decode(Answer.self, from: data)
+            }
+            var answer = try await ask(prompt)
+            guard isStillRunning(job) else { return }
+            if answer == nil {
+                answer = try await ask(prompt + "\n\nIMPORTANT: Return ONLY the JSON object {\"diagram\": {kind, title, caption, direction, nodes, edges}} with every field of the schema on every node and edge.")  // l10n-skip
+                guard isStillRunning(job) else { return }
+            }
+            guard let answer else { throw LLMError.badAnswer(String(localized: "整理工具回的流程格式不對，請再試一次") + provider.badOutputHint) }
+            guard var drawn = Diagrams.cleanDiagram(answer.diagram) else { throw LLMError.badAnswer(String(localized: "整理工具給的流程少於兩個步驟，畫不出來")) }
+            if simplified { drawn = MeetingDiagrams(diagrams: [drawn]).mappingText(ChineseScript.toSimplified).diagrams[0] }
+            drawn.id = "draft"
+            drawn.nodes = drawn.nodes.map { var n = $0; n.time = ""; n.focal = false; return n }
+            try db.updateWorkshop(job.meetingId) { r in
+                r.plan.draft = drawn
+                r.plan.draftSource = request.source ?? (r.plan.draftSource.isEmpty ? String(localized: "從文字整理") : r.plan.draftSource)
+                r.plan.draftText = text
+                r.plan.draftComments = comments
+                r.revised = nil
+                r.provider = provider.rawValue; r.model = model
+            }
+        case .analyze:
+            let notes = meeting.decodedNotes
+            let segments = try db.segments(job.meetingId)
+            guard !segments.isEmpty || notes != nil else { return }
+            let speakers = Dictionary(uniqueKeysWithValues: try db.speakers(job.meetingId).map { ($0.idx, $0.name) })
+            let prompt = Workshop.analysisPrompt(meeting: meeting, plan: record.plan, notes: notes, segments: segments, speakers: speakers)
+            let data = try await callLLM(lane) { onStart in
+                try await LLMClient.generateJSON(provider: provider, model: model, system: Workshop.analysisSystem(language, purposes: record.plan.purposes),
+                                                 prompt: prompt, format: Workshop.analysisFormat, onStart: onStart)
+            }
+            guard isStillRunning(job) else { return }
+            let raw: Workshop.Raw
+            do { raw = try JSONDecoder().decode(Workshop.Raw.self, from: data) }
+            catch { throw LLMError.badAnswer(error.localizedDescription + provider.badOutputHint) }
+            var counters = try db.workshopCounters(scope: Workshop.scopeFolder(meeting), excluding: job.meetingId)
+            // 這場自己之前用過的編號也算進去（重新分析時新項目接在後面，不重複）
+            for m in (record.analysis?.allMeta ?? []) {
+                let parts = m.id.split(separator: "-")
+                if parts.count == 2, let n = Int(parts[1]) { counters[String(parts[0]), default: 0] = max(counters[String(parts[0])] ?? 0, n) }
+            }
+            record.plan.questions.forEach { q in
+                let parts = q.id.split(separator: "-")
+                if parts.count == 2, let n = Int(parts[1]) { counters[String(parts[0]), default: 0] = max(counters[String(parts[0])] ?? 0, n) }
+            }
+            var analysis = Workshop.build(raw, plan: record.plan, previous: record.analysis, counters: &counters)
+            analysis.basis = Workshop.basisKey(plan: record.plan, notes: notes)
+            if simplified { analysis = WorkshopAnalysis.decode(ChineseScript.toSimplified(analysis.jsonString())) ?? analysis }
+            try db.updateWorkshop(job.meetingId) { r in
+                r.analysis = analysis
+                r.provider = provider.rawValue; r.model = model
+                // 版本 2：驗證結果變了就重算（使用者確認、改過的結果也算進去）
+                if let draft = r.plan.draft, r.plan.hasDraft { r.revised = Workshop.revise(draft, with: analysis.steps)?.diagram }
+            }
+            log.info("workshop analysed: \(analysis.allMeta.count) items for meeting \(job.meetingId)")
         }
     }
 

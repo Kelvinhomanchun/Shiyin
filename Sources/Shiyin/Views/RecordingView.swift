@@ -146,6 +146,8 @@ struct RecordingPanel: View {
                     }
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
+                    // 工作坊（fork）：要問的問題一直放在旁邊，問到了可以勾掉（只是提醒，整理時還是看逐字稿）
+                    if let plan = detail.workshop?.plan, !plan.questions.isEmpty { WorkshopQuestionChecklist(questions: plan.questions) }
                     Text("我的筆記").font(.songti(16))
                     Text("每換一行會自動加上當下的錄音時間；整理時會優先納入這些內容。")
                         .font(.caption)

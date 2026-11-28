@@ -24,7 +24,7 @@ struct ExportSheet: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     SheetFieldLabel(String(localized: "項目"))
-                    SheetMenuField(options: ExportItem.allCases.map { ($0, $0.label) }, selection: $item) { item in
+                    SheetMenuField(options: availableItems.map { ($0, $0.label) }, selection: $item) { item in
                         item == .audio && bundle?.meeting.hasAudio != true || item == .mindMap && !hasMindMap
                     }
                 }
@@ -75,8 +75,14 @@ struct ExportSheet: View {
         // 還沒有會議紀錄（整理中或整理失敗）時，預設改匯出逐字稿（使用者回報：匯出的會議紀錄只有標題）
         .onAppear {
             bundle = model.exportMeetingId.flatMap { try? model.exportBundle(meetingId: $0) }
-            if !hasNotes { item = .transcript }
+            if hasWorkshop { item = .workshopSummary; format = item.formats[0] } else if !hasNotes { item = .transcript }
         }
+    }
+
+    /// 工作坊的項目只在有分析結果的工作坊才給（其他會議不出現）
+    private var hasWorkshop: Bool { bundle?.workshop?.analysis.map { !$0.isEmpty } ?? false }
+    private var availableItems: [ExportItem] {
+        ExportItem.allCases.filter { ($0 != .workshopSummary && $0 != .workshopWorkbook) || hasWorkshop }
     }
 
     private var hasNotes: Bool { bundle?.notes != nil }
@@ -90,6 +96,8 @@ struct ExportSheet: View {
                 return String(localized: "這場會議還沒有會議紀錄（還在整理或整理失敗），匯出的會議紀錄只會有標題和基本資料。要留下內容，請改匯出逐字稿。")
             }
             return String(localized: "PDF 和 docx 的段落標題使用宋體；Markdown 適合貼到 Notion、GitHub。")
+        case .workshopSummary: return String(localized: "給客戶的工作坊摘要：流程前後對照圖、已確認和待確認的項目、負責人和期限、簽核表。不放錄音的時間點。")
+        case .workshopWorkbook: return String(localized: "Excel 工作簿：需求、規則、問題、RAID 和證據，編號和 CBAF 工作簿一致，可以直接貼進專案的工作簿。")
         case .mindMap: return String(localized: "依會議紀錄畫成心智圖。PNG 適合貼到聊天軟體、簡報；SVG 可以再用其他軟體編輯。")
         case .transcript: return String(localized: "srt、vtt 是字幕格式，可以搭配錄音或影片在播放器裡顯示。")
         case .audio: return String(localized: "m4a 檔案小、適合分享；wav 是 16 kHz 單聲道，適合給其他轉錄工具使用。")
@@ -103,7 +111,7 @@ struct ExportSheet: View {
     }
 
     private func formatLabel(_ format: String) -> String {
-        ["md": "Markdown", "pdf": "PDF", "png": String(localized: "PNG 圖片"), "svg": "SVG", "docx": String(localized: "Word（docx）"), "txt": String(localized: "純文字（txt）"), "srt": String(localized: "字幕（srt）"),
+        ["md": "Markdown", "pdf": "PDF", "png": String(localized: "PNG 圖片"), "svg": "SVG", "docx": String(localized: "Word（docx）"), "xlsx": String(localized: "Excel（xlsx）"), "txt": String(localized: "純文字（txt）"), "srt": String(localized: "字幕（srt）"),
          "vtt": String(localized: "字幕（vtt）"), "m4a": "m4a", "wav": "wav", "shiyin": String(localized: ".shiyin 封包")][format] ?? format
     }
 

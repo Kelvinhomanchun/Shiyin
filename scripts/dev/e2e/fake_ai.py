@@ -110,6 +110,65 @@ def diagram_draw(prompt):
         pick["title"] = pick["title"] + " (current)"
     return {"diagram": pick}
 
+def workshop_draft():
+    d = {"kind": "swimlane", "title": "Monthly claims report", "caption": "How the monthly claims report is produced.", "direction": "down",
+         "nodes": [node("s1", "Start of month", "", "start"), node("s2", "Extract claim data", "", "step", "AMS team"),
+                   node("s3", "Upload files to SharePoint", "", "step", "AMS team"), node("s4", "Rename downloaded files", "", "step", "Claims analyst"),
+                   node("s5", "Run cutoff script", "", "step", "Claims analyst"), node("s6", "Refresh Power BI", "", "step", "Claims analyst"),
+                   node("s7", "Report issued", "", "end", "Claims analyst")],
+         "edges": [edge("s1", "s2"), edge("s2", "s3"), edge("s3", "s4"), edge("s4", "s5"), edge("s5", "s6"), edge("s6", "s7")]}
+    k = 0
+    for n in d["nodes"]:
+        if n["shape"] == "step": k += 1; n["ref"] = str(k)
+        else: n["ref"] = ""
+    return {"diagram": d}
+
+def workshop_analysis(prompt):
+    import re
+    def e(speaker, time, quote): return [{"speaker": speaker, "time": time, "quote": quote}]
+    nodes = re.findall(r"^- node (\S+) \| ref (\S+) \| (\w+) \| (.*?)(?: \| lane:.*)?$", prompt, re.M)
+    steps = []
+    steps_nodes = [n for n in nodes if n[2] in ("step", "decision")]
+    verdicts = ["confirmed", "changed", "notDone", "disputed", "unclear", "confirmed"]
+    for i, (nid, ref, shape, label) in enumerate(steps_nodes):
+        v = verdicts[i % len(verdicts)]
+        if MODE.get("workshop") == "noevidence": ev = []
+        elif v == "unclear" and i == 4: ev = []
+        else: ev = e("Shing", "0%d:%02d" % (i, 10), "We do it like this at step %d" % (i + 1))
+        steps.append({"nodeId": nid, "ref": ref, "verdict": v, "note": "Client said: " + v if ev else "", "newLabel": "Check and rename downloaded files" if v == "changed" else "",
+                      "newLane": "", "afterRef": "", "evidence": ev})
+    if steps_nodes:
+        steps.append({"nodeId": "", "ref": "", "verdict": "added", "note": "A reviewer signs off before the report goes out", "newLabel": "Approve report before release",
+                      "newLane": "Claims analyst", "afterRef": steps_nodes[min(3, len(steps_nodes) - 1)][1], "evidence": e("Ming", "05:10", "Someone from finance has to approve it first")})
+    questions = []
+    for i, (qid, text) in enumerate(re.findall(r"^- (QST-\d+): (.*?)(?: \(about step.*)?$", prompt, re.M)):
+        state = ["answered", "partial", "notCovered"][min(i, 2)]
+        questions.append({"qid": qid, "text": text, "stepRef": "", "state": state, "answer": "About the 10th of the month" if state != "notCovered" else "",
+                          "raisedInRoom": False, "owner": "", "due": "", "evidence": e("Shing", "03:%02d" % (i * 10), "Around the tenth") if state != "notCovered" else []})
+    questions.append({"qid": "", "text": "Who approves late files?", "stepRef": "", "state": "notCovered", "answer": "", "raisedInRoom": True,
+                      "owner": "Ming", "due": "2026-12-05", "evidence": e("Kelvin", "07:00", "Who signs off when the files are late?")})
+    walk = [
+        {"ref": "1", "label": "Receive claim files", "actor": "Claims analyst", "systems": "Email, SharePoint", "timing": "10th of each month", "branchFrom": "", "frequency": "", "handoffNeeds": "File names as agreed", "draftNodeId": "", "evidence": e("Shing", "02:00", "I get them around the tenth")},
+        {"ref": "2", "label": "Rename downloaded files", "actor": "Claims analyst", "systems": "Excel", "timing": "30 minutes", "branchFrom": "", "frequency": "", "handoffNeeds": "", "draftNodeId": "", "evidence": e("Shing", "03:00", "I rename them by hand")},
+        {"ref": "2a", "label": "Chase late files", "actor": "Claims analyst", "systems": "", "timing": "", "branchFrom": "1", "frequency": "about 1 in 10", "handoffNeeds": "", "draftNodeId": "", "evidence": e("Shing", "04:00", "About one month in ten they are late")},
+        {"ref": "3", "label": "Refresh Power BI", "actor": "Claims analyst", "systems": "Power BI", "timing": "1 hour", "branchFrom": "", "frequency": "", "handoffNeeds": "", "draftNodeId": "", "evidence": e("Shing", "06:00", "Then I refresh the report")}]
+    if MODE.get("workshop") == "noevidence": walk[0]["evidence"] = []
+    pains = [{"text": "Renaming files by hand causes mistakes", "stepRef": "2", "workaround": "A side spreadsheet that lists the sheet names Power BI expects", "impact": "2 hours a month", "evidence": e("Shing", "03:30", "I keep a spreadsheet of the names")},
+             {"text": "Nobody knows who owns late files", "stepRef": "1", "workaround": "", "impact": "", "evidence": []}]
+    reqs = [{"text": "Check file names automatically on upload", "kind": "functional", "priority": "", "stepRef": "2", "fromPainIndex": 0, "evidence": e("Shing", "03:30", "I keep a spreadsheet of the names")},
+            {"text": "Report refresh must finish within an hour", "kind": "nonFunctional", "priority": "must have", "stepRef": "3", "fromPainIndex": -1, "evidence": e("Ming", "08:00", "It must be done within the hour, that is a must")}]
+    rules = [{"text": "Files after month-end are excluded", "isAuthority": False, "stepRef": "", "evidence": e("Shing", "09:00", "Anything after month end is cut off")},
+             {"text": "Only the finance manager can approve the release", "isAuthority": True, "stepRef": "", "evidence": e("Ming", "05:20", "Only the finance manager approves")}]
+    raid = [{"kind": "decision", "text": "Use SharePoint as the single drop location", "decidedBy": "Ming", "owner": "", "due": "", "evidence": e("Ming", "10:00", "Let's use SharePoint only")},
+            {"kind": "decision", "text": "Move reporting to monthly week 2", "decidedBy": "", "owner": "", "due": "", "evidence": e("Shing", "10:30", "Maybe we could move it")},
+            {"kind": "conflict", "text": "Shing says files arrive on the 10th; Ming says the 5th", "decidedBy": "", "owner": "", "due": "", "evidence": e("Ming", "02:10", "No, the fifth")},
+            {"kind": "risk", "text": "Late files delay the board pack", "decidedBy": "", "owner": "Ming", "due": "", "evidence": e("Ming", "11:00", "The board pack slips if files are late")}]
+    note = lambda t, d="": {"text": t, "detail": d, "evidence": e("Ming", "12:00", t)}
+    return {"steps": steps if MODE.get("workshop") != "nodraft" else [], "questions": questions, "walkthrough": walk, "pains": pains, "requirements": reqs,
+            "rules": rules, "raid": raid, "parking": [note("Archive old reports")], "outOfScope": [note("Claims system replacement")],
+            "glossary": [note("AMS", "The claims administration system")],
+            "readBack": {"done": True, "result": "agreed", "time": "13:00", "quote": "Yes, that is how it works"}}
+
 def first_meeting(prompt):
     import re
     m = re.search(r"[Mm]eeting (\d+)", prompt)
@@ -135,6 +194,8 @@ class H(BaseHTTPRequestHandler):
                 full = not MODE.get("stakeholder_thin_always") and (retry or not MODE.get("stakeholder_thin_first"))
             kind, out = "stakeholder" + ("-retry" if retry else ""), stakeholder(mid, full)
         elif "executive coach" in system or prompt.startswith("The user:"): kind, out = "coaching", coaching(mid)
+        elif '"readBack"' in schema: kind, out = "workshop-analysis", workshop_analysis(prompt)
+        elif prompt.startswith("Process description"): kind, out = "workshop-draft", workshop_draft()
         elif '"suggestions"' in schema: kind, out = "diagram-suggest", diagram_suggestions()
         elif '"diagram"' in schema: kind, out = "diagram-draw", diagram_draw(prompt)
         elif '"speakerNames"' in schema:

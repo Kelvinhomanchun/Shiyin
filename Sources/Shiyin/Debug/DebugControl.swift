@@ -512,6 +512,75 @@ enum DebugControl {
                 default: model.diagramRemoving = list[k].id   // 等於按「移除」，對話框跳出來，diagramremoveconfirm 才真的移除
                 }
             }
+        // 工作坊（fork）：workshopplan [標題]（新增一場準備中的工作坊，印出 id）；workshopstate <id> <輸出.json>；
+        // workshoppurpose <id> <目的>；workshopscope <id> <開始> <結束> <負責人>；workshopquestions <id> <一行一題，\n 分行>；
+        // workshopdraft <id> <文字>（文字整理成草稿）；workshopdraftcomment <id> <意見>；workshopanalyse <id>；
+        // workshopconfirm <id> <項目 ID>|all；workshopreject <id> <項目 ID>；workshopedit <id> <項目 ID> <文字>；
+        // workshopverdict <id> <項目 ID> <結論>；workshopreadback <id> <agreed|partly|no|unknown>；workshoprecord <id>：錄進這一場；
+        // workshopsheet <questions|draftText|draftComment|close>；workshopexport <id> <項目 summary|workbook> <格式> <輸出檔>
+        case "workshopplan":
+            let made = model.planWorkshop(title: args.count > 1 ? args.dropFirst().joined(separator: " ") : "")
+            if let made { try? "\(made)".write(toFile: "/tmp/kn-workshop-id.txt", atomically: true, encoding: .utf8) }
+        case "workshopstate":
+            let r = (try? model.db.workshop(id ?? 0)) ?? nil
+            let a = r?.analysis
+            write(["selection": model.selection.map { Int($0) } ?? -1, "hasRecord": r != nil,
+                   "purposes": r?.plan.purposes.map(\.rawValue) ?? [], "trigger": r?.plan.trigger ?? "", "endPoint": r?.plan.endPoint ?? "", "owner": r?.plan.owner ?? "",
+                   "questions": r?.plan.questions.map { "\($0.id)|\($0.text)|\($0.stepRef)" } ?? [],
+                   "draftNodes": r?.plan.draft?.nodes.count ?? 0, "draftTitle": r?.plan.draft?.title ?? "", "draftRefs": r?.plan.draft?.nodes.map(\.ref) ?? [],
+                   "revisedNodes": r?.revised?.nodes.count ?? 0, "revisedLabels": r?.revised?.nodes.map(\.label) ?? [],
+                   "analysing": model.detail?.analysingWorkshop ?? false, "drafting": model.detail?.draftingWorkshop ?? false,
+                   "planned": model.detail.map { model.isPlannedWorkshop($0.meeting) } ?? false,
+                   "isWorkshop": model.detail?.isWorkshop ?? false,
+                   "open": a?.openCount ?? -1, "confirmed": a?.confirmedCount ?? -1,
+                   "steps": a?.steps.map { "\($0.id)|\($0.verdict.rawValue)|\($0.meta.status.rawValue)|\($0.meta.evidence.count)" } ?? [],
+                   "questionResults": a?.questions.map { "\($0.id)|\($0.state.rawValue)|\($0.meta.status.rawValue)|\($0.raisedInRoom)" } ?? [],
+                   "walk": a?.walkthrough.map { "\($0.id)|\($0.ref)|\($0.branchFrom)|\($0.label)" } ?? [],
+                   "pains": a?.pains.map { "\($0.id)|\($0.workaround)" } ?? [],
+                   "reqs": a?.requirements.map { "\($0.id)|\($0.kind.rawValue)|\($0.priority)|\($0.fromWorkaround)" } ?? [],
+                   "rules": a?.rules.map { "\($0.id)|\($0.isAuthority)" } ?? [],
+                   "raid": a?.raid.map { "\($0.id)|\($0.kind.rawValue)|\($0.decidedBy)" } ?? [],
+                   "parking": a?.parking.map(\.id) ?? [], "oos": a?.outOfScope.map(\.id) ?? [], "glossary": a?.glossary.map(\.id) ?? [],
+                   "readBack": a.map { "\($0.readBack.done)|\($0.readBack.result.rawValue)" } ?? "",
+                   "notice": model.noticeMessage ?? "", "error": model.errorMessage ?? ""], to: args[2])
+        case "workshoppurpose":
+            model.selection = id
+            if let p = WorkshopPurpose(rawValue: args[2]) { model.togglePurpose(p) }
+        case "workshopscope":
+            model.selection = id
+            model.updateWorkshopPlan { $0.trigger = args[2]; $0.endPoint = args.count > 3 ? args[3] : ""; $0.owner = args.count > 4 ? args[4] : "" }
+        case "workshopquestions":
+            model.selection = id
+            model.addQuestions(Workshop.parseQuestions(args.dropFirst(2).joined(separator: " ").replacingOccurrences(of: "\\n", with: "\n")))
+        case "workshopdraft": model.selection = id; _ = model.draftFromText(args.dropFirst(2).joined(separator: " "))
+        case "workshopdraftcomment":
+            model.selection = id
+            _ = model.draftFromText(model.detail?.workshop?.plan.draftText ?? "", comment: args.dropFirst(2).joined(separator: " "))
+        case "workshopanalyse": model.selection = id; model.analyseWorkshop()
+        case "workshopconfirm":
+            model.selection = id
+            if args[2] == "all" { model.confirmAllWorkshop(model.detail?.workshop?.analysis?.allMeta.filter { $0.status == .unconfirmed }.map(\.id) ?? []) }
+            else { model.setWorkshopStatus(args[2], .confirmed) }
+        case "workshopreject": model.selection = id; model.setWorkshopStatus(args[2], .rejected)
+        case "workshopedit": model.selection = id; model.editWorkshopItem(args[2], text: args.dropFirst(3).joined(separator: " "))
+        case "workshopverdict": model.selection = id; if let v = StepVerdict(rawValue: args[3]) { model.setStepVerdict(args[2], v) }
+        case "workshopreadback": model.selection = id; if let r = ReadBack.Result(rawValue: args[2]) { model.setReadBack(r) }
+        case "workshopexport":   // workshopexport <id> <summary|workbook> <docx|pdf|xlsx> <輸出檔>
+            let item: ExportItem = args[2] == "workbook" ? .workshopWorkbook : .workshopSummary
+            let url = URL(fileURLWithPath: args[4])
+            Task {
+                do { try await model.export(item, format: args[3], times: false, speakers: false, meetingId: id ?? 0, to: url) }
+                catch { try? "ERROR \(error.localizedDescription)".write(to: url.appendingPathExtension("error"), atomically: true, encoding: .utf8) }
+            }
+        case "debugrecordfile": UserDefaults.standard.set(args[1], forKey: "debugRecordFile"); if args.count > 2 { UserDefaults.standard.set(Double(args[2]) ?? 1, forKey: "debugRecordSpeed") }   // debugrecordfile <音檔>：workshoprecord 用這個檔代替麥克風
+        case "workshoprecord": model.selection = id; model.startWorkshopRecording(id ?? 0)
+        case "workshopsheet":
+            switch args[1] {
+            case "questions": model.workshopSheet = .questions()
+            case "draftText": model.workshopSheet = .draftText
+            case "draftComment": model.workshopSheet = .draftComment
+            default: model.workshopSheet = nil
+            }
         case "diagramclose": model.diagramComment = nil
         case "diagramremoveconfirm": model.confirmRemoveDiagram()   // 確認對話框的「移除」
         case "diagramremovecancel": model.diagramRemoving = nil

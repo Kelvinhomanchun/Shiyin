@@ -84,6 +84,13 @@ enum BuiltinTemplates {
             custom: [.init(title: "點子清單", instruction: "每個點子一條，盡量標出是誰提出的"),
                      .init(title: "評估與取捨", instruction: "對點子的討論、優缺點與取捨理由")],
             instruction: "這是腦力激盪，不要遺漏任何被提出的點子，即使沒有被採納。")),
+        ("workshop", "需求工作坊", TemplateDefinition(
+            description: "業務分析師跟客戶開的需求工作坊：驗證流程、釐清問題、請客戶走一遍",
+            sections: ["summary", "decisions", "actionItems", "openQuestions"],
+            custom: [.init(title: "流程與步驟", instruction: "客戶說明的做事流程，照順序，一步一條，標出誰做、用什麼系統"),
+                     .init(title: "痛點與變通做法", instruction: "客戶遇到的困難，以及他們目前自己想的辦法"),
+                     .init(title: "需求與規則", instruction: "客戶要的東西、業務規則、誰有權批准什麼；客戶沒說的優先順序不要補")],
+            instruction: "這是業務分析師和客戶的需求工作坊。只記客戶實際說的，不要推論、不要替客戶做決定；客戶之間說法不同時兩邊都記下來。")),
     ]
 
     /// 英文版：英文會議整理時用，英文介面也顯示這裡的名稱和說明
@@ -117,6 +124,13 @@ enum BuiltinTemplates {
             custom: [.init(title: "Ideas", instruction: "One idea per item, noting who proposed it where possible"),
                      .init(title: "Evaluation and trade-offs", instruction: "Discussion of the ideas, pros and cons, and the reasons for each choice")],
             instruction: "This is a brainstorm. Do not leave out any idea that was raised, even if it was not adopted.")),
+        "workshop": ("Requirements workshop", TemplateDefinition(
+            description: "A business analyst's requirements workshop with a client: validate a process, clarify questions, client walkthrough",
+            sections: ["summary", "decisions", "actionItems", "openQuestions"],
+            custom: [.init(title: "Process and steps", instruction: "The process as the client described it, in order, one step per item, noting who does it and with what system"),
+                     .init(title: "Pain points and workarounds", instruction: "The difficulties the client described and what they do about them today"),
+                     .init(title: "Requirements and rules", instruction: "What the client needs, business rules, who may approve what; do not add priorities the client did not state")],
+            instruction: "This is a requirements workshop between a business analyst and a client. Record only what the client actually said; do not infer and do not decide for the client. When people disagree, record both positions.")),
     ]
 
     /// 日文版：日文會議整理時用（沒有日文介面，名稱不會顯示）
@@ -150,6 +164,13 @@ enum BuiltinTemplates {
             custom: [.init(title: "アイデア一覧", instruction: "1項目に1つのアイデア。できるだけ誰が出したかを書く"),
                      .init(title: "評価と取捨選択", instruction: "アイデアについての議論、長所と短所、選んだ理由")],
             instruction: "これはブレインストーミングです。採用されなかったものも含め、出たアイデアを漏らさないこと。"),
+        "workshop": TemplateDefinition(
+            description: "ビジネスアナリストが顧客と行う要件ワークショップ：プロセスの検証、質問の確認、ウォークスルー",
+            sections: ["summary", "decisions", "actionItems", "openQuestions"],
+            custom: [.init(title: "プロセスとステップ", instruction: "顧客が説明した業務の流れを順番に、1ステップ1項目で。誰が何のシステムで行うかも書く"),
+                     .init(title: "課題と回避策", instruction: "顧客が困っていることと、現在の対処方法"),
+                     .init(title: "要件とルール", instruction: "顧客が求めるもの、業務ルール、誰が何を承認できるか。顧客が言っていない優先度は書かない")],
+            instruction: "これはビジネスアナリストと顧客の要件ワークショップです。顧客が実際に言ったことだけを記録し、推測や代わりの決定をしないこと。意見が分かれた場合は両方を記録すること。"),
     ]
 
     static func seed(_ db: AppDatabase) {

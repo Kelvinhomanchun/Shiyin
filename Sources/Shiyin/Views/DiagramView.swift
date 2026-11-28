@@ -512,7 +512,7 @@ struct DiagramCommentSheet: View {
 }
 
 /// 圖放進欄寬：跟著文字大小放大，比欄寬寬時縮到欄寬（最小縮到原本的 0.75 倍，字還看得清楚；再寬就左右捲）
-private struct DiagramFrame: View {
+struct DiagramFrame: View {
     let view: DiagramView
     let textScale: Double
     @State private var available: Double = 0

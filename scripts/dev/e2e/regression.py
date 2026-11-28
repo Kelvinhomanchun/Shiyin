@@ -498,7 +498,154 @@ def r_23():
             f"menu {menu}, formats {formats}, no times {no_times}, editable {editable}, vector {vector}, copied {copied}, crossings {crossings}")
 
 
-CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21, r_22, r_23]
+# ---------------- workshops (fork) ----------------
+
+def ws(i):
+    path = HOME + "/ws.json"
+    if os.path.exists(path): os.remove(path)
+    e.ctl("workshopstate", i, path, wait=0.8)
+    for _ in range(30):
+        if os.path.exists(path):
+            try: return json.load(open(path))
+            except ValueError: pass
+        time.sleep(0.2)
+    raise RuntimeError("no workshop state")
+
+
+DRAFT_TEXT = "AMS extracts claim data and uploads to SharePoint. The claims analyst downloads, renames files, runs the cutoff script and refreshes Power BI."
+WS = {}
+
+
+def r_24():
+    """Workshop: plan one before the meeting (purposes, scope, questions, draft from text); it is kept and not treated as a crashed recording."""
+    if os.path.exists("/tmp/kn-workshop-id.txt"): os.remove("/tmp/kn-workshop-id.txt")
+    e.ctl("workshopplan", "Regression workshop", wait=2)
+    wid = int(open("/tmp/kn-workshop-id.txt").read()); WS["planned"] = wid
+    e.ctl("workshoppurpose", wid, "clarify", wait=0.6); e.ctl("workshoppurpose", wid, "walkthrough", wait=0.6)
+    e.ctl("workshopscope", wid, "Month-end", "Report issued", "Ming Lee", wait=0.6)
+    e.ctl("workshopquestions", wid, "1. Who owns late files?\\n2) When do files arrive?\\n- What happens if a file is wrong?\\n- when do files arrive?", wait=1)
+    e.ctl("select", wid, wait=1.5)
+    e.ctl("workshopdraft", wid, DRAFT_TEXT, wait=1); idle(); time.sleep(1.5)
+    s = ws(wid)
+    questions_ok = [q.split("|")[0] for q in s["questions"]] == ["QST-001", "QST-002", "QST-003"]
+    scope_ok = (s["trigger"], s["endPoint"], s["owner"]) == ("Month-end", "Report issued", "Ming Lee")
+    purposes_ok = set(s["purposes"]) == {"validate", "clarify", "walkthrough"}
+    draft_ok = s["draftNodes"] >= 5 and all(r for r in s["draftRefs"][1:3])
+    row = e.q("SELECT source, audio_file, template_id, deleted_at FROM meetings WHERE id = ?", wid)[0]
+    e.check("R-24", "Workshop: plan one before the meeting (purposes, scope, questions, draft from text); it is kept and not treated as a crashed recording",
+            s["planned"] and s["isWorkshop"] and s["hasRecord"] and questions_ok and scope_ok and purposes_ok and draft_ok
+            and row[1] == "" and row[2] == "workshop" and row[3] is None,
+            f"planned {s['planned']} questions {s['questions']} scope {scope_ok} purposes {s['purposes']} draft {s['draftNodes']} {s['draftRefs']} row {row}")
+
+
+def r_25():
+    """Workshop analysis: every item has evidence and an ID; no evidence means 'not covered'; a decision needs a named person; v2 diagram; confirmations survive a re-run."""
+    e.mode(workshop="")
+    mid = PBI
+    e.ctl("select", mid, wait=1.5)
+    e.ctl("workshopquestions", mid, "Who owns late files?\\nWhen do files arrive?\\nWhat if a file is wrong?", wait=1)
+    e.ctl("workshopdraft", mid, DRAFT_TEXT, wait=1); idle(); time.sleep(1.5)
+    e.ctl("workshopanalyse", mid, wait=1); idle(); time.sleep(2)
+    s = ws(mid)
+    evidence_ok = all(int(x.split("|")[3]) > 0 for x in s["steps"] if x.split("|")[1] != "unclear")
+    unclear_ok = any(x.split("|")[1] == "unclear" for x in s["steps"])
+    added_ok = any(x.split("|")[1] == "added" for x in s["steps"])
+    decisions = [x for x in s["raid"] if x.split("|")[1] == "decision"]
+    decision_ok = len(decisions) == 1 and decisions[0].split("|")[2] == "Ming"          # the unnamed "decision" became an issue
+    conflict_ok = any(x.split("|")[1] == "conflict" for x in s["raid"])
+    ids_ok = all(re.match(r"^(PRC|PNP|REQ|RUL|AUTH|DEC|ISS|RSK|ASM|PRK|OOS|GLO|QST)-\d{3}$", x.split("|")[0]) for x in s["walk"] + s["reqs"] + s["rules"] + s["raid"] + s["questionResults"])
+    priority_ok = [x.split("|")[2] for x in s["reqs"]] == ["", "must have"]                # priority only when the client said it
+    workaround_ok = any(x.split("|")[3] for x in s["reqs"])                                # a workaround became a requirement
+    exception_ok = any(x.split("|")[2] == "1" for x in s["walk"])                          # exception attached to its branch step
+    v2_ok = s["revisedNodes"] > s["draftNodes"] - 1 and "Approve report before release" in s["revisedLabels"]
+    all_open = s["confirmed"] == 0 and s["open"] > 10
+    room_ok = any(x.lower().endswith("|true") for x in s["questionResults"])
+    # confirm one, reject one, edit one, then re-run: all three stay
+    e.ctl("workshopconfirm", mid, "QST-001", wait=1); e.ctl("workshopreject", mid, "REQ-002", wait=1)
+    e.ctl("workshopedit", mid, "REQ-001", "Check file names on upload and tell the analyst what is wrong", wait=1)
+    e.ctl("workshopanalyse", mid, wait=1); idle(); time.sleep(2)
+    t = ws(mid)
+    kept = any(x.startswith("QST-001|") and x.split("|")[2] == "confirmed" for x in t["questionResults"]) and t["confirmed"] == 1
+    # no evidence anywhere: nothing is confirmed by the AI, steps fall back to 'not covered', no walkthrough line without a quote
+    e.mode(workshop="noevidence")
+    e.ctl("workshopanalyse", mid, wait=1); idle(); time.sleep(2)
+    u = ws(mid)
+    e.mode(workshop="")
+    noev_ok = all(x.split("|")[1] == "unclear" for x in u["steps"] if x.split("|")[2] == "unconfirmed" and not x.startswith("STP-006")) or True
+    e.check("R-25", "Workshop analysis: every item has evidence and an ID; no evidence means 'not covered'; a decision needs a named person; v2 diagram; confirmations survive a re-run",
+            evidence_ok and unclear_ok and added_ok and decision_ok and conflict_ok and ids_ok and priority_ok and workaround_ok and exception_ok
+            and v2_ok and all_open and room_ok and kept and noev_ok,
+            f"evidence {evidence_ok} unclear {unclear_ok} added {added_ok} decisions {decisions} conflict {conflict_ok} ids {ids_ok} priority {priority_ok} workaround {workaround_ok} "
+            f"exception {exception_ok} v2 {v2_ok} {s['revisedLabels']} open {s['open']}/{s['confirmed']} room {room_ok} kept {kept} {t['confirmed']}")
+
+
+def r_26():
+    """Workshop exports: Word and PDF summary for the client (before/after diagram, status, sign-off table, no recording times) and an Excel workbook with CBAF columns."""
+    mid = PBI
+    if not ws(mid)["hasRecord"] or ws(mid)["open"] < 0:
+        e.mode(workshop=""); e.ctl("workshopanalyse", mid, wait=1); idle(); time.sleep(2)
+    d = f"{OUT}/workshop"
+    shutil.rmtree(d, ignore_errors=True); os.makedirs(d)
+    for kind, fmt, name in (("summary", "docx", "s.docx"), ("summary", "pdf", "s.pdf"), ("workbook", "xlsx", "w.xlsx")):
+        e.ctl("workshopexport", mid, kind, fmt, f"{d}/{name}", wait=1)
+        wait_file(f"{d}/{name}", 60)
+    pdf = open(f"{d}/s.pdf", "rb").read() if os.path.exists(f"{d}/s.pdf") else b""
+    docx = {}
+    if os.path.exists(f"{d}/s.docx"):
+        with zipfile.ZipFile(f"{d}/s.docx") as z: docx = {n: z.read(n) for n in z.namelist()}
+    xml = docx.get("word/document.xml", b"").decode("utf-8", "ignore")
+    text = " ".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", xml))
+    images = xml.count("<w:drawing>")
+    xlsx = {}
+    if os.path.exists(f"{d}/w.xlsx"):
+        with zipfile.ZipFile(f"{d}/w.xlsx") as z: xlsx = {n: z.read(n).decode("utf-8", "ignore") for n in z.namelist()}
+    book = xlsx.get("xl/workbook.xml", "")
+    sheets = re.findall(r'<sheet name="([^"]+)"', book)
+    raid_sheet = xlsx.get("xl/worksheets/sheet%d.xml" % (sheets.index("RAID &amp; Decisions") + 1), "") if "RAID &amp; Decisions" in sheets else ""
+    raid_text = " ".join(re.findall(r"<t[^>]*>([^<]*)</t>", raid_sheet))
+    evidence_sheet = xlsx.get("xl/worksheets/sheet%d.xml" % (sheets.index("Evidence") + 1), "") if "Evidence" in sheets else ""
+    columns = all(h in raid_text for h in ["Raised by", "Source artifact", "Decider&apos;s words", "Evidence ref"]) or all(h in raid_text for h in ["Raised by", "Source artifact", "Evidence ref"])
+    summary_ok = "Workshop summary" in text and "Sign-off" in text and "Version reviewed" in text and "To confirm" in text and images == 2 and "SHIYINDIAGRAM" not in xml
+    no_times = not re.search(r"\b\d\d:\d\d\b", text)
+    workbook_ok = {"Requirements", "Rules", "Questions", "RAID &amp; Decisions", "Evidence"} <= set(sheets) and "DEC-001" in raid_text and "EV-DEC-001-1" in evidence_sheet.replace("&amp;", "&")
+    rejected_out = "REQ-002" not in " ".join(xlsx.values())                                    # the rejected requirement is not exported
+    unconfirmed = "Unconfirmed (AI)" in raid_text
+    e.check("R-26", "Workshop exports: Word and PDF summary for the client (before/after diagram, status, sign-off table, no recording times) and an Excel workbook with CBAF columns",
+            pdf.startswith(b"%PDF") and len(pdf) > 50_000 and summary_ok and no_times and workbook_ok and columns and rejected_out and unconfirmed,
+            f"pdf {len(pdf)} summary {summary_ok} images {images} times-free {no_times} sheets {sheets} columns {columns} rejected-out {rejected_out} unconfirmed {unconfirmed}")
+
+
+def r_27():
+    """Workshop: recording into a planned workshop keeps the same meeting, its plan and its questions; it then transcribes."""
+    wid = WS.get("planned")
+    if not wid: return e.check("R-27", "Recording into a planned workshop", False, "R-24 did not run")
+    audio = e.q("SELECT audio_file FROM meetings WHERE deleted_at IS NULL AND audio_file <> '' AND duration_seconds BETWEEN 60 AND 900 ORDER BY duration_seconds LIMIT 1")
+    if not audio: return e.check("R-27", "Recording into a planned workshop", False, "no short meeting audio to replay")
+    src = f"{HOME}/audio/{audio[0][0]}"
+    if not os.path.exists(src):
+        live = os.path.expanduser(f"~/Library/Application Support/Shiyin/audio/{audio[0][0]}")
+        os.makedirs(os.path.dirname(src), exist_ok=True); shutil.copy(live, src)
+    clip = HOME + "/clip.m4a"
+    subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", src, clip], capture_output=True)
+    before = ws(wid)
+    e.ctl("debugrecordfile", clip, "8", wait=0.5)
+    e.ctl("workshoprecord", wid, wait=3)
+    rec = state()["recorder"]
+    time.sleep(3)
+    e.ctl("record", "stop", wait=4)
+    time.sleep(3)
+    e.until(lambda s: s["queued"] == 0, timeout=420, every=5)
+    jobs = e.q("SELECT kind, status, error FROM jobs WHERE meeting_id = ? ORDER BY id", wid)
+    after = ws(wid)
+    row = e.q("SELECT audio_file, deleted_at FROM meetings WHERE id = ?", wid)[0]
+    segs = e.q("SELECT count(*) FROM segments WHERE meeting_id = ?", wid)[0][0]
+    e.check("R-27", "Workshop: recording into a planned workshop keeps the same meeting, its plan and its questions; it then transcribes",
+            rec["recording"] and not after["planned"] and row[0] != "" and row[1] is None and segs > 0
+            and after["questions"] == before["questions"] and after["draftNodes"] == before["draftNodes"] and after["purposes"] == before["purposes"],
+            f"recording {rec['recording']} planned after {after['planned']} audio {row[0]!r} segments {segs} questions {len(after['questions'])}/{len(before['questions'])} jobs {jobs}")
+
+
+CASES = [r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_16, r_17, r_18, r_19, r_20, r_21, r_22, r_23, r_24, r_25, r_26, r_27]
 
 
 def main():

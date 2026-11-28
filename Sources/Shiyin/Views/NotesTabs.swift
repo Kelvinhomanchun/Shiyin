@@ -240,6 +240,8 @@ struct NotesPage: View {
                 }
                 // 會議紀錄的圖（fork）：摘要後面；使用者按了才建議、才畫
                 DiagramsSection(detail: detail)
+                // 工作坊（fork）：範本是工作坊的會議
+                if detail.isWorkshop { WorkshopSection(detail: detail) }
                 if !notes.decisions.isEmpty {
                     NotesSection(title: String(localized: "決議")) { ItemList(items: notes.decisions, detail: detail) { .decisions($0) } }
                 }
@@ -285,6 +287,12 @@ struct NotesPage: View {
                         .contentFont(.caption)
                         .foregroundStyle(.tertiary)
                 }
+            }
+        } else if detail.isWorkshop {
+            // 工作坊（fork）：還沒錄音、還沒整理時，頁面就是「事前準備」
+            ReadingColumn {
+                WorkshopSection(detail: detail)
+                if !model.isPlannedWorkshop(detail.meeting) { NotesPlaceholder(detail: detail).padding(-32) }
             }
         } else {
             NotesPlaceholder(detail: detail)

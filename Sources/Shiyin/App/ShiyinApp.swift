@@ -100,6 +100,9 @@ struct AppCommands: Commands {
             // 主視窗關著時先打開，不然對話框要等到下次打開主視窗才會跳出來
             Button("匯入…") { model.openMainWindow?(); model.showFileImporter = true }
                 .keyboardShortcut("o")
+            // 工作坊（fork）：先準備（目的、草稿流程、問題），開會時錄進這一場
+            Button("新工作坊…") { model.openMainWindow?(); model.planWorkshop() }
+                .keyboardShortcut("n", modifiers: [.command, .option])
             // 建一個空的資料夾（R104、design §78）
             Button("新資料夾…") { model.openMainWindow?(); model.renameTarget = .newFolder([]) }
                 .keyboardShortcut("n", modifiers: [.command, .shift])

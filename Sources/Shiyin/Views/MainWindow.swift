@@ -30,6 +30,7 @@ struct RootView: View {
             .sheet(isPresented: $model.showRediarizeSheet) { RediarizeSheet() }
             .sheet(item: $model.refineRequest) { RefineSheet(request: $0) }
             .sheet(item: $model.diagramComment) { DiagramCommentSheet(request: $0) }
+            .sheet(item: $model.workshopSheet) { WorkshopSheet(request: $0) }
             .sheet(isPresented: $model.showStopTimerSheet) { StopTimerSheet() }
             .alert("出了一點問題", isPresented: Binding(get: { model.errorMessage != nil },
                                                    set: { if !$0 { model.errorMessage = nil } })) {
@@ -839,6 +840,8 @@ struct RecordingControls: View {
                 }
                 .help("開始錄音（⌘R），用\(language.uiName)辨識；點右邊的箭頭可以改錄音來源和語言")
                 Menu {
+                    Button("新工作坊…", systemImage: "rectangle.3.group.bubble") { model.planWorkshop() }
+                    Divider()
                     Picker("錄音來源", selection: Binding(get: { source }, set: { value in
                         source = value
                         model.noticeMessage = String(localized: "之後的錄音：\(Self.sourceLabel(value))")
@@ -910,6 +913,7 @@ struct EmptyDetailView: View {
                     Button("開始錄音") { model.startRecording() }
                         .buttonStyle(.borderedProminent)
                     Button("匯入錄音…") { model.showFileImporter = true }
+                    Button("新工作坊…") { model.planWorkshop() }
                     Button("看使用說明") { openWindow(id: "guide") }
                 }
             }

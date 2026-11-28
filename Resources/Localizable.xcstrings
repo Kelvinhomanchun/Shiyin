@@ -230,6 +230,23 @@
         }
       }
     },
+    "%@ 確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ confirm"
+          }
+        }
+      }
+    },
     "%@ 自動停止錄音": {
       "extractionState": "manual",
       "localizations": {
@@ -754,6 +771,40 @@
         }
       }
     },
+    "%@（工作坊工作簿）.%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（工作坊工作簿）.%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (workshop workbook).%@"
+          }
+        }
+      }
+    },
+    "%@（工作坊摘要）.%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（工作坊摘要）.%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (workshop summary).%@"
+          }
+        }
+      }
+    },
     "%@（心智圖）.%@": {
       "extractionState": "manual",
       "localizations": {
@@ -1011,6 +1062,57 @@
     "%lld / %lld": {
       "extractionState": "manual"
     },
+    "%lld / %lld 已問": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / %lld 已问"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld asked"
+          }
+        }
+      }
+    },
+    "%lld / %lld 已回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / %lld 已回答"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld answered"
+          }
+        }
+      }
+    },
+    "%lld / %lld 待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / %lld 待确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld to confirm"
+          }
+        }
+      }
+    },
     "%lld 人": {
       "extractionState": "manual",
       "localizations": {
@@ -1140,6 +1242,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 个出处"
+          }
+        }
+      }
+    },
+    "%lld 個問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个问题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld questions"
           }
         }
       }
@@ -1335,6 +1454,40 @@
         }
       }
     },
+    "%lld 項已確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项已确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld confirmed"
+          }
+        }
+      }
+    },
+    "%lld 項待確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项待确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld to confirm"
+          }
+        }
+      }
+    },
     "%lld 項待辦還沒完成": {
       "extractionState": "manual",
       "localizations": {
@@ -1360,6 +1513,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 项待办还没完成"
+          }
+        }
+      }
+    },
+    "%lld 項，都確認了": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项，都确认了"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items, all confirmed"
           }
         }
       }
@@ -2169,6 +2339,40 @@
         }
       }
     },
+    "Excel 工作簿：需求、規則、問題、RAID 和證據，編號和 CBAF 工作簿一致，可以直接貼進專案的工作簿。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excel 工作簿：需求、规则、问题、RAID 和证据，编号和 CBAF 工作簿一致，可以直接贴进项目的工作簿。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excel workbook: requirements, rules, questions, RAID and evidence. IDs match the CBAF workbook, so rows can be pasted straight into the project's workbook."
+          }
+        }
+      }
+    },
+    "Excel（xlsx）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excel（xlsx）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excel (xlsx)"
+          }
+        }
+      }
+    },
     "Gemini": {
       "extractionState": "manual",
       "localizations": {}
@@ -2466,6 +2670,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qwen3-ASR（阿里巴巴开源）"
+          }
+        }
+      }
+    },
+    "RAID：決定、假設、議題、風險": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RAID：决定、假设、议题、风险"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RAID: decisions, assumptions, issues, risks"
           }
         }
       }
@@ -3327,6 +3548,23 @@
         }
       }
     },
+    "一行一題，貼上整份清單也可以。編號（QST-）會自動接下去，之後整理時每一題都會有回答或「沒問到」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一行一题，粘贴整份列表也可以。编号（QST-）会自动接下去，之后整理时每一题都会有回答或“没问到”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One question per line; you can paste a whole list. IDs (QST-) continue automatically, and after the workshop every question gets an answer or \"not asked\"."
+          }
+        }
+      }
+    },
     "一起開過 %lld 場會議，最近 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -3815,6 +4053,23 @@
         }
       }
     },
+    "不對，駁回": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不对，驳回"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrong, reject"
+          }
+        }
+      }
+    },
     "不提醒：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -4053,6 +4308,23 @@
         }
       }
     },
+    "不連到流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不连到流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not tied to a step"
+          }
+        }
+      }
+    },
     "不限": {
       "extractionState": "manual",
       "localizations": {
@@ -4185,6 +4457,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "中立"
+          }
+        }
+      }
+    },
+    "串接": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "串接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integration"
+          }
+        }
+      }
+    },
+    "主線先，例外接在分出去的那一步": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主线先，例外接在分出去的那一步"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Main path first; exceptions follow the step they branch from"
           }
         }
       }
@@ -4467,6 +4773,40 @@
         }
       }
     },
+    "事前準備": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事前准备"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparation"
+          }
+        }
+      }
+    },
+    "事前準備或會議紀錄改過，這份整理是依之前的內容做的": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事前准备或会议记录改过，这份整理是依之前的内容做的"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The preparation or the notes changed after this analysis was made"
+          }
+        }
+      }
+    },
     "事項": {
       "extractionState": "manual",
       "localizations": {
@@ -4480,6 +4820,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "事项"
+          }
+        }
+      }
+    },
+    "交接需要：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "交接需要：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hand-off needs: %@"
           }
         }
       }
@@ -5040,6 +5397,23 @@
         }
       }
     },
+    "你事前畫的草稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你事前画的草稿"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your draft from before the workshop"
+          }
+        }
+      }
+    },
     "你們之間的互動": {
       "extractionState": "manual",
       "localizations": {
@@ -5053,6 +5427,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "你们之间的互动"
+          }
+        }
+      }
+    },
+    "你先畫好的流程，拿去給客戶驗證每一步對不對。貼上描述、讀進文件，整理工具會整理成一張流程圖；之後工作坊的結果會對照這一張。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你先画好的流程，拿去给客户验证每一步对不对。粘贴描述、读进文档，整理工具会整理成一张流程图；之后工作坊的结果会对照这一张。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The process you drew beforehand, to check each step with the client. Paste a description or read in a document and it becomes a diagram; the workshop results are compared against it."
           }
         }
       }
@@ -5087,6 +5478,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "你平常用哪个 AI？"
+          }
+        }
+      }
+    },
+    "你改過": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你改过"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You edited"
           }
         }
       }
@@ -5318,6 +5726,40 @@
         }
       }
     },
+    "來自 %@ 的變通做法": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@ 的变通做法"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workaround from %@"
+          }
+        }
+      }
+    },
+    "例外：從第 %@ 步分出去": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例外：从第 %@ 步分出去"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exception: branches from step %@"
+          }
+        }
+      }
+    },
     "例如「HKJC 客戶」「IBM 團隊」「面試者」。把人拖進群組，或在人的選單選「移到群組」。": {
       "extractionState": "manual",
       "localizations": {
@@ -5428,6 +5870,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如案子名称。在“%@”看得到所有子文件夹的会议。"
+          }
+        }
+      }
+    },
+    "例如：\n誰負責核對月底的保費數字？\n如果檔案晚到，現在怎麼處理？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：\n谁负责核对月底的保费数字？\n如果文件晚到，现在怎么处理？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example:\nWho checks the month-end premium figures?\nWhat happens today when a file arrives late?"
           }
         }
       }
@@ -5563,6 +6022,23 @@
         }
       }
     },
+    "例如：報表發給管理層": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：报表发给管理层"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: report sent to management"
+          }
+        }
+      }
+    },
     "例如：小明": {
       "extractionState": "manual",
       "localizations": {
@@ -5576,6 +6052,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如：小明"
+          }
+        }
+      }
+    },
+    "例如：月底結帳日": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：月底结帐日"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: month-end close"
+          }
+        }
+      }
+    },
+    "例如：核對和批准是兩步，不要合在一起；少畫例外": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：核对和批准是两步，不要合在一起；少画例外"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: checking and approving are two steps, don't merge them; leave out exceptions"
+          }
+        }
+      }
+    },
+    "例如：每月五號 AMS 會寄出理賠檔案，Shing 下載後改檔名、放進 SharePoint，再更新 Power BI 報表…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：每月五号 AMS 会寄出理赔文件，Shing 下载后改文件名、放进 SharePoint，再更新 Power BI 报表…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For example: on the 5th of each month AMS sends the claim files; Shing downloads them, renames them, puts them on SharePoint, then refreshes the Power BI report…"
           }
         }
       }
@@ -5847,6 +6374,23 @@
         }
       }
     },
+    "依這些步驟畫一張泳道圖（誰做哪一步、怎麼交接），畫好放在上面的「圖」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依这些步骤画一张泳道图（谁做哪一步、怎么交接），画好放在上面的“图”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw a swimlane from these steps (who does what, how it is handed over); it appears in Diagrams above"
+          }
+        }
+      }
+    },
     "保持簡短、容易辨識。日期和與會者在會議頁的「編輯」改。": {
       "extractionState": "manual",
       "localizations": {
@@ -5949,6 +6493,40 @@
         }
       }
     },
+    "候選：確認前不算規則": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候选：确认前不算规则"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate: not a rule until confirmed"
+          }
+        }
+      }
+    },
+    "假設": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "假设"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assumptions"
+          }
+        }
+      }
+    },
     "停止": {
       "extractionState": "manual",
       "localizations": {
@@ -6047,6 +6625,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止录音，开始正式转录"
+          }
+        }
+      }
+    },
+    "停車場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停车场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parking lot"
+          }
+        }
+      }
+    },
+    "停車場、範圍外、詞彙": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停车场、范围外、词汇"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parking lot, out of scope, glossary"
           }
         }
       }
@@ -6155,6 +6767,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Listening"
+          }
+        }
+      }
+    },
+    "優先順序只在客戶說過的時候才寫": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "优先顺序只在客户说过的时候才写"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Priority is shown only when the client stated it"
           }
         }
       }
@@ -6621,6 +7250,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部略过"
+          }
+        }
+      }
+    },
+    "全部確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm all"
           }
         }
       }
@@ -8137,6 +8783,23 @@
         }
       }
     },
+    "到什麼結果結束": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到什么结果结束"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends with"
+          }
+        }
+      }
+    },
     "到設定的「模型與空間」下載": {
       "extractionState": "manual",
       "localizations": {
@@ -8302,6 +8965,40 @@
         }
       }
     },
+    "功能": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Functional"
+          }
+        }
+      }
+    },
+    "加 %lld 個問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加 %lld 个问题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %lld questions"
+          }
+        }
+      }
+    },
     "加上電腦聲音": {
       "extractionState": "manual",
       "localizations": {
@@ -8455,6 +9152,40 @@
         }
       }
     },
+    "加問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加问题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add questions"
+          }
+        }
+      }
+    },
+    "加問題…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加问题…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add questions…"
+          }
+        }
+      }
+    },
     "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開拾音、跳到那個時間點。": {
       "extractionState": "manual",
       "localizations": {
@@ -8474,6 +9205,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加好之後在 AI 工具裡直接問，例如「列出我這週的會議」「上週所有會議的待辦有哪些」「找出提到預算的會議，整理成一段給主管」，也可以跟其他工具一起用（把待辦開成工單、寫週報）。回答裡的會議連結點了會打開 KelNote、跳到那個時間點。"
+          }
+        }
+      }
+    },
+    "加進 %lld 個問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加进 %lld 个问题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %lld questions"
           }
         }
       }
@@ -9812,6 +10560,23 @@
         }
       }
     },
+    "和草稿的差異": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和草稿的差异"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Differences from the draft"
+          }
+        }
+      }
+    },
     "問「%@」裡的會議，例如：還有哪些待辦沒完成？": {
       "extractionState": "manual",
       "localizations": {
@@ -9825,6 +10590,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "问“%@”里的会议，例如：还有哪些待办没完成？"
+          }
+        }
+      }
+    },
+    "問客戶想要什麼、卡在哪裡": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问客户想要什么、卡在哪里"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask what the client wants and where they are stuck"
           }
         }
       }
@@ -9961,6 +10743,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "问这场会议，例如：谁负责寄信的部分？"
+          }
+        }
+      }
+    },
+    "問題記錄": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问题记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Question log"
           }
         }
       }
@@ -10199,6 +10998,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "回答"
+          }
+        }
+      }
+    },
+    "回答一部分": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答一部分"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partly answered"
           }
         }
       }
@@ -10635,6 +11451,23 @@
         }
       }
     },
+    "報表": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报表"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report"
+          }
+        }
+      }
+    },
     "填他的實際角色、組織和你知道的背景；分析會以這些為準": {
       "extractionState": "manual",
       "localizations": {
@@ -10919,6 +11752,23 @@
         }
       }
     },
+    "好的做法：結束前把整理好的流程讀一遍，請客戶說「對」。沒讀回的內容，客戶之後可能不同意。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好的做法：结束前把整理好的流程读一遍，请客户说“对”。没读回的内容，客户之后可能不同意。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Good practice: read the process back before the end and ask the client to say \"yes, that's it\". Anything not read back may be disputed later."
+          }
+        }
+      }
+    },
     "子資料夾名稱（例如案子名稱）": {
       "extractionState": "manual",
       "localizations": {
@@ -10966,6 +11816,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "字幕（vtt）"
+          }
+        }
+      }
+    },
+    "存": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
           }
         }
       }
@@ -11123,6 +11990,40 @@
         }
       }
     },
+    "客戶不同意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户不同意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client disagreed"
+          }
+        }
+      }
+    },
+    "客戶同意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户同意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client agreed"
+          }
+        }
+      }
+    },
     "客戶會議": {
       "extractionState": "manual",
       "localizations": {
@@ -11140,6 +12041,57 @@
         }
       }
     },
+    "客戶自己想的辦法，常常就是沒說出口的需求": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户自己想的办法，常常就是没说出口的需求"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A client's own workaround is often an unspoken requirement"
+          }
+        }
+      }
+    },
+    "客戶說的流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户说的流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The process as the client described it"
+          }
+        }
+      }
+    },
+    "客戶說：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户说：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client said: %@"
+          }
+        }
+      }
+    },
     "客戶連續說了超過 5 分鐘，你沒有打斷。": {
       "extractionState": "manual",
       "localizations": {
@@ -11153,6 +12105,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "A client spoke for over 5 minutes without you cutting in."
+          }
+        }
+      }
+    },
+    "客戶那邊的人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户那边的人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People on the client side"
+          }
+        }
+      }
+    },
+    "客戶部分同意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "客户部分同意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client partly agreed"
           }
         }
       }
@@ -11191,6 +12177,23 @@
         }
       }
     },
+    "實際沒做": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实际没做"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not done in practice"
+          }
+        }
+      }
+    },
     "寫下要畫什麼、畫成哪一種圖。整理工具會對照會議紀錄和逐字稿來畫。": {
       "extractionState": "manual",
       "localizations": {
@@ -11221,6 +12224,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Write what to draw, for example: the steps Shing follows each month to produce the report, in two lanes for AMS and Shing"
+          }
+        }
+      }
+    },
+    "寫下要釐清的問題，或貼上整份清單、讀進文件。每一題有編號（QST-），工作坊後會一題一題對照：回答了、回答一部分、還是沒問到。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写下要厘清的问题，或粘贴整份列表、读进文档。每一题有编号（QST-），工作坊后会一题一题对照：回答了、回答一部分、还是没问到。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write the questions to clarify, or paste a list or read in a document. Each gets an ID (QST-), and after the workshop each is checked: answered, partly answered, or not asked."
           }
         }
       }
@@ -11310,6 +12330,23 @@
         }
       }
     },
+    "對草稿提意見": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对草稿提意见"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment on the draft"
+          }
+        }
+      }
+    },
     "對話": {
       "extractionState": "manual",
       "localizations": {
@@ -11391,6 +12428,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "Expand section"
+          }
+        }
+      }
+    },
+    "工作坊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作坊"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workshop"
+          }
+        }
+      }
+    },
+    "工作坊 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作坊 %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workshop %@"
+          }
+        }
+      }
+    },
+    "工作坊工作簿（需求、規則、問題、RAID）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作坊工作簿（需求、规则、问题、RAID）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workshop workbook"
+          }
+        }
+      }
+    },
+    "工作坊摘要（給客戶）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作坊摘要（给客户）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workshop summary"
           }
         }
       }
@@ -12089,6 +13194,23 @@
         }
       }
     },
+    "已回答": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已回答"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answered"
+          }
+        }
+      }
+    },
     "已在「%@」建立子資料夾「%@」": {
       "extractionState": "manual",
       "localizations": {
@@ -12732,6 +13854,40 @@
         }
       }
     },
+    "已確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmed"
+          }
+        }
+      }
+    },
+    "已確認，再按一次取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已确认，再按一次取消"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmed; click again to undo"
+          }
+        }
+      }
+    },
     "已移出資料夾": {
       "extractionState": "manual",
       "localizations": {
@@ -12847,6 +14003,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "已经在重新识别说话者了"
+          }
+        }
+      }
+    },
+    "已經在錄另一場": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经在录另一场"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already recording another meeting"
           }
         }
       }
@@ -13160,6 +14333,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recorded %lld s · speech %lld s (needs 10 s or more)"
+          }
+        }
+      }
+    },
+    "已駁回": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已驳回"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rejected"
           }
         }
       }
@@ -13845,6 +15035,23 @@
         }
       }
     },
+    "從什麼事件開始": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从什么事件开始"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts with"
+          }
+        }
+      }
+    },
     "從你所有的會議重新寫一次建議": {
       "extractionState": "manual",
       "localizations": {
@@ -13896,6 +15103,40 @@
         }
       }
     },
+    "從文字整理": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文字整理"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build from text"
+          }
+        }
+      }
+    },
+    "從文字整理成流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文字整理成流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build a process from text"
+          }
+        }
+      }
+    },
     "從檔案匯入…": {
       "extractionState": "manual",
       "localizations": {
@@ -13909,6 +15150,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Import from File…"
+          }
+        }
+      }
+    },
+    "從檔案讀入…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文件读入…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read from a file…"
           }
         }
       }
@@ -15504,6 +16762,23 @@
         }
       }
     },
+    "把文字整理成流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把文字整理成流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the text into a process"
+          }
+        }
+      }
+    },
     "把會議紀錄切換成條列、心智圖或依人物整理": {
       "extractionState": "manual",
       "localizations": {
@@ -15538,6 +16813,23 @@
         }
       }
     },
+    "把準備好的問題一題一題問完": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把准备好的问题一题一题问完"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work through the prepared questions one by one"
+          }
+        }
+      }
+    },
     "把結尾的把手移到播放頭：後面的部分裁掉": {
       "extractionState": "manual",
       "localizations": {
@@ -15568,6 +16860,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "把逐字稿和会议记录里的同一个词一起改掉"
+          }
+        }
+      }
+    },
+    "把逐字稿整理成：草稿流程每一步的驗證結果、問題的回答、客戶說的流程、需求與規則、RAID。每一項都附證據，都是「待確認」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把逐字稿整理成：草稿流程每一步的验证结果、问题的回答、客户说的流程、需求与规则、RAID。每一项都附证据，都是“待确认”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turns the transcript into: a verdict for each draft step, answers to the questions, the process as the client described it, requirements and rules, and RAID. Every item has evidence and starts as \"to confirm\""
           }
         }
       }
@@ -16339,6 +17648,23 @@
         }
       }
     },
+    "拿我畫好的流程給客戶看，確認每一步對不對": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拿我画好的流程给客户看，确认每一步对不对"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the client the process I drew and check each step"
+          }
+        }
+      }
+    },
     "拿掉切點": {
       "extractionState": "manual",
       "localizations": {
@@ -16352,6 +17678,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove Split Point"
+          }
+        }
+      }
+    },
+    "拿掉這一題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拿掉这一题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove this question"
           }
         }
       }
@@ -16517,6 +17860,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "按“开始使用”后会打开使用说明，介绍录音、实时逐字稿、会议记录和导出的用法。"
+          }
+        }
+      }
+    },
+    "按一下確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按一下确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to confirm"
           }
         }
       }
@@ -16887,6 +18247,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Go back to the diagram before the last redraw"
+          }
+        }
+      }
+    },
+    "換成別的文字…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "换成别的文字…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace with other text…"
           }
         }
       }
@@ -17299,6 +18676,23 @@
         }
       }
     },
+    "改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        }
+      }
+    },
     "改回%@": {
       "extractionState": "manual",
       "localizations": {
@@ -17329,6 +18723,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "改在这台电脑转录"
+          }
+        }
+      }
+    },
+    "改成…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改成…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change to…"
           }
         }
       }
@@ -17832,6 +19243,23 @@
         }
       }
     },
+    "整理不出流程：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理不出流程：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't build a process: %@"
+          }
+        }
+      }
+    },
     "整理中": {
       "extractionState": "manual",
       "localizations": {
@@ -17845,6 +19273,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "整理中"
+          }
+        }
+      }
+    },
+    "整理中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理中…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysing…"
           }
         }
       }
@@ -17900,6 +19345,74 @@
         }
       }
     },
+    "整理好了：%lld 項等你確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理好了：%lld 项等你确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done: %lld items waiting for you to confirm"
+          }
+        }
+      }
+    },
+    "整理工作坊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工作坊"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse Workshop"
+          }
+        }
+      }
+    },
+    "整理工作坊失敗：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工作坊失败：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't analyse the workshop: %@"
+          }
+        }
+      }
+    },
+    "整理工作坊：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工作坊：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysing workshop: %@"
+          }
+        }
+      }
+    },
     "整理工具": {
       "extractionState": "manual",
       "localizations": {
@@ -17917,6 +19430,23 @@
         }
       }
     },
+    "整理工具列出的都是「待確認」：沒有你確認，不算客戶說定的。每一項附上誰在什麼時候說的、原話。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工具栏出的都是“待确认”：没有你确认，不算客户说定的。每一项附上谁在什么时候说的、原话。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything the assistant lists is \"to confirm\": until you confirm it, it doesn't count as agreed by the client. Each item shows who said it, when, and their words."
+          }
+        }
+      }
+    },
     "整理工具回的圖格式不對，請再試一次": {
       "extractionState": "manual",
       "localizations": {
@@ -17930,6 +19460,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "The diagram came back in the wrong format. Please try again."
+          }
+        }
+      }
+    },
+    "整理工具回的流程格式不對，請再試一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工具回的流程格式不对，请再试一次"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The assistant returned the process in the wrong format; please try again"
+          }
+        }
+      }
+    },
+    "整理工具的判斷不對的話，點這裡改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工具的判断不对的话，点这里改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the assistant got it wrong, click here to change it"
           }
         }
       }
@@ -17964,6 +19528,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "The diagram came back with fewer than two steps, so it can't be drawn"
+          }
+        }
+      }
+    },
+    "整理工具給的流程少於兩個步驟，畫不出來": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理工具给的流程少于两个步骤，画不出来"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The assistant returned fewer than two steps, so there is nothing to draw"
           }
         }
       }
@@ -18219,6 +19800,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "整理成会议记录"
+          }
+        }
+      }
+    },
+    "整理成流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理成流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build process"
           }
         }
       }
@@ -18563,6 +20161,23 @@
         }
       }
     },
+    "新增的一步": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加的一步"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New step"
+          }
+        }
+      }
+    },
     "新增自訂段落": {
       "extractionState": "manual",
       "localizations": {
@@ -18610,6 +20225,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加议题"
+          }
+        }
+      }
+    },
+    "新工作坊…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新工作坊…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Workshop…"
           }
         }
       }
@@ -20197,6 +21829,23 @@
         }
       }
     },
+    "會議裡的圖「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会议里的图“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagram from the meeting: \"%@\""
+          }
+        }
+      }
+    },
     "會議語言": {
       "extractionState": "manual",
       "localizations": {
@@ -20487,6 +22136,74 @@
         }
       }
     },
+    "有讀回": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有读回"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read back"
+          }
+        }
+      }
+    },
+    "有，客戶不同意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有，客户不同意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes, the client disagreed"
+          }
+        }
+      }
+    },
+    "有，客戶同意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有，客户同意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes, the client agreed"
+          }
+        }
+      }
+    },
+    "有，客戶部分同意": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有，客户部分同意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes, the client partly agreed"
+          }
+        }
+      }
+    },
     "期限": {
       "extractionState": "manual",
       "localizations": {
@@ -20738,6 +22455,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "条列"
+          }
+        }
+      }
+    },
+    "業務規則與權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "业务规则与权限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Business rules and authority"
           }
         }
       }
@@ -20997,6 +22731,23 @@
         }
       }
     },
+    "檔案「%@」": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件“%@”"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File \"%@\""
+          }
+        }
+      }
+    },
     "檔案太大：詞彙表的文字檔通常只有幾 KB": {
       "extractionState": "manual",
       "localizations": {
@@ -21163,6 +22914,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status & Updates"
+          }
+        }
+      }
+    },
+    "權限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "权限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authority"
           }
         }
       }
@@ -21458,6 +23226,23 @@
         }
       }
     },
+    "正在把文字整理成流程…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在把文字整理成流程…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turning the text into a process…"
+          }
+        }
+      }
+    },
     "正在整理…": {
       "extractionState": "manual",
       "localizations": {
@@ -21488,6 +23273,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reading what you said in your meetings…"
+          }
+        }
+      }
+    },
+    "正在整理這場工作坊…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在整理这场工作坊…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysing this workshop…"
           }
         }
       }
@@ -21641,6 +23443,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在用 %@ 回答…"
+          }
+        }
+      }
+    },
+    "正在用 %@ 整理工作坊…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在用 %@ 整理工作坊…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysing the workshop with %@…"
           }
         }
       }
@@ -22582,6 +24401,57 @@
         }
       }
     },
+    "決定": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "决定"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decisions"
+          }
+        }
+      }
+    },
+    "決定只記有具名的人明確說了的；說法不同的兩邊都留著": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "决定只记有具名的人明确说了的；说法不同的两边都留着"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A decision is recorded only when a named person clearly made it; when views differ, both are kept"
+          }
+        }
+      }
+    },
+    "決定的人：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "决定的人：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decided by: %@"
+          }
+        }
+      }
+    },
     "決定轉錄和會議紀錄用的語言": {
       "extractionState": "manual",
       "localizations": {
@@ -22629,6 +24499,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "决议"
+          }
+        }
+      }
+    },
+    "沒問到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没问到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not asked"
           }
         }
       }
@@ -22979,6 +24866,23 @@
         }
       }
     },
+    "沒有讀回": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有读回"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not read back"
+          }
+        }
+      }
+    },
     "沒有逐字稿。": {
       "extractionState": "manual",
       "localizations": {
@@ -23060,6 +24964,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "KelNote couldn't hear your voice clearly. Please record again somewhere quiet and read the whole passage."
+          }
+        }
+      }
+    },
+    "沒討論到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没讨论到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not covered"
           }
         }
       }
@@ -23268,6 +25189,40 @@
         }
       }
     },
+    "流程範圍": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流程范围"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Process scope"
+          }
+        }
+      }
+    },
+    "流程負責人": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流程负责人"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Process owner"
+          }
+        }
+      }
+    },
     "清晰": {
       "extractionState": "manual",
       "localizations": {
@@ -23434,6 +25389,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "测试这个模型"
+          }
+        }
+      }
+    },
+    "準備中": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备中"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned"
           }
         }
       }
@@ -23659,6 +25631,74 @@
         }
       }
     },
+    "版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "版本 1：草稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 1：草稿"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version 1: draft"
+          }
+        }
+      }
+    },
+    "版本 2：依工作坊的驗證結果修改；藍色的是改過或新增的步驟": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 2：依工作坊的验证结果修改；蓝色的是改过或添加的步骤"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version 2: revised from the workshop; blue steps were changed or added"
+          }
+        }
+      }
+    },
+    "版本 2：驗證後": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 2：验证后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version 2: after validation"
+          }
+        }
+      }
+    },
     "版本紀錄": {
       "extractionState": "manual",
       "localizations": {
@@ -23832,6 +25872,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Current agenda"
+          }
+        }
+      }
+    },
+    "現場提出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现场提出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raised in the room"
           }
         }
       }
@@ -24193,6 +26250,23 @@
         }
       }
     },
+    "用這場會議的圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用这场会议的图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use a diagram from this meeting"
+          }
+        }
+      }
+    },
     "用預覽程式打開": {
       "extractionState": "manual",
       "localizations": {
@@ -24460,6 +26534,23 @@
         }
       }
     },
+    "畫成泳道圖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画成泳道图"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw as swimlane"
+          }
+        }
+      }
+    },
     "畫成泳道圖：誰做哪一步、怎麼交接": {
       "extractionState": "manual",
       "localizations": {
@@ -24592,6 +26683,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Screens changed; the notes don’t include them yet."
+          }
+        }
+      }
+    },
+    "痛點與變通做法": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "痛点与变通做法"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pain points and workarounds"
           }
         }
       }
@@ -24948,6 +27056,23 @@
         }
       }
     },
+    "看過、都對的時候一次確認；不對的先改或駁回": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看过、都对的时候一次确认；不对的先改或驳回"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you've checked them and they're right, confirm in one go; edit or reject the ones that aren't"
+          }
+        }
+      }
+    },
     "看關係人地圖": {
       "extractionState": "manual",
       "localizations": {
@@ -24995,6 +27120,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Short & sharp"
+          }
+        }
+      }
+    },
+    "確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm"
           }
         }
       }
@@ -25266,6 +27408,23 @@
         }
       }
     },
+    "移除草稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除草稿"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove draft"
+          }
+        }
+      }
+    },
     "移除這個人…": {
       "extractionState": "manual",
       "localizations": {
@@ -25398,6 +27557,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fit to Width"
+          }
+        }
+      }
+    },
+    "第 %@ 步": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第 %@ 步"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step %@"
           }
         }
       }
@@ -25574,6 +27750,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "范围"
+          }
+        }
+      }
+    },
+    "範圍外": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "范围外"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Out of scope"
           }
         }
       }
@@ -25839,6 +28032,23 @@
         }
       }
     },
+    "系統串接": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统串接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System integration"
+          }
+        }
+      }
+    },
     "系統名、產品名、人名的正確寫法。轉錄時會當成提示（最多約 150 字），整理時也會參考。實驗顯示，有沒有詞彙提示，專有名詞的正確率差很多。": {
       "extractionState": "manual",
       "localizations": {
@@ -26077,6 +28287,23 @@
         }
       }
     },
+    "結束前有沒有讀回給客戶": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束前有没有读回给客户"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was it read back to the client before the end?"
+          }
+        }
+      }
+    },
     "結束拾音": {
       "extractionState": "manual",
       "localizations": {
@@ -26113,6 +28340,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Room given"
+          }
+        }
+      }
+    },
+    "給客戶的工作坊摘要：流程前後對照圖、已確認和待確認的項目、負責人和期限、簽核表。不放錄音的時間點。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "给客户的工作坊摘要：流程前后对照图、已确认和待确认的项目、负责人和期限、签核表。不放录音的时间点。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workshop summary for the client: before/after process diagram, confirmed and to-confirm items, owners and dates, sign-off table. No recording times."
           }
         }
       }
@@ -27024,6 +29268,74 @@
         }
       }
     },
+    "草稿 %lld 步": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "草稿 %lld 步"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft: %lld steps"
+          }
+        }
+      }
+    },
+    "草稿流程驗證": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "草稿流程验证"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft process check"
+          }
+        }
+      }
+    },
+    "草稿流程（版本 1）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "草稿流程（版本 1）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft process (version 1)"
+          }
+        }
+      }
+    },
+    "草稿裡沒有需要修改的步驟，所以沒有版本 2。確認、駁回、改結論之後，版本 2 會跟著更新。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "草稿里没有需要修改的步骤，所以没有版本 2。确认、驳回、改结论之后，版本 2 会跟着更新。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No step in the draft needs changing, so there is no version 2. Version 2 updates as you confirm, reject or change verdicts."
+          }
+        }
+      }
+    },
     "草稿（改過）": {
       "extractionState": "manual",
       "localizations": {
@@ -27054,6 +29366,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "草稿：用录音中的实时逐字稿整理的，正式转录完成后会自动更新"
+          }
+        }
+      }
+    },
+    "蒐集需求": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜集需求"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elicit requirements"
+          }
+        }
+      }
+    },
+    "藍色是改過或新增的步驟": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓝色是改过或添加的步骤"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue steps were changed or added"
           }
         }
       }
@@ -27427,6 +29773,23 @@
         }
       }
     },
+    "要修改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要修改"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs a change"
+          }
+        }
+      }
+    },
     "要停止錄音並轉錄嗎？": {
       "extractionState": "manual",
       "localizations": {
@@ -27508,6 +29871,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "要问的"
+          }
+        }
+      }
+    },
+    "要問的問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要问的问题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questions to ask"
           }
         }
       }
@@ -27661,6 +30041,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "要开始录音吗？"
+          }
+        }
+      }
+    },
+    "規則": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rules"
           }
         }
       }
@@ -28170,6 +30567,23 @@
         }
       }
     },
+    "說哪裡要改。之前的意見也會一起考慮。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说哪里要改。之前的意见也会一起考虑。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say what to change. Earlier comments are taken into account too."
+          }
+        }
+      }
+    },
     "說哪裡要改。之前的意見也會一起考慮，改之前的那張可以復原。": {
       "extractionState": "manual",
       "localizations": {
@@ -28200,6 +30614,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Say what should change (only today's process, split into lanes, fewer steps…) and it is redrawn with your comments"
+          }
+        }
+      }
+    },
+    "說法不同": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说法不同"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Views differ"
+          }
+        }
+      }
+    },
+    "說法衝突": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说法冲突"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflicting statements"
           }
         }
       }
@@ -28496,6 +30944,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "請到「系統設定 → 隱私權與安全性 → 麥克風」打開「KelNote」，再重新開始錄音。"
+          }
+        }
+      }
+    },
+    "請客戶說明他們每天怎麼做，從頭走到尾": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请客户说明他们每天怎么做，从头走到尾"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask the client to explain what they do day to day, from start to finish"
+          }
+        }
+      }
+    },
+    "請客戶走一遍流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请客户走一遍流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client walkthrough"
           }
         }
       }
@@ -28955,6 +31437,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "粘贴 API key 并按“保存”后才会用 %@ 整理；没有 key 的话可以选“先不用”。"
+          }
+        }
+      }
+    },
+    "貼上或讀入流程描述…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴或读入流程描述…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste or read in a process description…"
+          }
+        }
+      }
+    },
+    "貼上流程的描述（郵件、會議筆記、文件的一段）。整理工具會整理成一張草稿流程圖，你再拿去給客戶驗證。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴流程的描述（邮件、会议笔记、文档的一段）。整理工具会整理成一张草稿流程图，你再拿去给客户验证。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a description of the process (an email, meeting notes, part of a document). It becomes a draft process diagram that you can validate with the client."
+          }
+        }
+      }
+    },
+    "資料": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资料"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
           }
         }
       }
@@ -29822,6 +32355,23 @@
         }
       }
     },
+    "逐字稿裡沒有看到": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐字稿里没有看到"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not found in the transcript"
+          }
+        }
+      }
+    },
     "逐字稿裡琥珀色的段落辨識信心比較低，值得回頭聽；時間軸上的三角形是待確認題目、圓點是你標的重點；時間軸上面的色塊是議題，點了從那個議題開始聽。": {
       "extractionState": "manual",
       "localizations": {
@@ -30424,6 +32974,23 @@
         }
       }
     },
+    "這場工作坊要做什麼": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场工作坊要做什么"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What this workshop is for"
+          }
+        }
+      }
+    },
     "這場很像「%@」裡的會議：%@ 都參加（%lld 場）": {
       "extractionState": "manual",
       "localizations": {
@@ -30471,6 +33038,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "这场会议不再提示"
+          }
+        }
+      }
+    },
+    "這場會議不是工作坊，或還沒有整理，沒有東西可以匯出": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这场会议不是工作坊，或还没有整理，没有东西可以导出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This meeting isn't a workshop, or hasn't been analysed yet, so there is nothing to export"
           }
         }
       }
@@ -31184,6 +33768,23 @@
         }
       }
     },
+    "這組全部確認": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这组全部确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm this group"
+          }
+        }
+      }
+    },
     "這組按鍵被別的 app 佔用了，可以用錄音島或錄音畫面上的「截圖」。": {
       "extractionState": "manual",
       "localizations": {
@@ -31248,6 +33849,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "连不到企业服务器（%@）。请确认网址，在公司外面要先连 VPN。"
+          }
+        }
+      }
+    },
+    "連到步驟": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连到步骤"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tied to step"
           }
         }
       }
@@ -31333,6 +33951,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "遇到问题，可以从“辅助说明”菜单选“反馈问题…”，会附上版本和环境（不含会议内容）。"
+          }
+        }
+      }
+    },
+    "選一個 Word、PDF 或文字檔": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选一个 Word、PDF 或文本文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Word, PDF or text file"
           }
         }
       }
@@ -32343,6 +34978,23 @@
         }
       }
     },
+    "還沒有逐字稿，錄音轉錄完才能整理工作坊": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有逐字稿，录音转录完才能整理工作坊"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no transcript yet; the workshop can be analysed once the recording is transcribed"
+          }
+        }
+      }
+    },
     "還沒設定整理工具。選好之後，就能把逐字稿整理成摘要、決議和待辦；之後的會議轉錄完會自動整理。": {
       "extractionState": "manual",
       "localizations": {
@@ -33108,6 +35760,23 @@
         }
       }
     },
+    "釐清問題": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "厘清问题"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clarify questions"
+          }
+        }
+      }
+    },
     "錄一場不會一直守著的線上分享、講座時，按錄音畫面計時旁邊的「定時停止」，選 1 小時後、2 小時後或「指定時間…」（例如 16:00），時間到拾音會自己停止並轉錄，暫停也照算。選單列的拾音圖示、「檔案」選單也可以設定或取消。": {
       "extractionState": "manual",
       "localizations": {
@@ -33257,6 +35926,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录制系统音频"
+          }
+        }
+      }
+    },
+    "錄進這一場，準備好的草稿和問題會留著": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录进这一场，准备好的草稿和问题会留着"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record into this workshop; the draft and questions you prepared stay"
           }
         }
       }
@@ -33749,6 +36435,23 @@
         }
       }
     },
+    "錄音時，右邊會列出要問的問題。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音时，右边会列出要问的问题。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While recording, the questions to ask are listed on the right."
+          }
+        }
+      }
+    },
     "錄音會交給公司的伺服器轉錄。要改回這台 Mac，到「設定 → 企業伺服器」。": {
       "extractionState": "manual",
       "localizations": {
@@ -33870,6 +36573,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音里没有识别到任何语音"
+          }
+        }
+      }
+    },
+    "錄音轉錄好之後，按「整理工作坊」。整理出來的每一項都附證據、都是「待確認」，由你確認。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音转录好之后，按“整理工作坊”。整理出来的每一项都附证据、都是“待确认”，由你确认。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After the recording is transcribed, click \"Analyse Workshop\". Every item has evidence and starts as \"to confirm\"; you decide what to confirm."
           }
         }
       }
@@ -34362,6 +37082,23 @@
         }
       }
     },
+    "限制": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "限制"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Constraints"
+          }
+        }
+      }
+    },
     "隨時可以到設定選": {
       "extractionState": "manual",
       "localizations": {
@@ -34494,6 +37231,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "电脑声音的撷取中断了，重新连接失败：%@。会继续重试，录音没有停"
+          }
+        }
+      }
+    },
+    "需求": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需求"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requirements"
+          }
+        }
+      }
+    },
+    "非功能": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非功能"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non-functional"
+          }
+        }
+      }
+    },
+    "非功能（速度、安全、稽核）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非功能（速度、安全、稽核）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non-functional (speed, security, audit)"
           }
         }
       }
@@ -34731,6 +37519,23 @@
         }
       }
     },
+    "風險": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "风险"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risks"
+          }
+        }
+      }
+    },
     "驗證模型失敗：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -34744,6 +37549,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "验证模型失败：%@"
+          }
+        }
+      }
+    },
+    "驗證草稿流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "验证草稿流程"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validate a draft process"
           }
         }
       }
@@ -35278,6 +38100,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "（没有记录种类）"
+          }
+        }
+      }
+    },
+    "（版本 %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（版本 %lld）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (version %lld)"
           }
         }
       }

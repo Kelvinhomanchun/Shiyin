@@ -477,6 +477,20 @@ final class AppDatabase: @unchecked Sendable {
                 ALTER TABLE meeting_diagrams ADD COLUMN history TEXT NOT NULL DEFAULT '{}';
                 """)
         }
+        // 工作坊（fork）：開會前的準備（目的、範圍、草稿流程、問題）、開完後的分析（每項有 ID、證據、狀態）、版本 2 的圖；一場一份
+        migrator.registerMigration("fork-workshop") { db in
+            try db.execute(sql: """
+                CREATE TABLE workshop_plans (
+                  meeting_id  INTEGER PRIMARY KEY REFERENCES meetings(id) ON DELETE CASCADE,
+                  plan        TEXT NOT NULL DEFAULT '{}',
+                  analysis    TEXT,
+                  provider    TEXT NOT NULL DEFAULT '',
+                  model       TEXT NOT NULL DEFAULT '',
+                  updated_at  TEXT NOT NULL,
+                  revised     TEXT
+                );
+                """)
+        }
         return migrator
     }
 
@@ -641,7 +655,7 @@ final class AppDatabase: @unchecked Sendable {
     /// 錄音中途當掉、連錄音檔都沒有的會議（design §20.6）
     func emptyRecordingMeetings() throws -> [Int64] {
         try pool.read { db in
-            try Int64.fetchAll(db, sql: "SELECT id FROM meetings WHERE source = 'recording' AND audio_file = '' AND deleted_at IS NULL")
+            try Int64.fetchAll(db, sql: "SELECT id FROM meetings WHERE source = 'recording' AND audio_file = '' AND deleted_at IS NULL AND id NOT IN (SELECT meeting_id FROM workshop_plans)")
         }
     }
 

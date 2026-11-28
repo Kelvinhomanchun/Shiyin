@@ -65,6 +65,10 @@ background job in the TC-2 group is checked for that.
 | R-21 | Exports | Notes exports (Markdown, Word, PDF) and diagram pictures carry no recording times unless "Include recording times" is on; diagrams follow the summary; removing a diagram puts its suggestion back |
 | R-22 | Diagrams | The drawing rules ask for verb + object step labels and step IDs (1, 2a, 2b…); an ID the AI types into the label becomes the step ID; "horizontal" lays the diagram out left to right; a malformed first answer is asked again |
 | R-23 | Diagrams | The Download menu writes PNG, JPEG, SVG, PDF and draw.io files for clients (no recording times; draw.io boxes and connectors stay editable; PDF is vector with the fonts embedded); Copy Image puts PNG + PDF on the pasteboard; the downloaded diagram has no crossing arrows |
+| R-24 | Workshop | A workshop is planned before the meeting (purposes, process scope, owner, questions numbered QST-001… with duplicates dropped, draft diagram built from pasted text); it stays in the list and the empty-recording clean-up leaves it alone |
+| R-25 | Workshop | The analysis gives every item an ID and evidence; a step with no evidence comes back as "not covered"; a "decision" with no named person becomes an issue; conflicts keep both statements; priority only where the client said it; a workaround becomes a requirement; exceptions sit under the step they branch from; version 2 of the diagram holds the new step; confirm, reject and edit survive a re-run |
+| R-26 | Workshop | Word and PDF summary (before/after diagrams, status per item, sign-off table, no recording times) and the Excel workbook (Requirements, Rules, Questions, RAID & Decisions, Process steps, Pain points, Evidence; CBAF column order; rejected items left out; unconfirmed items marked) are written and readable |
+| R-27 | Workshop | Recording into a planned workshop keeps the same meeting, plan and questions, then transcribes |
 
 ## Last run (2026-11-26)
 
@@ -112,3 +116,12 @@ Checked by eye: the PBI swimlane left-to-right and top-down, and a claims flowch
 in both directions. New Download menu (R-23); the draw.io file was opened in draw.io and matches the app.
 
 `run.py` 19 of 19 and `regression.py` 24 of 24 passed (new R-23); live database unchanged.
+
+
+## Workshops (2026-11-28)
+
+New meeting type for requirements workshops (design in the conversation of 2026-11-27, first build): set up before the
+meeting (purpose, scope, owner, question list, draft diagram from text or a file), a question checklist beside the
+recording, then an analysis where every item is "unconfirmed (AI)" until the user confirms it, with the speaker, time
+and quote behind it. Deliverables: Word/PDF workshop summary and an Excel workbook with CBAF IDs and columns.
+Cases R-24 to R-27 cover the new parts; R-1 to R-23 cover everything that existed before.

@@ -14,6 +14,8 @@ enum MeetingStatus: Equatable {
     case cancelled
     case review(Int)
     case done
+    /// 還沒錄音的工作坊（準備中）
+    case planned
 
     var label: String {
         switch self {
@@ -30,6 +32,7 @@ enum MeetingStatus: Equatable {
         case .cancelled: return String(localized: "已取消")
         case .review(let n): return String(localized: "待確認 \(n) 題")
         case .done: return String(localized: "完成")
+        case .planned: return String(localized: "準備中")
         }
     }
 
@@ -104,6 +107,12 @@ struct MeetingDetail: Equatable {
     var diagrams: DiagramRecord?
     /// 這場會議排隊或正在做的畫圖工作（從工作表讀，離開再回來也對）
     var diagramJobs: [DiagramJob] = []
+    /// 工作坊（fork）：準備、分析、版本 2；不是工作坊的會議是 nil
+    var workshop: WorkshopRecord?
+    var workshopJobs: [WorkshopJob] = []
+    var analysingWorkshop: Bool { workshopJobs.contains { $0.mode == .analyze } }
+    var draftingWorkshop: Bool { workshopJobs.contains { $0.mode == .draftFromText } }
+    var isWorkshop: Bool { meeting.templateId == "workshop" || workshop != nil }
     var suggestingDiagrams: Bool { diagramJobs.contains { $0.mode == .suggest } }
     /// 正在畫的建議（建議的 id）、正在重新畫的圖（圖的 id）
     var drawingSuggestions: Set<String> { Set(diagramJobs.compactMap { $0.mode == .draw ? $0.suggestion?.id : nil }) }
@@ -398,6 +407,11 @@ final class AppModel {
     var refineDraft: [String: String] = [:]
     /// fork：「提意見重新畫」「自己描述一張圖」的彈窗；沒送出時打的字留著
     var diagramComment: DiagramCommentRequest?
+    /// 工作坊（fork）：「規劃工作坊」「準備」「加進問題」「重新畫草稿」的彈窗
+    var workshopSheet: WorkshopSheetRequest?
+    var workshopDraft: [String: String] = [:]
+    /// 「事前準備」摺起來、展開（整理完之後預設摺起來）
+    var workshopPrepOpen = false
     /// 按了「移除」、還沒確認的圖（id）
     var diagramRemoving: String?
     var diagramDraft: [String: String] = [:]
@@ -474,6 +488,7 @@ final class AppModel {
         runner.onStakeholdersFinished = { [weak self] job, error in self?.stakeholdersFinished(job, error: error) }
         runner.onCoachingFinished = { [weak self] job, error in self?.coachingFinished(job, error: error) }
         runner.onDiagramsFinished = { [weak self] job, error in self?.diagramsFinished(job, error: error) }
+        runner.onWorkshopFinished = { [weak self] job, error in self?.workshopFinished(job, error: error) }
         runner.onAudioReplaced = { [weak self] id in
             guard let self, self.selection == id else { return }
             // 錄音壓縮成 m4a 後換檔案：接著原本的位置，正在播的繼續播
@@ -773,6 +788,8 @@ final class AppModel {
         loaded.screens = (try? db.screens(id)) ?? []
         loaded.diagrams = (try? db.diagramRecord(id)) ?? nil
         loaded.diagramJobs = (try? db.activeDiagramJobs(id)) ?? []
+        loaded.workshop = (try? db.workshop(id)) ?? nil
+        loaded.workshopJobs = (try? db.activeWorkshopJobs(id)) ?? []
         loaded.speakerCandidates = (try? db.voiceprintCandidates(id)) ?? [:]
         loaded.cleanLines = (try? db.cleanLines(id)) ?? [:]
         loaded.cleanFailure = ((try? db.lastJob(id, kind: .clean)) ?? nil).flatMap { $0.status == .failed ? ($0.error ?? "") : nil }
@@ -806,7 +823,8 @@ final class AppModel {
     }
 
     func status(_ row: MeetingRow) -> MeetingStatus {
-        status(meetingId: row.id, latestJob: row.latestJob, reviewCount: row.reviewCount)
+        if isPlannedWorkshop(row.meeting) { return .planned }
+        return status(meetingId: row.id, latestJob: row.latestJob, reviewCount: row.reviewCount)
     }
 
     func status(meetingId: Int64, latestJob: Job?, reviewCount: Int) -> MeetingStatus {
@@ -827,6 +845,7 @@ final class AppModel {
 
     var detailStatus: MeetingStatus? {
         guard let detail else { return nil }
+        if isPlannedWorkshop(detail.meeting) { return .planned }
         return status(meetingId: detail.meeting.id!, latestJob: detail.latestJob, reviewCount: detail.reviewCount)
     }
 
@@ -980,6 +999,8 @@ final class AppModel {
 
     func startRecording() {
         guard !recorder.isRecording else { return }
+        // 工作坊（fork）：正看著一場準備好、還沒錄音的工作坊，「錄音」就錄進這一場
+        if let id = selection, let m = detail?.meeting, m.id == id, isPlannedWorkshop(m) { startWorkshopRecording(id); return }
         MeetingPromptPanel.shared.close()
         RecordingIsland.shared.closePrompt()
         #if DEBUG
@@ -1102,7 +1123,9 @@ final class AppModel {
             let bytes = (result.file.flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.size] as? Int }) ?? 0
             guard let file = result.file, bytes > 44 + Int(CaptureFormat.sampleRate) else {
                 if let file = result.file { try? FileManager.default.removeItem(at: file) }
-                try db.deleteMeeting(result.meetingId)
+                // 工作坊（fork）：準備好的工作坊沒錄到東西，不能把準備的草稿和問題一起刪掉，留著再錄
+                let planned = ((try? db.workshop(result.meetingId)) ?? nil) != nil
+                if !planned { try db.deleteMeeting(result.meetingId) }
                 reload()
                 return
             }
@@ -1776,6 +1799,271 @@ final class AppModel {
         reloadDetail(.meeting)
         if request?.mode == .suggest, error == nil, detail?.diagrams?.suggestions.isEmpty ?? true {
             noticeMessage = String(localized: "這場會議沒有適合畫成圖的地方。可以自己描述一張圖")
+        }
+    }
+
+    // MARK: 工作坊（fork）
+
+    /// 規劃一場工作坊：建一場還沒錄音的會議（範本是工作坊、放在目前的資料夾），打開準備的畫面
+    @discardableResult
+    func planWorkshop(title: String = "", date: Date = Date()) -> Int64? {
+        do {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd HH:mm"
+            let meeting = try db.insertMeeting(Meeting(
+                title: title, titleLocked: !title.isEmpty, meetingDate: DateText.string(date),
+                sourceFilename: String(localized: "工作坊 \(formatter.string(from: date))"),
+                templateId: "workshop", source: "recording", folder: currentFolder, language: AppSettings.defaultMeetingLanguage.rawValue),
+                audioExtension: nil)
+            try db.updateWorkshop(meeting.id!) { $0.plan.purposes = [.validate] }
+            reload()
+            showTrash = false
+            selection = meeting.id
+            tab = .summary
+            return meeting.id
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// 這場還沒錄音的工作坊：按「開始錄音」就錄進這一場（準備好的草稿、問題不用重做）
+    func startWorkshopRecording(_ meetingId: Int64) {
+        guard !recorder.isRecording, let meeting = try? db.meeting(meetingId), meeting.audioFile.isEmpty, meeting.deletedAt == nil else { return }
+        MeetingPromptPanel.shared.close()
+        RecordingIsland.shared.closePrompt()
+        #if DEBUG
+        if let file = UserDefaults.standard.string(forKey: "debugRecordFile") {
+            recorder.startSimulated(meetingId: meetingId, file: URL(fileURLWithPath: file), speed: UserDefaults.standard.double(forKey: "debugRecordSpeed").nonZero ?? 1, both: false, language: meeting.meetingLanguage)
+            reload(); selection = meetingId; return
+        }
+        #endif
+        var source = AppSettings.recordSource
+        if source == "mic" && meetingDetector.meetingAppUsingMic { source = "both" }
+        var updated = meeting
+        updated.channels = source
+        try? db.updateMeeting(updated)
+        recorder.start(meetingId: meetingId, source: source, language: meeting.meetingLanguage)
+        reload()
+        selection = meetingId
+    }
+
+    /// 這場是還沒錄音的工作坊（準備中）
+    func isPlannedWorkshop(_ meeting: Meeting) -> Bool {
+        meeting.source == "recording" && meeting.audioFile.isEmpty && meeting.templateId == "workshop" && recorder.meetingId != meeting.id
+    }
+
+    private func workshopReady(analysis: Bool = true) -> Int64? {
+        guard let id = selection, readyForAction(id), detail?.meeting.deletedAt == nil else { return nil }
+        guard AppSettings.provider != .none else {
+            errorMessage = AppSettings.needsProviderSetup
+                ? String(localized: "還沒設定整理工具，請先到設定選擇 Claude、Codex 或 API")
+                : String(localized: "整理工具設定為「不整理」，請先到設定改成 Claude、Codex 或 API")
+            return nil
+        }
+        if let problem = AppSettings.summarizerProblem { errorMessage = problem.message; return nil }
+        if analysis, detail?.segments.isEmpty != false, detail?.notes == nil {
+            noticeMessage = String(localized: "還沒有逐字稿，錄音轉錄完才能整理工作坊")
+            return nil
+        }
+        return id
+    }
+
+    func updateWorkshopPlan(_ change: (inout WorkshopPlan) -> Void) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) { try db.updateWorkshop(id) { change(&$0.plan); $0.revised = reviseIfPossible($0) } }
+    }
+
+    private func reviseIfPossible(_ r: WorkshopRecord) -> MeetingDiagrams.Diagram? {
+        guard let draft = r.plan.draft, r.plan.hasDraft, let steps = r.analysis?.steps else { return nil }
+        return Workshop.revise(draft, with: steps)?.diagram
+    }
+
+    func togglePurpose(_ purpose: WorkshopPurpose) {
+        updateWorkshopPlan { p in
+            if let k = p.purposes.firstIndex(of: purpose) { p.purposes.remove(at: k) } else { p.purposes.append(purpose) }
+            p.purposes = WorkshopPurpose.allCases.filter { p.purposes.contains($0) }
+        }
+    }
+
+    /// 問題加進來：下一個 QST- 編號接這個專案已經用到的（同一個資料夾所有工作坊）
+    func addQuestions(_ texts: [String], stepRef: String = "") {
+        guard let id = selection, let meeting = detail?.meeting else { return }
+        let cleaned = texts.map { Diagrams.clean($0) }.filter { !$0.isEmpty }
+        guard !cleaned.isEmpty else { return }
+        var counters = (try? db.workshopCounters(scope: Workshop.scopeFolder(meeting), excluding: id)) ?? [:]
+        perform(.detail(.meeting)) {
+            try db.updateWorkshop(id) { r in
+                for q in r.plan.questions { if let n = Int(q.id.dropFirst(4)) { counters["QST"] = max(counters["QST"] ?? 0, n) } }
+                for a in r.analysis?.questions ?? [] { if let n = Int(a.meta.id.dropFirst(4)) { counters["QST"] = max(counters["QST"] ?? 0, n) } }
+                for text in cleaned where !r.plan.questions.contains(where: { $0.text.caseInsensitiveCompare(text) == .orderedSame }) {
+                    counters["QST", default: 0] += 1
+                    r.plan.questions.append(WorkshopQuestion(id: Workshop.id("QST", counters["QST"]!), text: text, stepRef: stepRef))
+                }
+            }
+        }
+    }
+
+    func removeQuestion(_ qid: String) { updateWorkshopPlan { $0.questions.removeAll { $0.id == qid } } }
+
+    func editQuestion(_ qid: String, text: String? = nil, stepRef: String? = nil, ask: String? = nil) {
+        updateWorkshopPlan { p in
+            guard let k = p.questions.firstIndex(where: { $0.id == qid }) else { return }
+            if let text { p.questions[k].text = Diagrams.clean(text) }
+            if let stepRef { p.questions[k].stepRef = stepRef }
+            if let ask { p.questions[k].ask = ask }
+        }
+    }
+
+    /// 草稿流程：貼上文字或讀進檔案 → 整理工具整理成流程圖；或直接用一張畫好的圖（會議裡已經畫過的）
+    func draftFromText(_ text: String, source: String? = nil, comment: String? = nil) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let id = workshopReady(analysis: false) else { return false }
+        updateWorkshopPlan { $0.draftText = trimmed }
+        perform(.detail(.meeting)) { _ = try db.enqueue(id, kind: .workshop, payload: WorkshopJob(mode: .draftFromText, text: trimmed, source: source, comment: comment).json) }
+        runner.wake()
+        return true
+    }
+
+    /// 草稿換成這場會議裡已經畫好的圖（版本 1）
+    func useDiagramAsDraft(_ diagram: MeetingDiagrams.Diagram) {
+        updateWorkshopPlan { p in
+            var d = diagram
+            d.comments = []; d.request = nil; d.notesKey = ""; d.id = "draft"
+            d.nodes = d.nodes.map { var n = $0; n.time = ""; n.focal = false; return n }
+            p.draft = d
+            p.draftSource = String(localized: "會議裡的圖「\(diagram.title)」")
+        }
+    }
+
+    /// 客戶說的流程畫成泳道圖（走原本的畫圖流程，畫好放在「圖」）
+    func drawWalkthrough() {
+        guard let a = detail?.workshop?.analysis, !a.walkthrough.isEmpty else { return }
+        let lines = a.walkthrough.filter { $0.meta.status != .rejected }.map { s in
+            "- \(s.ref.isEmpty ? "" : s.ref + " ")\(s.label)" + (s.actor.isEmpty ? "" : " [\(s.actor)]")
+                + (s.branchFrom.isEmpty ? "" : " (exception from \(s.branchFrom)\(s.frequency.isEmpty ? "" : ", " + s.frequency))")
+                + (s.systems.isEmpty ? "" : " using \(s.systems)")
+        }
+        _ = drawDescribed("Draw the client's walkthrough as a BPMN-style swimlane: one lane per role, show hand-offs, exceptions as labelled branches. Steps:\n" + lines.joined(separator: "\n"))  // l10n-skip
+    }
+
+    func importDraftFile(_ url: URL) { importDraftFileImpl(url) }
+
+    func removeDraft() { updateWorkshopPlan { $0.draft = nil; $0.draftSource = ""; $0.draftText = ""; $0.draftComments = [] } }
+
+    /// 讀進一個檔案當草稿來源（Word、PDF、文字、簡報…）：讀出文字，整理成流程
+    private func importDraftFileImpl(_ url: URL) {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        let language = detail?.meeting.meetingLanguage ?? .zh
+        do {
+            let result = try DocumentReader.read(url, language: language)
+            let text = result.pages.joined(separator: "\n\n")
+            guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw DocumentReader.DocumentError.empty(url.lastPathComponent) }
+            _ = draftFromText(String(text.prefix(30_000)), source: String(localized: "檔案「\(url.lastPathComponent)」"))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 問題清單的檔案（文字、Word、PDF）：讀出文字，一行一題
+    func importQuestionsFile(_ url: URL) {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        let language = detail?.meeting.meetingLanguage ?? .zh
+        do {
+            let result = try DocumentReader.read(url, language: language)
+            let list = Workshop.parseQuestions(result.pages.joined(separator: "\n"))
+            guard !list.isEmpty else { throw DocumentReader.DocumentError.empty(url.lastPathComponent) }
+            addQuestions(list)
+            noticeMessage = String(localized: "加進 \(list.count) 個問題")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 開完後：整理成驗證結果、需求、RAID…（按了才做）
+    func analyseWorkshop() {
+        guard let id = workshopReady(), detail?.analysingWorkshop != true else { return }
+        perform(.detail(.meeting)) { _ = try db.enqueue(id, kind: .workshop, payload: WorkshopJob(mode: .analyze).json) }
+        runner.wake()
+    }
+
+    /// 確認、駁回、改回待確認：只有使用者能確認（確認的日期是今天）
+    func setWorkshopStatus(_ itemId: String, _ status: WorkshopStatus, by name: String = "") {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateWorkshop(id) { r in
+                r.analysis?.updateMeta(itemId) { m in
+                    m.status = status
+                    m.confirmedOn = status == .confirmed ? DateText.string(Date()) : ""
+                    m.confirmedBy = status == .confirmed ? name : ""
+                }
+                r.revised = reviseIfPossible(r)
+            }
+        }
+    }
+
+    /// 這一類全部「待確認」的一次確認（使用者看過了）
+    func confirmAllWorkshop(_ ids: [String]) {
+        guard let id = selection, !ids.isEmpty else { return }
+        perform(.detail(.meeting)) {
+            try db.updateWorkshop(id) { r in
+                for item in ids {
+                    r.analysis?.updateMeta(item) { m in
+                        guard m.status == .unconfirmed else { return }
+                        m.status = .confirmed; m.confirmedOn = DateText.string(Date())
+                    }
+                }
+                r.revised = reviseIfPossible(r)
+            }
+        }
+    }
+
+    func editWorkshopItem(_ itemId: String, text: String) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateWorkshop(id) { r in r.analysis?.setText(itemId, Diagrams.clean(text)); r.revised = reviseIfPossible(r) }
+        }
+    }
+
+    /// 改草稿某一步的結論（使用者覺得 AI 判斷錯了）
+    func setStepVerdict(_ itemId: String, _ verdict: StepVerdict) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateWorkshop(id) { r in
+                guard var a = r.analysis, let k = a.steps.firstIndex(where: { $0.id == itemId }) else { return }
+                a.steps[k].verdict = verdict
+                a.steps[k].meta.edited = true
+                r.analysis = a
+                r.revised = reviseIfPossible(r)
+            }
+        }
+    }
+
+    func setReadBack(_ result: ReadBack.Result) {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) {
+            try db.updateWorkshop(id) { r in r.analysis?.readBack.done = result != .unknown; r.analysis?.readBack.result = result }
+        }
+    }
+
+    func removeWorkshop() {
+        guard let id = selection else { return }
+        perform(.detail(.meeting)) { try db.deleteWorkshop(id) }
+    }
+
+    func workshopFinished(_ job: Job, error: Error?) {
+        let request = WorkshopJob.decode(job.payload)
+        if let error {
+            errorMessage = request?.mode == .draftFromText
+                ? String(localized: "整理不出流程：\(error.localizedDescription)")
+                : String(localized: "整理工作坊失敗：\(error.localizedDescription)")
+        }
+        guard selection == job.meetingId else { return }
+        reloadDetail(.meeting)
+        if request?.mode == .analyze, error == nil, let a = detail?.workshop?.analysis {
+            noticeMessage = String(localized: "整理好了：\(a.openCount) 項等你確認")
         }
     }
 
@@ -2456,13 +2744,15 @@ final class AppModel {
         return ExportBundle(meeting: meeting, segments: try db.segments(meetingId),
                             speakers: Dictionary(uniqueKeysWithValues: try db.speakers(meetingId).map { ($0.idx, $0.name) }),
                             bookmarks: try db.bookmarks(meetingId), notes: meeting.decodedNotes, documents: try db.documents(meetingId),
-                            screens: try db.screens(meetingId), diagrams: try db.diagramRecord(meetingId).flatMap { $0.diagrams.isEmpty ? nil : $0 })
+                            screens: try db.screens(meetingId), diagrams: try db.diagramRecord(meetingId).flatMap { $0.diagrams.isEmpty ? nil : $0 },
+                            workshop: try db.workshop(meetingId))
     }
 
     func exportBundle() -> ExportBundle? {
         guard let d = detail else { return nil }
         return ExportBundle(meeting: d.meeting, segments: d.segments, speakers: d.speakers, bookmarks: d.bookmarks, notes: d.notes,
-                            documents: d.documents, screens: d.screens, diagrams: d.diagrams.flatMap { $0.diagrams.isEmpty ? nil : $0 })
+                            documents: d.documents, screens: d.screens, diagrams: d.diagrams.flatMap { $0.diagrams.isEmpty ? nil : $0 },
+                            workshop: d.workshop)
     }
 
     /// 寫出檔案
@@ -2489,6 +2779,20 @@ final class AppModel {
                 try ScreenExport.writeFolder(b.screens, next: url, language: b.meeting.meetingLanguage)
                 try ScreenExport.writeDiagrams(pictures.map(\.png), next: url, language: b.meeting.meetingLanguage)
             }
+        case .workshopSummary:
+            guard let w = b.workshop else { throw ExportError.noWorkshop }
+            let pictures = WorkshopExport.diagrams(b, w)
+            if format == "pdf" {
+                let body = WorkshopExport.html(b, w, pdf: true, diagramTitles: pictures.map(\.title))
+                let html = ScreenExport.inlineDiagrams(ExportScript.html(WorkshopExport.pdfPage(b, body: body), b), pictures.map(\.png))
+                try await HTML.reportPDF(html, title: b.meeting.displayTitle, to: url)
+            } else {
+                let html = ExportScript.html(WorkshopExport.html(b, w, pdf: false, diagramTitles: pictures.map(\.title)), b)
+                try await Self.docxWithScreens(html, [], diagrams: pictures.map(\.png)).write(to: url)
+            }
+        case .workshopWorkbook:
+            guard let w = b.workshop else { throw ExportError.noWorkshop }
+            try await Task.detached(priority: .userInitiated) { try WorkshopExport.workbook(b, w) }.value.write(to: url)
         case .mindMap:
             // 心智圖（design §42.4）：段落名稱跟著會議語言，同其他匯出
             guard let layout = MindMapExport.layout(b) else { throw ExportError.noNotes }
@@ -2538,17 +2842,20 @@ final class AppModel {
         switch item {
         case .transcript: return String(localized: "\(base)（逐字稿）.\(format)")
         case .mindMap: return String(localized: "\(base)（心智圖）.\(format)")
+        case .workshopSummary: return String(localized: "\(base)（工作坊摘要）.\(format)")
+        case .workshopWorkbook: return String(localized: "\(base)（工作坊工作簿）.\(format)")
         case .audio: return "\(base).\(format)"
         default: return "\(base).\(format)"
         }
     }
 
     enum ExportError: LocalizedError {
-        case meetingGone, noNotes
+        case meetingGone, noNotes, noWorkshop
         var errorDescription: String? {
             switch self {
             case .meetingGone: return String(localized: "這場會議已經被刪除，沒辦法匯出")
             case .noNotes: return String(localized: "這場會議還沒有會議紀錄，畫不出心智圖")
+            case .noWorkshop: return String(localized: "這場會議不是工作坊，或還沒有整理，沒有東西可以匯出")
             }
         }
     }
@@ -2695,6 +3002,8 @@ final class AppModel {
             updated.versionCount = (try? db.versionCount(id)) ?? 0
             updated.diagrams = (try? db.diagramRecord(id)) ?? nil
             updated.diagramJobs = (try? db.activeDiagramJobs(id)) ?? []
+            updated.workshop = (try? db.workshop(id)) ?? nil
+            updated.workshopJobs = (try? db.activeWorkshopJobs(id)) ?? []
             updated.linkReviewItems()
         }
         if !parts.isDisjoint(with: [.segments, .corrections]) || !segmentIds.isEmpty { updated.buildIndexes() }
@@ -2771,3 +3080,7 @@ extension Notification.Name {
     /// 整理工具的登入狀態、key、暫停變了（design §34.1）
     static let summarizerStateChanged = Notification.Name("com.weiwei.shiyin.summarizerStateChanged")
 }
+
+#if DEBUG
+private extension Double { var nonZero: Double? { self == 0 ? nil : self } }
+#endif

@@ -16,6 +16,8 @@ struct ExportBundle {
     var screens: [MeetingDocument] = []
     /// 會議紀錄的圖（fork）：摘要後面一節；沒有圖時 nil
     var diagrams: DiagramRecord? = nil
+    /// 工作坊的準備和分析（fork）：工作坊摘要、工作簿用；不是工作坊時 nil
+    var workshop: WorkshopRecord? = nil
 
     func speakerName(_ idx: Int?) -> String? { idx.map { speakers[$0] ?? text.speaker($0) } }
 
@@ -61,11 +63,13 @@ struct ExportText {
 }
 
 enum ExportItem: String, CaseIterable, Identifiable {
-    case notes, mindMap, transcript, audio, package
+    case notes, workshopSummary, workshopWorkbook, mindMap, transcript, audio, package
     var id: String { rawValue }
     var label: String {
         switch self {
         case .notes: return String(localized: "會議紀錄")
+        case .workshopSummary: return String(localized: "工作坊摘要（給客戶）")
+        case .workshopWorkbook: return String(localized: "工作坊工作簿（需求、規則、問題、RAID）")
         case .mindMap: return String(localized: "心智圖")
         case .transcript: return String(localized: "逐字稿")
         case .audio: return String(localized: "錄音")
@@ -75,6 +79,8 @@ enum ExportItem: String, CaseIterable, Identifiable {
     var formats: [String] {
         switch self {
         case .notes: return ["md", "pdf", "docx"]
+        case .workshopSummary: return ["docx", "pdf"]
+        case .workshopWorkbook: return ["xlsx"]
         case .mindMap: return ["png", "pdf", "svg"]   // design §42.4
         case .transcript: return ["txt", "md", "srt", "vtt", "docx"]
         case .audio: return ["m4a", "wav"]
